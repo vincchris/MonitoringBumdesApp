@@ -16,5 +16,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::get('/Login', [LoginController::class, 'index'])->name('loginform');
 
+Route::get('tes', fn() => 'Tes kolab');
+
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
