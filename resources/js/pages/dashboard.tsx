@@ -5,7 +5,7 @@ import { Head } from '@inertiajs/react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Dashboard',
+        title: 'Selamat datang, Pengelola Mini soccer',
         href: '/dashboard',
     },
 ];

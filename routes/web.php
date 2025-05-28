@@ -14,7 +14,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 });
 
-Route::get('/LoginForm', [LoginController::class, 'index'])->name('loginform');
+Route::get('/Login', [LoginController::class, 'index'])->name('loginform');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

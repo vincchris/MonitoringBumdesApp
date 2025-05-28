@@ -1,24 +1,40 @@
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { FormEventHandler } from 'react';
+import { useForm } from '@inertiajs/react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import InputError from '@/components/input-error';
+
+type LoginForm = {
+  email: string;
+  password: string;
+  remember: boolean;
+};
+
+interface LoginProps {
+  status?: string;
+  canResetPassword: boolean;
+}
 
 export default function LoginBumdes() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(false);
+  const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
+    email: '',
+    password: '',
+    remember: false,
+  });
 
-  const handleLogin = () => {
-    // Call Laravel backend API here
-    console.log("Logging in with:", { email, password, remember });
+  const submit: FormEventHandler = (e) => {
+    e.preventDefault();
+    post(route('login'), {
+      onFinish: () => reset('password'),
+    });
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#4383FF] bg-[url('/background-waves.svg')] bg-cover bg-center">
       <div className="w-full max-w-md shadow-xl rounded-xl bg-white">
-        <div className="p-6">
+        <form onSubmit={submit} className="p-6">
           <div className="flex flex-col items-center gap-2">
             <div className="flex gap-4 items-center justify-center">
               <img src="/assets/images/Bumdes Logo.png" alt="Logo 1" width={100} height={40} />
@@ -38,10 +54,12 @@ export default function LoginBumdes() {
                 type="email"
                 placeholder="esteban_schiller@gmail.com"
                 className="text-black"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={data.email}
+                onChange={(e) => setData('email', e.target.value)}
               />
+              <InputError message={errors.email} />
             </div>
+
             <div>
               <Label htmlFor="password">Password</Label>
               <Input
@@ -49,30 +67,34 @@ export default function LoginBumdes() {
                 type="password"
                 placeholder="********"
                 className="text-black"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={data.password}
+                onChange={(e) => setData('password', e.target.value)}
               />
+              <InputError message={errors.password} />
             </div>
+
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="remember"
-                checked={remember}
-                onCheckedChange={() => setRemember(!remember)}
+                checked={data.remember}
+                onCheckedChange={() => setData('remember', !data.remember)}
               />
               <Label htmlFor="remember" className="text-sm text-black">Ingat password</Label>
             </div>
+
             <Button
-              onClick={handleLogin}
+              type="submit"
               className="w-full bg-[#4383FF] text-white hover:bg-[#3569cc]"
+              disabled={processing}
             >
-              Masuk
+              {processing ? 'Memproses...' : 'Masuk'}
             </Button>
           </div>
 
           <p className="mt-4 text-center text-xs text-gray-500">
             Lupa password? hubungi admin bumdes untuk merubah password anda
           </p>
-        </div>
+        </form>
       </div>
     </div>
   );

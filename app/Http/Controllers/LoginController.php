@@ -8,6 +8,6 @@ use Inertia\Inertia;
 class LoginController extends Controller
 {
     public function index() {
-        return Inertia::render('LoginForm');
+        return Inertia::render('Login');
     }
 }
