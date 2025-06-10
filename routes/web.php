@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\KelolaLaporanMiniSocController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PemasukanMiniSocController;
@@ -34,7 +35,7 @@ Route::get('/KelolaLaporanMiniSoc', [KelolaLaporanMiniSocController::class, 'ind
 
 
 Route::get('tes', fn() => 'Tes kolab');
-
+Route::get('Home', [HomeController::class, 'index'])->name('HomeCompro');
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
