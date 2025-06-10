@@ -1,6 +1,11 @@
-// js/components/nav-main.tsx
-import { LayoutDashboard, ArrowUpRight, ArrowDownLeft, FileText, LogOut } from 'lucide-react';
-import { Link, usePage } from '@inertiajs/react';
+import {
+  LayoutDashboard,
+  ArrowUpRight,
+  ArrowDownLeft,
+  FileText,
+  LogOut,
+} from 'lucide-react';
+import { Link, usePage, router } from '@inertiajs/react';
 import clsx from 'clsx';
 
 const NavLink = ({ href, icon: Icon, label }: any) => {
@@ -23,31 +28,44 @@ const NavLink = ({ href, icon: Icon, label }: any) => {
 };
 
 export default function NavMain() {
+  const handleLogout = (e: React.FormEvent) => {
+    e.preventDefault();
+    router.post('/logout');
+  };
+
   return (
     <nav className="p-4 space-y-6">
       <div className="space-y-2">
-        <NavLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" />
+        <NavLink href="/DashboardMiniSoc" icon={LayoutDashboard} label="Dashboard" />
       </div>
 
       <div>
         <div className="text-xs text-gray-500 uppercase px-4">Transaksi</div>
         <div className="mt-2 space-y-2">
-          <NavLink href="/pemasukan" icon={ArrowUpRight} label="Pemasukan" />
-          <NavLink href="/pengeluaran" icon={ArrowDownLeft} label="Pengeluaran" />
+          <NavLink href="/PemasukanMiniSoc" icon={ArrowUpRight} label="Pemasukan" />
+          <NavLink href="/PengeluaranMiniSoc" icon={ArrowDownLeft} label="Pengeluaran" />
         </div>
       </div>
 
       <div>
         <div className="text-xs text-gray-500 uppercase px-4">Laporan</div>
         <div className="mt-2 space-y-2">
-          <NavLink href="/laporan" icon={FileText} label="Kelola laporan" />
+          <NavLink href="/KelolaLaporanMiniSoc" icon={FileText} label="Kelola laporan" />
         </div>
       </div>
 
       <div>
         <div className="text-xs text-gray-500 uppercase px-4">Keluar</div>
         <div className="mt-2 space-y-2">
-          <NavLink href="/logout" icon={LogOut} label="Keluar" />
+          <form onSubmit={handleLogout}>
+            <button
+              type="submit"
+              className="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 w-full text-left"
+            >
+              <LogOut size={18} />
+              <span>Keluar</span>
+            </button>
+          </form>
         </div>
       </div>
     </nav>

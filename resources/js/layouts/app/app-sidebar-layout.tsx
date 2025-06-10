@@ -1,4 +1,4 @@
-import NavMain from '@/components/nav-main';
+import NavMain from '@/components/nav-main-minisoc';
 
 export default function AppSidebarLayout({ children }: { children: React.ReactNode }) {
   return (

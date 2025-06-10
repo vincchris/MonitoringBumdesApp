@@ -39,13 +39,14 @@ export default function PemasukanMiniSoc({ auth }: PageProps) {
         </div>
       </div>
 
-     {/* Heading untuk halaman Pemasukan */}
+       {/* Heading untuk halaman Pemasukan */}
       <div className="px-6 mb-4">
-        <h2 className="text-xl font-semibold text-gray-800">Pemasukan - Mini Soccer</h2>
+        <h2 className="text-xl font-semibold text-gray-800">Pengeluaran - Mini Soccer</h2>
       </div>
 
 
       <div className="flex justify-end mb-4">
+        <h1>Pemasukan - Mini soccer</h1>
         <Button className="bg-[#3B82F6] text-white hover:bg-blue-700">
           Tambah pendapatan harian +
         </Button>
