@@ -1,27 +1,53 @@
 import { Button } from "@/components/ui/button";
-import { Head } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, PageProps } from '@/types';
+import { FormEvent } from "react";
 
 const breadcrumbs: BreadcrumbItem[] = [
-  {
-    title: 'Selamat datang, Pengelola Mini soccer',
-    href: '/dashboard',
-  },
+  { title: 'Selamat datang, Pengelola Mini soccer', href: '/dashboard' },
 ];
 
-const data = [
-  // ... data kamu
-];
+interface TarifItem {
+  id: number;
+  tanggal: string;
+  penyewa: string;
+  tipe: string;
+  durasi: number;
+  tarif: number;
+  total: number;
+  keterangan: string;
+}
 
-export default function PemasukanMiniSoc({ auth }: PageProps) {
+interface Props extends PageProps {
+  data: TarifItem[];
+}
+
+export default function PemasukanMiniSoc({ auth, data }: Props) {
   const user = auth.user;
+
+  const { data: formData, setData, post, processing, reset } = useForm({
+    tanggal: '',
+    penyewa: '',
+    tipe: 'Member',
+    durasi: 1,
+    tarif: 0,
+    total: 0,
+    keterangan: '',
+  });
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    post('/pemasukan', {
+      onSuccess: () => reset(),
+    });
+  };
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Dashboard" />
+      <Head title="Pemasukan Mini Soccer" />
 
-       {/* Header atas: Selamat datang dan data user */}
+      {/* Header */}
       <div className="flex items-center justify-between px-6 pt-6 pb-8 text-black">
         <h1 className="text-lg font-semibold text-black">
           Selamat datang, Pengelola Mini soccer
@@ -39,19 +65,29 @@ export default function PemasukanMiniSoc({ auth }: PageProps) {
         </div>
       </div>
 
-     {/* Heading untuk halaman Pemasukan */}
-      <div className="px-6 mb-4">
-        <h2 className="text-xl font-semibold text-gray-800">Pemasukan - Mini Soccer</h2>
-      </div>
+      {/* Form input */}
+      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 mx-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <input type="date" className="input" value={formData.tanggal} onChange={e => setData('tanggal', e.target.value)} required />
+          <input type="text" placeholder="Nama Penyewa" className="input" value={formData.penyewa} onChange={e => setData('penyewa', e.target.value)} required />
+          <select className="input" value={formData.tipe} onChange={e => setData('tipe', e.target.value)}>
+            <option>Member</option>
+            <option>Non Member</option>
+          </select>
+          <input type="number" placeholder="Durasi (jam)" className="input" value={formData.durasi} onChange={e => setData('durasi', Number(e.target.value))} required />
+          <input type="number" placeholder="Tarif per jam" className="input" value={formData.tarif} onChange={e => setData('tarif', Number(e.target.value))} required />
+          <input type="number" placeholder="Total bayar" className="input" value={formData.durasi * formData.tarif} onChange={e => setData('total', Number(e.target.value))} readOnly />
+        </div>
+        <textarea placeholder="Keterangan (opsional)" className="input mt-4 w-full" value={formData.keterangan} onChange={e => setData('keterangan', e.target.value)} />
+        <div className="mt-4 text-right">
+          <Button type="submit" disabled={processing} className="bg-blue-600 text-white">
+            Simpan Pemasukan
+          </Button>
+        </div>
+      </form>
 
-
-      <div className="flex justify-end mb-4">
-        <Button className="bg-[#3B82F6] text-white hover:bg-blue-700">
-          Tambah pendapatan harian +
-        </Button>
-      </div>
-
-      <div className="overflow-x-auto rounded-xl border border-gray-200">
+      {/* Tabel data */}
+      <div className="overflow-x-auto rounded-xl border border-gray-200 mx-6">
         <table className="min-w-full bg-white text-sm text-black">
           <thead className="bg-gray-100 text-black font-semibold">
             <tr>
@@ -63,7 +99,6 @@ export default function PemasukanMiniSoc({ auth }: PageProps) {
               <th className="px-4 py-3 text-left">Tarif per jam</th>
               <th className="px-4 py-3 text-left">Total bayar</th>
               <th className="px-4 py-3 text-left">Keterangan</th>
-              <th className="px-4 py-3 text-left">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -74,21 +109,9 @@ export default function PemasukanMiniSoc({ auth }: PageProps) {
                 <td className="px-4 py-3">{item.penyewa}</td>
                 <td className="px-4 py-3">{item.durasi}</td>
                 <td className="px-4 py-3">{item.tipe}</td>
-                <td className="px-4 py-3">
-                  Rp. {item.tarif.toLocaleString("id-ID")}
-                </td>
-                <td className="px-4 py-3">
-                  Rp. {item.total.toLocaleString("id-ID")}
-                </td>
+                <td className="px-4 py-3">Rp. {item.tarif.toLocaleString("id-ID")}</td>
+                <td className="px-4 py-3">Rp. {item.total.toLocaleString("id-ID")}</td>
                 <td className="px-4 py-3">{item.keterangan}</td>
-                <td className="px-4 py-3 space-x-2">
-                  <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded">
-                    Edit
-                  </button>
-                  <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">
-                    Hapus
-                  </button>
-                </td>
               </tr>
             ))}
           </tbody>

@@ -123,7 +123,7 @@ const Navbar: React.FC = () => {
 
                     <div className="hidden lg:block">
                         <Button asChild variant="default" className="bg-blue-600 hover:bg-blue-700 text-white" size="default" onClick={() => setIsOpen(false)}>
-                            <Link href="#">Login</Link>
+                            <Link href="/Login">Login</Link>
                         </Button>
                     </div>
 

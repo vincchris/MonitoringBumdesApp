@@ -17,10 +17,14 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
+
+    protected $primaryKey = 'id_user';
+
     protected $fillable = [
         'name',
         'email',
         'password',
+        'roles',
     ];
 
     /**
@@ -38,7 +42,19 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
-    protected function casts(): array
+    /**
+    * @return \Illuminate\Database\Eloquent\Relations\HasMany
+    */
+
+    public function unit() {
+        return $this->hasMany(Unit::class, 'users_id');
+    }
+
+    public function incomes() {
+        return $this->hasMany(Income::class, 'users_id');
+    }
+
+    public function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
