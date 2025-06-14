@@ -21,7 +21,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('unit_id')->references('id_units')->on('units')->onDelete('cascade');
-            $table->foreign('tarif_id')->references('id_tariffs')->on('tariffs')->onDelete('cascade');
+            $table->foreign('tarif_id')->references('id_tarifs')->on('tarifs')->onDelete('cascade');
         });
     }
 

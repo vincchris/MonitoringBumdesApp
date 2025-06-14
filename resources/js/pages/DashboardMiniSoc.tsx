@@ -47,7 +47,7 @@ export default function Dashboard({ auth }: PageProps) {
           />
           <div className="text-right">
             <p className="text-sm font-semibold text-black">{user.name}</p>
-            <p className="text-xs text-gray-500">{user.role}</p>
+            <p className="text-xs text-black mr-3">{user.roles}</p>
           </div>
         </div>
       </div>
