@@ -58,7 +58,7 @@ const Home: React.FC<HomeProps> = ({ unitUsaha = [], beritaTerbaru = [], galeriH
     return (
         <MainLayout title="Beranda">
             {/* Hero Section */}
-            <section className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+            <section className="font-Inter relative overflow-hidden bg-gradient-to-r from-sky-400 to-blue-700 text-white">
                 <div className="absolute inset-0 bg-black/20"></div>
                 <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
                     <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
@@ -111,23 +111,63 @@ const Home: React.FC<HomeProps> = ({ unitUsaha = [], beritaTerbaru = [], galeriH
             {/* Stats Section */}
             <section className="bg-white py-16">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-2 gap-8 lg:grid-cols-4">
+                    {/* Judul Section */}
+                    <div className="mb-12 text-center">
+                        <h2 className="inline-block rounded-lg bg-blue-100 px-4 py-1 text-lg font-bold text-blue-700 md:text-xl">Data Statistik</h2>
+                        <p className="mt-2 text-sm text-gray-600 md:text-base">Informasi singkat mengenai kinerja dan perkembangan BUMDes.</p>
+                    </div>
+
+                    {/* Grid Statistik */}
+                    <div className="grid grid-cols-2 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
                         {dataStats.map((stat, index) => {
                             const IconComponent = stat.icon || Building;
                             return (
-                                <div key={index} className="text-center">
-                                    <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-xl bg-blue-100">
-                                        <IconComponent className="h-8 w-8 text-blue-600" />
+                                <div key={index} className="space-y-2 text-center sm:space-y-3">
+                                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 sm:h-16 sm:w-16 sm:rounded-xl">
+                                        <IconComponent className="h-6 w-6 text-blue-700 sm:h-8 sm:w-8" />
                                     </div>
-                                    <div className="text-3xl font-bold">{stat.number}</div>
-                                    <div className="mt-1 font-semibold text-blue-600">{stat.label}</div>
+                                    <div className="text-xl font-bold text-blue-700 sm:text-3xl">{stat.number}</div>
+                                    <div className="text-sm font-medium text-gray-600 sm:text-base">{stat.label}</div>
                                 </div>
                             );
                         })}
                     </div>
                 </div>
             </section>
-            
+
+            {/* Section Sambutan Kepala Desa */}
+            <section className="bg-white py-20">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div className="animate-fade-up grid items-center gap-10 duration-700 md:grid-cols-2">
+                        {/* Foto Kepala Desa */}
+                        <div className="flex flex-col items-center text-center">
+                            <img
+                                src="https://cdn.pixabay.com/photo/2021/07/09/14/22/photographer-6399191_1280.jpg"
+                                alt="Kepala Desa"
+                                className="h-60 w-60 rounded-4xl object-cover shadow-md"
+                            />
+                            <div className="mt-4 text-lg font-bold text-gray-800">Muhammad Dhafa</div>
+                            <div className="text-md mt-1 font-semibold text-blue-700">Kepala desa</div>
+                            <div className="text-sm text-gray-700">2025-2030</div>
+                        </div>
+
+                        {/* Sambutan */}
+                        <div>
+                            <h2 className="inline-block rounded-lg bg-blue-100 px-4 py-1 font-bold text-blue-700 md:text-xl">Sambutan Kepala Desa</h2>
+                            <p className="mt-4 text-base text-gray-700 sm:text-lg">
+                                Assalamu’alaikum warahmatullahi wabarakatuh.
+                                <br />
+                                <br />
+                                Puji syukur ke hadirat Tuhan Yang Maha Esa, atas limpahan rahmat dan karunia-Nya sehingga Desa kami dapat terus
+                                berkembang menjadi desa yang mandiri dan produktif. Website ini hadir sebagai jembatan informasi dan transparansi
+                                antara pemerintah desa dan masyarakat. Kami berharap partisipasi aktif dari seluruh warga untuk bersama-sama membangun
+                                desa yang lebih baik.
+                            </p>
+                            <p className="mt-6 font-semibold text-blue-700">- Kepala Desa</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </MainLayout>
     );
 };

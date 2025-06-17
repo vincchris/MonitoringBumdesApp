@@ -36,8 +36,8 @@ const Navbar: React.FC = () => {
             ],
         },
         { name: 'Unit Usaha', href: '/unit-usaha' },
-        { name: 'Berita & Kegiatan', href: '/berita' },
-        { name: 'Produk & Layanan', href: '/produk-layanan' },
+        { name: 'Berita', href: '/berita' },
+        { name: 'Layanan', href: '/produk-layanan' },
         { name: 'Galeri', href: '/galeri' },
         { name: 'Laporan & Transparansi', href: '/laporan-transparansi' },
         { name: 'Kontak', href: '/kontak' },
@@ -62,7 +62,7 @@ const Navbar: React.FC = () => {
                                 <img
                                     src="/assets/images/Bumdes Logo.png"
                                     alt="Logo Bumdes"
-                                    height={48} // pas dengan navbar
+                                    height={48}
                                     style={{ width: 'auto', maxHeight: '100%' }}
                                     className="object-contain"
                                 />

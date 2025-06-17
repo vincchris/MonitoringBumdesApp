@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('units', function (Blueprint $table) {
             $table->id("id_units");
-            $table->string('unit_name');
             $table->unsignedBigInteger('user_id');
+            $table->string('unit_name');
             $table->timestamps();
 
-            $table->foreignId('users_id')->references('id_users')->on('users')->onDelete('cascade');
+            $table->foreign('user_id')->references('id_users')->on('users')->onUpdate('cascade')->onDelete('cascade');
         });
     }
 
