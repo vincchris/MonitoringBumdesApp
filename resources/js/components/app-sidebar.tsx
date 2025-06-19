@@ -25,12 +25,12 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Kelola Laporan',
-        href: '/kelolaLaporan',
+        href: '/KelolaLaporan',
         icon: BookOpenCheck,
     },
     {
         title: 'Keluar',
-        href: '/kelolaLaporan',
+        href: '/Login',
         icon: LogOut,
     },
 ];

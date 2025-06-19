@@ -46,7 +46,7 @@ export default function PemasukanMiniSoc({ auth }: PageProps) {
 
 
       <div className="flex justify-end mb-4">
-        <h1>Pemasukan - Mini soccer</h1>
+        <h1>Pengeluaran - Mini soccer</h1>
         <Button className="bg-[#3B82F6] text-white hover:bg-blue-700">
           Tambah pendapatan harian +
         </Button>

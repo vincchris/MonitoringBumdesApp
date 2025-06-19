@@ -27,7 +27,8 @@ Route::post('/logout', function() {
 })->name('logout');
 
 Route::get('/Login', [LoginController::class, 'index'])->name('loginform');
-Route::get('/PemasukanMiniSoc', [PemasukanMiniSocController::class, 'index'])->name('pemasukanminisoc');
+// Route::get('/PemasukanMiniSoc', [PemasukanMiniSocController::class, 'index'])->name('pemasukanminisoc');
+Route::get('/PemasukanMiniSoc/{unitId}', [PemasukanMiniSocController::class, 'index'])->name('pemasukan.index');
 Route::get('/PengeluaranMiniSoc', [PengeluaranMiniSocController::class, 'index'])->name('pengeluaranminisoc');
 Route::get('/KelolaLaporanMiniSoc', [KelolaLaporanMiniSocController::class, 'index'])->name('pengeluaranminisoc');
 
