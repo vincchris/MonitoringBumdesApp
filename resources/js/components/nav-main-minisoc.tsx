@@ -46,14 +46,14 @@ export default function NavMain() {
         <div className="text-xs text-gray-500 uppercase px-4">Transaksi</div>
         <div className="mt-2 space-y-2">
           <NavLink href={`/unit/${unitId}/pemasukan`} icon={ArrowUpRight} label="Pemasukan" />
-          <NavLink href="/PengeluaranMiniSoc" icon={ArrowDownLeft} label="Pengeluaran" />
+          <NavLink href={`/unit/${unitId}/pengeluaran`} icon={ArrowDownLeft} label="Pengeluaran" />
         </div>
       </div>
 
       <div>
         <div className="text-xs text-gray-500 uppercase px-4">Laporan</div>
         <div className="mt-2 space-y-2">
-          <NavLink href="/KelolaLaporanMiniSoc" icon={FileText} label="Kelola laporan" />
+          <NavLink href={`/unit/${unitId}/kelolalaporan`} icon={FileText} label="Kelola laporan" />
         </div>
       </div>
 

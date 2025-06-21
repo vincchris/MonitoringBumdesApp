@@ -4,7 +4,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MiniSoc\KelolaLaporanMiniSocController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\MiniSoc\PemasukanMiniSocController;
-use App\Http\Controllers\PengeluaranMiniSocController;
+use App\Http\Controllers\MiniSoc\PengeluaranMiniSocController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -56,12 +56,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Pemasukan
         Route::resource('pemasukan', PemasukanMiniSocController::class);
+        Route::put('/pemasukan/{id}', [PemasukanMiniSocController::class, 'update']);
+        Route::delete('/pemasukan/{id}', [PemasukanMiniSocController::class, 'destroy']);
+        // Pengeluaran
+        Route::resource('pengeluaran', PengeluaranMiniSocController::class)->only(['index', 'store']);
+        // Kelola Laporan
+        Route::get('/kelolalaporan', [KelolaLaporanMiniSocController::class, 'index'])->name('laporan.kelola');
+
+        Route::middleware(['auth'])->group(function () {
+            Route::get('/kelolalaporan/export-pdf', [KelolaLaporanMiniSocController::class, 'exportPDF']);
+            Route::get('/kelolalaporan/export-excel', [KelolaLaporanMiniSocController::class, 'exportExcel']);
+        });
     });
 
 
     // Laporan & Pengeluaran
-    Route::get('/KelolaLaporanMiniSoc', [KelolaLaporanMiniSocController::class, 'index'])->name('laporan.kelola');
-    // Route::get('/PengeluaranMiniSoc', [PengeluaranMiniSocController::class, 'index'])->name('pengeluaranminisoc'); // jika ingin dipakai kembali
+    // Route::get('/KelolaLaporanMiniSoc', [KelolaLaporanMiniSocController::class, 'index'])->name('laporan.kelola');
+    // // Route::get('/PengeluaranMiniSoc', [PengeluaranMiniSocController::class, 'index'])->name('pengeluaranminisoc'); // jika ingin dipakai kembali
 });
 
 // =============================

@@ -38,6 +38,7 @@ class PemasukanMiniSocController extends Controller
 
         $formatted = $incomes->map(function ($item) {
             return [
+                'id' => $item->rent->rent_id,
                 'tanggal' => optional($item->updated_at)->format('Y-m-d'),
                 'penyewa' => $item->rent->tenant_name ?? '-',
                 'durasi' => (int) $item->rent->nominal ?? 0,
@@ -65,7 +66,7 @@ class PemasukanMiniSocController extends Controller
      */
     public function create()
     {
-        // 
+        //
     }
 
     /**
@@ -126,7 +127,8 @@ class PemasukanMiniSocController extends Controller
 
             DB::commit();
 
-            return back()->with('success', 'Data pemasukan berhasil ditambahkan');
+            // return back()->with('success', 'Data pemasukan berhasil ditambahkan');
+            return redirect()->route('unit.pemasukan.index', ['unitId' => $unitId])->with('success', 'Data berhasil ditambahkan');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Gagal menambahkan data: ' . $e->getMessage()]);
@@ -152,16 +154,67 @@ class PemasukanMiniSocController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, string $id, $unitId)
     {
-        //
+        $user = auth()->user();
+
+        if (!$user->units->contains('id_units', $unitId)) {
+            abort(403, 'Anda tidak memiliki akses ke unit ini');
+        }
+
+        $validated = $request->validate([
+            'tanggal' => 'required|date',
+            'penyewa' => 'required|string|max:255',
+            'tipe' => ['required', Rule::exists('tarifs', 'category_name')->where('unit_id', $unitId)],
+            'durasi' => 'required|numeric|min:0.1',
+            'keterangan' => 'nullable|string|max:500',
+        ]);
+
+        DB::beginTransaction();
+
+        $tarif = Tarif::where('unit_id', $unitId)
+            ->where('category_name', $validated['tipe'])
+            ->firstOrFail();
+
+        $totalBayar = $validated['durasi'] * $tarif->harga_per_unit;
+
+        $rent = RentTransaction::findOrFail($id);
+        $rent->update([
+            'tarif_id' => $tarif->id_tarif,
+            'tenant_name' => $validated['penyewa'],
+            'nominal' => $validated['durasi'],
+            'total_bayar' => $totalBayar,
+            'description' => $validated['keterangan'],
+            'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+        ]);
+
+        DB::commit();
+
+        return back()->with('success', 'Data berhasil diperbarui');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(string $id, $unitId)
     {
-        //
+        $user = auth()->user();
+
+        // Pastikan user punya akses
+        if (!$user->units->contains('id_units', $unitId)) {
+            abort(403, 'Anda tidak memiliki akses ke unit ini');
+        }
+
+        $rent = RentTransaction::findOrFail($id);
+
+        // Hapus income terkait
+        $income = Income::where('rent_id', $rent->id_rent)->first();
+        if ($income) {
+            $income->delete();
+        }
+
+        $rent->delete();
+
+        return back()->with('success', 'Data berhasil dihapus');
     }
 }
