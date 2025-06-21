@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('initial_balances', function (Blueprint $table) {
-            $table->id('id_initial_balance');
+        Schema::create('unit_user', function (Blueprint $table) {
+            $table->id("id_unit_user");
+            $table->foreignId('user_id')->constrained('users', 'id_users')->onDelete('cascade');
             $table->foreignId('unit_id')->constrained('units', 'id_units')->onDelete('cascade');
-            $table->decimal('nominal', 15, 2);
-             $table->timestamps();
+            $table->timestamps();
         });
     }
 
@@ -24,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('initial_balances');
+        Schema::dropIfExists('unit_user');
     }
 };

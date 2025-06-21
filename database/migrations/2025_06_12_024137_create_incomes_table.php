@@ -13,15 +13,8 @@ return new class extends Migration
     {
         Schema::create('incomes', function (Blueprint $table) {
             $table->id('id_income');
-            $table->unsignedBigInteger('units_id');
-            $table->unsignedBigInteger('user_id');
-            $table->unsignedBigInteger('generic_event_id')->nullable();
-            $table->decimal('nominal', 15, 2);
-            $table->text('description')->nullable();
-            $table->timestamps();
-
-            $table->foreign('units_id')->references('id_units')->on('units')->onDelete('cascade');
-            $table->foreign('user_id')->references('id_users')->on('users')->onDelete('cascade');
+            $table->foreignId('rent_id')->nullable()->constrained('rent_transactions', 'id_rent')->onDelete('set null');
+            $table->timestamps();;
         });
     }
 

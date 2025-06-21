@@ -8,12 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class Expense extends Model
 {
     use HasFactory;
-
+    protected $table = 'expenses';
     protected $primaryKey = 'id_expense';
 
-    protected $fillable = ['units_id', 'category_expense', 'nominal', 'description'];
+    protected $guarded = ['id_expense'];
 
-    public function unit() {
-        return $this->belongsTo(Unit::class, 'units_id');
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class, 'unit_id', 'id_units');
     }
 }

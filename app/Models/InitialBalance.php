@@ -8,12 +8,14 @@ use Illuminate\Database\Eloquent\Model;
 class InitialBalance extends Model
 {
     use HasFactory;
+    protected $table = 'initial_balances';
 
     protected $primaryKey = 'id_initial_balance';
 
-    protected $fillable = ['unit_id', 'nominal'];
+    protected $guarded = ['id_initial_balance'];
 
-    public function unit() {
-        return $this->belongsTo(Unit::class, 'unit_id');
+   public function unit()
+    {
+        return $this->belongsTo(Unit::class, 'unit_id', 'id_units');
     }
 }

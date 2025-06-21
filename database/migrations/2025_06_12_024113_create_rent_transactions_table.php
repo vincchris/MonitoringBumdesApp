@@ -13,15 +13,12 @@ return new class extends Migration
     {
         Schema::create('rent_transactions', function (Blueprint $table) {
             $table->id('id_rent');
-            $table->unsignedBigInteger('unit_id');
-            $table->string('tenant_name');
-            $table->unsignedBigInteger('tarif_id');
-            $table->decimal('total_biaya', 15, 2);
+            $table->foreignId('tarif_id')->constrained('tarifs', 'id_tarif')->onDelete('cascade');
+            $table->string('tenant_name')->nullable();
+            $table->decimal('nominal', 15, 2);
+            $table->decimal('total_bayar', 15, 2);
             $table->text('description')->nullable();
             $table->timestamps();
-
-            $table->foreign('unit_id')->references('id_units')->on('units')->onDelete('cascade');
-            $table->foreign('tarif_id')->references('id_tarifs')->on('tarifs')->onDelete('cascade');
         });
     }
 

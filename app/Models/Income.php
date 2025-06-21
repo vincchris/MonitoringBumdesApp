@@ -8,16 +8,14 @@ use Illuminate\Database\Eloquent\Model;
 class Income extends Model
 {
     use HasFactory;
+    protected $table = "incomes";
 
     protected $primaryKey = 'id_income';
 
-    protected $fillable = ['units_id', 'users_id', 'generic_event_id', 'nominal', 'description'];
+    protected $guarded = ['id_income'];
 
-    public function unit() {
-        return $this->belongsTo(Unit::class, 'units_id');
-    }
-
-    public function user() {
-        return $this->belongsTo(User::class, 'users_id');
+    public function rent()
+    {
+        return $this->belongsTo(RentTransaction::class, 'rent_id', 'id_rent');
     }
 }

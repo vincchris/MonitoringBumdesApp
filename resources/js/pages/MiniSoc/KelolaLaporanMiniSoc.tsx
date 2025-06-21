@@ -1,6 +1,15 @@
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem, PageProps } from '@/types';
+import { type BreadcrumbItem } from '@/types';
+type PageProps = {
+  auth: {
+    user: {
+      name: string;
+      role: string;
+      image?: string;
+    };
+  };
+};
 import { Button } from '@/components/ui/button';
 
 const breadcrumbs: BreadcrumbItem[] = [

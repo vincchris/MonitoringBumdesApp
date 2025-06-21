@@ -30,10 +30,25 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-
         $request->session()->regenerate();
+        $user = $request->user();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        if ($user->roles === 'pengelola') {
+
+            // Ambil unit pertama dari relasi unit_user
+            $unit = $user->units->first();
+
+            if ($unit) {
+                return redirect()->intended(
+                    route('unit.dashboard', ['unitId' => $unit->id_units], false)
+                );
+            }
+
+            abort(403, 'Anda tidak memiliki unit yang bisa diakses.');
+        }
+
+        // Jika tidak ada unit default, redirect ke dashboard utama
+        return redirect()->intended(route('dashboard', [], false));
     }
 
     /**

@@ -8,16 +8,17 @@ use Illuminate\Database\Eloquent\Model;
 class RentTransaction extends Model
 {
     use HasFactory;
-
+    protected $table = "rent_transactions";
     protected $primaryKey = 'id_rent';
+    protected $guarded = ['id_rent'];
 
-    protected $fillable = ['unit_id', 'tenant_name', 'tarif_id', 'total_bayar', 'description'];
-
-    public function unit() {
-        return $this->belongsTo(Unit::class, 'unit_id');
+    public function tarif()
+    {
+        return $this->belongsTo(Tarif::class, 'tarif_id', 'id_tarif');
     }
 
-    public function tariff() {
-        return $this->belongsTo(Tarif::class, 'tarif_id');
+    public function income()
+    {
+        return $this->hasOne(Income::class, 'rent_id', 'id_rent');
     }
 }

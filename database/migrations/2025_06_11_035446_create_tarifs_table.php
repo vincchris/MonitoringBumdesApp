@@ -12,14 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tarifs', function (Blueprint $table) {
-            $table->id('id_tarifs');
-            $table->unsignedBigInteger('unit_id');
-            $table->unsignedBigInteger('category_id');
-            $table->decimal('harga_per_unit', 15, 2);
+            $table->id('id_tarif');
+            $table->foreignId('unit_id')->constrained('units', 'id_units')->onDelete('cascade');
             $table->string('satuan');
+            $table->string('category_name');
+            $table->decimal('harga_per_unit', 15, 2);
             $table->timestamps();
-
-            $table->foreign('unit_id')->references('id_units')->on('units')->onDelete('cascade');
         });
     }
 

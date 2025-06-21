@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem, PageProps } from '@/types';
+import { type BreadcrumbItem } from '@/types';
 import {
   LineChart,
   Line,
@@ -27,7 +27,17 @@ const data = [
   { name: '2019', uv: 95, pv: 90 },
 ];
 
-export default function Dashboard({ auth }: PageProps) {
+type DashboardProps = {
+  auth: {
+    user: {
+      image?: string;
+      name: string;
+      roles: string;
+    };
+  };
+};
+
+export default function Dashboard({ auth }: DashboardProps) {
   const user = auth.user;
 
   return (

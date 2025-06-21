@@ -28,6 +28,9 @@ const NavLink = ({ href, icon: Icon, label }: any) => {
 };
 
 export default function NavMain() {
+  const { props } = usePage<{ unit_id: number }>();
+  const unitId = props.unit_id;
+
   const handleLogout = (e: React.FormEvent) => {
     e.preventDefault();
     router.post('/logout');
@@ -36,13 +39,13 @@ export default function NavMain() {
   return (
     <nav className="p-4 space-y-6">
       <div className="space-y-2">
-        <NavLink href="/DashboardMiniSoc" icon={LayoutDashboard} label="Dashboard" />
+        <NavLink href={`/unit/${unitId}/dashboard`} icon={LayoutDashboard} label="Dashboard" />
       </div>
 
       <div>
         <div className="text-xs text-gray-500 uppercase px-4">Transaksi</div>
         <div className="mt-2 space-y-2">
-          <NavLink href="/PemasukanMiniSoc" icon={ArrowUpRight} label="Pemasukan" />
+          <NavLink href={`/unit/${unitId}/pemasukan`} icon={ArrowUpRight} label="Pemasukan" />
           <NavLink href="/PengeluaranMiniSoc" icon={ArrowDownLeft} label="Pengeluaran" />
         </div>
       </div>

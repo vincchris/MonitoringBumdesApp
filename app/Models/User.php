@@ -20,12 +20,7 @@ class User extends Authenticatable
 
     protected $primaryKey = 'id_users';
 
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'roles',
-    ];
+    protected $guarded = ["id_users"];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -43,15 +38,13 @@ class User extends Authenticatable
      * @return array<string, string>
      */
     /**
-    * @return \Illuminate\Database\Eloquent\Relations\HasMany
-    */
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
 
-    public function unit() {
-        return $this->hasMany(Unit::class, 'users_id');
-    }
-
-    public function incomes() {
-        return $this->hasMany(Income::class, 'users_id');
+    public function units()
+    {
+        return $this->belongsToMany(Unit::class, 'unit_user', 'user_id', 'unit_id')
+            ->withTimestamps();
     }
 
     public function casts(): array
