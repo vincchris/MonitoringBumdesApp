@@ -56,8 +56,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Pemasukan
         Route::resource('pemasukan', PemasukanMiniSocController::class);
-        Route::put('/pemasukan/{id}', [PemasukanMiniSocController::class, 'update']);
-        Route::delete('/pemasukan/{id}', [PemasukanMiniSocController::class, 'destroy']);
         // Pengeluaran
         Route::resource('pengeluaran', PengeluaranMiniSocController::class)->only(['index', 'store']);
         // Kelola Laporan

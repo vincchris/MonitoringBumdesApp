@@ -136,7 +136,7 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan }: Props) {
                                     setData('tarif', tarif);
                                 }}>
                                     <option value="Member">Member</option>
-                                    <option value="Non Member">Non Member</option>
+                                    <option value="Non Member">Umum</option>
                                 </select>
                             </div>
 

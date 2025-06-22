@@ -160,7 +160,7 @@ class PemasukanMiniSocController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id, $unitId)
+    public function update(Request $request, string $unitId, string $id)
     {
         $user = auth()->user();
 
@@ -170,7 +170,6 @@ class PemasukanMiniSocController extends Controller
         if (!$user->units->contains('id_units', $unitId)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
         }
-
         $validated = $request->validate([
             'tanggal' => 'required|date',
             'penyewa' => 'required|string|max:255',
