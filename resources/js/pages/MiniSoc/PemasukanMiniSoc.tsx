@@ -80,9 +80,11 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan }: Props) {
     };
 
     const handleDelete = (id: number) => {
+        console.log(`Deleting: /unit/${unit_id}/pemasukan/${id}`);
         if (confirm('Yakin ingin menghapus data ini?')) {
             router.delete(`/unit/${unit_id}/pemasukan/${id}`);
         }
+        console.log("Unit ID:", unit_id);
     };
 
     return (

@@ -9,6 +9,7 @@ use App\Models\Tarif;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class PemasukanMiniSocController extends Controller
@@ -19,6 +20,8 @@ class PemasukanMiniSocController extends Controller
     public function index(Request $request, $unitId)
     {
         $user = auth()->user();
+
+        $user->load('units');
 
         // Pastikan user punya akses ke unit ini via pivot
         if (!$user->units->contains('id_units', $unitId)) {
@@ -38,7 +41,7 @@ class PemasukanMiniSocController extends Controller
 
         $formatted = $incomes->map(function ($item) {
             return [
-                'id' => $item->rent->rent_id,
+                'id' => $item->rent->id_rent,
                 'tanggal' => optional($item->updated_at)->format('Y-m-d'),
                 'penyewa' => $item->rent->tenant_name ?? '-',
                 'durasi' => (int) $item->rent->nominal ?? 0,
@@ -77,6 +80,9 @@ class PemasukanMiniSocController extends Controller
         // Masih ngebug
 
         $user = auth()->user();
+
+        $user->load('units');
+
 
         // Pastikan user punya akses ke unit ini
         if (!$user->units->contains('id_units', $unitId)) {
@@ -158,6 +164,9 @@ class PemasukanMiniSocController extends Controller
     {
         $user = auth()->user();
 
+        $user->load('units');
+
+
         if (!$user->units->contains('id_units', $unitId)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
         }
@@ -198,23 +207,26 @@ class PemasukanMiniSocController extends Controller
      */
     public function destroy(string $id, $unitId)
     {
-        $user = auth()->user();
+       $user = auth()->user()->load('units');
 
-        // Pastikan user punya akses
-        if (!$user->units->contains('id_units', $unitId)) {
-            abort(403, 'Anda tidak memiliki akses ke unit ini');
-        }
+    $unitIds = $user->units->pluck('id_units')->map(fn($val) => (int)$val)->toArray();
+    Log::info('Units yang dimiliki user: ', $unitIds);
+    Log::info('Unit ID yang dikirim di route: ' . $unitId);
 
-        $rent = RentTransaction::findOrFail($id);
-
-        // Hapus income terkait
-        $income = Income::where('rent_id', $rent->id_rent)->first();
-        if ($income) {
-            $income->delete();
-        }
-
-        $rent->delete();
-
-        return back()->with('success', 'Data berhasil dihapus');
+    if (!in_array((int) $unitId, $unitIds)) {
+        abort(403, 'Anda tidak memiliki akses ke unit ini');
     }
+
+    $rent = RentTransaction::findOrFail($id);
+
+    // Hapus income terkait
+    $income = Income::where('rent_id', $rent->id_rent)->first();
+    if ($income) {
+        $income->delete();
+    }
+
+    $rent->delete();
+
+    return back()->with('success', 'Data berhasil dihapus');
+}
 }
