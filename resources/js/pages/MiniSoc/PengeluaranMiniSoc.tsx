@@ -1,10 +1,11 @@
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
-import { Head, useForm } from '@inertiajs/react';
-import { Pencil, Trash2 } from 'lucide-react';
-import { FormEvent, useState } from 'react';
+import { Head, useForm, router, usePage } from '@inertiajs/react';
+import { CheckCircle, Pencil, RefreshCw, Trash2 } from 'lucide-react';
+import { FormEvent, useEffect, useState } from 'react';
 
 interface PengeluaranItem {
+    id: number;
     tanggal: string;
     kategori: string;
     deskripsi: string;
@@ -23,13 +24,72 @@ interface Props {
     pengeluaran: PengeluaranItem[];
 }
 
+interface FlashInfo {
+    message?: string;
+    method?: 'create' | 'update' | 'delete';
+}
+
+
 export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran }: Props) {
+    const { flash } = usePage().props as unknown as {
+        flash: { info?: { message?: string; method?: string } };
+    };
+
+    const [flashMethod, setFlashMethod] = useState<string>('');
+    const [flashColor, setFlashColor] = useState<string>('');
+    const [flashMessage, setFlashMessage] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!flash?.info?.message) return;
+
+        const { message, method } = flash.info;
+
+        setFlashMessage(message || '');
+        setFlashMethod(method || '');
+
+        switch (method) {
+            case 'delete':
+                setFlashColor('bg-red-600');
+                break;
+            case 'update':
+                setFlashColor('bg-blue-600');
+                break;
+            case 'create':
+            default:
+                setFlashColor('bg-green-600');
+                break;
+        }
+
+        const timeout = setTimeout(() => {
+            setFlashMessage(null);
+            setFlashMethod('');
+        }, 3000);
+
+        return () => clearTimeout(timeout);
+    }, [flash]);
+
+    const renderFlashIcon = () => {
+        switch (flashMethod) {
+            case 'create':
+                return <CheckCircle className="h-5 w-5 text-white" />;
+            case 'update':
+                return <RefreshCw className="h-5 w-5 text-white" />;
+            case 'delete':
+                return <Trash2 className="h-5 w-5 text-white" />;
+            default:
+                return <CheckCircle className="h-5 w-5 text-white" />;
+        }
+    };
+
     const [showModal, setShowModal] = useState(false);
+    const [editing, setEditing] = useState<null | number>(null);
 
     const {
         data: formData,
         setData,
         post,
+        put,
+        delete: destroy,
         processing,
         reset,
     } = useForm({
@@ -41,22 +101,61 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran }: Props
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
-        post(`/unit/${unit_id}/pengeluaran`, {
+        // Fix: URL untuk pengeluaran, bukan pemasukan
+        const method = editing === null ? post : put;
+        const url = editing === null ? `/unit/${unit_id}/pengeluaran` : `/unit/${unit_id}/pengeluaran/${editing}`;
+
+        method(url, {
             onSuccess: () => {
                 reset();
                 setShowModal(false);
+                setEditing(null);
             },
         });
     };
+
+    const handleEdit = (item: PengeluaranItem) => {
+        setData({
+            tanggal: item.tanggal,
+            kategori: item.kategori,
+            deskripsi: item.deskripsi,
+            biaya: item.biaya
+        });
+        setEditing(item.id);
+        setShowModal(true);
+    };
+
+    const handleDelete = (id: number) => {
+        console.log(`Deleting: /unit/${unit_id}/pengeluaran/${id}`);
+        if (confirm('Yakin ingin menghapus data ini?')) {
+            router.delete(`/unit/${unit_id}/pengeluaran/${id}`);
+        }
+        console.log('Unit ID:', unit_id);
+    };
+
 
     return (
         <AppLayout>
             <Head title="Pengeluaran Mini Soccer" />
 
+            {/* Flash Message */}
+            {flashMessage && (
+                <div
+                    className={`fixed top-6 left-1/2 z-50 flex -translate-x-1/2 transform items-center gap-2 rounded-md px-4 py-3 text-sm font-medium text-white shadow-lg transition-all duration-300 ${flashColor}`}
+                >
+                    {renderFlashIcon()}
+                    <span>{flashMessage}</span>
+                </div>
+            )}
+
             <div className="flex items-center justify-between px-6 pt-6 pb-8 text-black">
                 <h1 className="text-lg font-semibold text-black">Selamat datang, Pengelola Mini Soccer</h1>
                 <div className="flex items-center gap-3">
-                    <img src={user.image || '/assets/images/avatar.png'} alt="User Avatar" className="h-9 w-9 rounded-full object-cover" />
+                    <img
+                        src={user.image || '/assets/images/avatar.png'}
+                        alt="User Avatar"
+                        className="h-9 w-9 rounded-full object-cover"
+                    />
                     <div className="text-right">
                         <p className="text-sm font-semibold text-black">{user.name}</p>
                         <p className="mr-3 text-xs text-black">{user.roles}</p>
@@ -78,7 +177,9 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran }: Props
                         <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-black">
                             ✕
                         </button>
-                        <h2 className="mb-4 text-lg font-semibold">Tambah Pengeluaran</h2>
+                        <h2 className="mb-4 text-lg font-semibold">
+                            {editing ? 'Edit Pengeluaran' : 'Tambah Pengeluaran'}
+                        </h2>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
@@ -107,7 +208,7 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran }: Props
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Deskripsi</label>
                                 <input
-                                    type="number"
+                                    type="text"
                                     className="w-full rounded border bg-gray-100 px-4 py-2 outline-none"
                                     value={formData.deskripsi}
                                     onChange={(e) => setData('deskripsi', e.target.value)}
@@ -118,17 +219,23 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran }: Props
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Biaya</label>
                                 <input
+                                    type="number"
                                     className="w-full rounded border bg-gray-100 px-4 py-2 outline-none"
                                     value={formData.biaya}
                                     onChange={(e) => setData('biaya', Number(e.target.value))}
+                                    required
                                 />
                             </div>
 
                             <div className="flex justify-end gap-2 pt-2">
                                 <Button type="submit" disabled={processing} className="bg-blue-700 text-white hover:bg-blue-500">
-                                    Tambah
+                                    {editing ? 'Update' : 'Tambah'}
                                 </Button>
-                                <Button type="button" className="bg-gray-300 text-black" onClick={() => setShowModal(false)}>
+                                <Button type="button" className="bg-gray-300 text-black" onClick={() => {
+                                    setShowModal(false);
+                                    setEditing(null);
+                                    reset();
+                                }}>
                                     Batal
                                 </Button>
                             </div>
@@ -145,8 +252,8 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran }: Props
                             <th className="px-4 py-3 text-center">No</th>
                             <th className="px-4 py-3 text-center">Tanggal</th>
                             <th className="px-4 py-3 text-center">Kategori</th>
-                            <th className="px-4 py-3 text-center">Nominal</th>
-                            <th className="px-4 py-3 text-center">Keterangan</th>
+                            <th className="px-4 py-3 text-center">Deskripsi</th>
+                            <th className="px-4 py-3 text-center">Biaya</th>
                             <th className="px-4 py-3 text-center">Aksi</th>
                         </tr>
                     </thead>
@@ -160,10 +267,20 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran }: Props
                                 <td className="px-4 py-3 text-center">Rp. {item.biaya.toLocaleString('id-ID')}</td>
                                 <td className="px-4 py-3 text-center">
                                     <div className="flex justify-center gap-2">
-                                        <button type="button" className="rounded bg-yellow-500 px-3 py-1 text-white hover:bg-yellow-600" title="Edit">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleEdit(item)}
+                                            className="rounded bg-yellow-500 px-2 py-1 text-white hover:bg-yellow-600"
+                                            title="Edit"
+                                        >
                                             <Pencil size={16} />
                                         </button>
-                                        <button type="button" className="rounded bg-red-600 px-3 py-1 text-white hover:bg-red-700" title="Hapus">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDelete(item.id)}
+                                            className="rounded bg-red-600 px-2 py-1 text-white hover:bg-red-700"
+                                            title="Hapus"
+                                        >
                                             <Trash2 size={16} />
                                         </button>
                                     </div>

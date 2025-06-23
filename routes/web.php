@@ -4,6 +4,8 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MiniSoc\KelolaLaporanMiniSocController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\MiniSoc\PemasukanMiniSocController;
+use App\Http\Controllers\Buper\PemasukanBuperController;
+use App\Http\Controllers\Buper\PengeluaranBuperController;
 use App\Http\Controllers\MiniSoc\PengeluaranMiniSocController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -49,15 +51,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 abort(403, 'Anda tidak memiliki unit yang dapat diakses.');
             }
 
-            return Inertia::render('MiniSoc/DashboardMiniSoc', [
+            $page = match ($unit->id_units) {
+                1 => 'MiniSoc/DashboardMiniSoc',
+                2 => 'Buper/DashboardBuper',
+                default => 'dashboard',
+            };
+
+            return Inertia::render($page, [
                 'unit_id' => $unit->id_units,
             ]);
         })->middleware(['auth', 'verified'])->name('dashboard');
 
         // Pemasukan
         Route::resource('pemasukan', PemasukanMiniSocController::class);
+        Route::resource('pemasukan', PemasukanBuperController::class)->only(['index', 'store', 'update', 'destroy']);
         // Pengeluaran
-        Route::resource('pengeluaran', PengeluaranMiniSocController::class)->only(['index', 'store']);
+        Route::resource('pengeluaran', PengeluaranMiniSocController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('pengeluaran', PengeluaranBuperController::class)->only(['index', 'store', 'update', 'destroy']);
         // Kelola Laporan
         Route::get('/kelolalaporan', [KelolaLaporanMiniSocController::class, 'index'])->name('laporan.kelola');
 
