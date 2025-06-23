@@ -4,6 +4,7 @@ namespace App\Http\Controllers\MiniSoc;
 
 use App\Http\Controllers\Controller;
 use App\Models\Income;
+use App\Models\InitialBalance;
 use App\Models\RentTransaction;
 use App\Models\Tarif;
 use Illuminate\Support\Facades\DB;
@@ -101,7 +102,6 @@ class PemasukanMiniSocController extends Controller
         try {
             DB::beginTransaction();
 
-            // Ambil tarif berdasarkan tipe
             $tarif = Tarif::where('unit_id', $unitId)
                 ->where('category_name', $validated['tipe'])
                 ->first();
@@ -131,30 +131,22 @@ class PemasukanMiniSocController extends Controller
                 'updated_at' => now(),
             ]);
 
-            DB::commit();
+            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
+            if ($initialBalance) {
+                $initialBalance->update([
+                    'nominal' => $initialBalance->nominal + $totalBayar,
+                ]);
+            }
 
-            // return back()->with('success', 'Data pemasukan berhasil ditambahkan');
-            return redirect()->route('unit.pemasukan.index', ['unitId' => $unitId])->with('success', 'Data berhasil ditambahkan');
+            DB::commit();
+            return back()->with('info', [
+                'message' => 'Data pemasukan berhasil ditambah',
+                'method' => 'create'
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Gagal menambahkan data: ' . $e->getMessage()]);
         }
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
     }
 
     /**
@@ -180,52 +172,96 @@ class PemasukanMiniSocController extends Controller
 
         DB::beginTransaction();
 
-        $tarif = Tarif::where('unit_id', $unitId)
-            ->where('category_name', $validated['tipe'])
-            ->firstOrFail();
+        try {
+            $tarif = Tarif::where('unit_id', $unitId)
+                ->where('category_name', $validated['tipe'])
+                ->firstOrFail();
 
-        $totalBayar = $validated['durasi'] * $tarif->harga_per_unit;
+            $totalBayarBaru = $validated['durasi'] * $tarif->harga_per_unit;
 
-        $rent = RentTransaction::findOrFail($id);
-        $rent->update([
-            'tarif_id' => $tarif->id_tarif,
-            'tenant_name' => $validated['penyewa'],
-            'nominal' => $validated['durasi'],
-            'total_bayar' => $totalBayar,
-            'description' => $validated['keterangan'],
-            'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-        ]);
+            $rent = RentTransaction::with('income')->findOrFail($id);
+            $totalBayarLama = $rent->total_bayar ?? 0;
 
-        DB::commit();
+            $rent->update([
+                'tarif_id' => $tarif->id_tarif,
+                'tenant_name' => $validated['penyewa'],
+                'nominal' => $validated['durasi'],
+                'total_bayar' => $totalBayarBaru,
+                'description' => $validated['keterangan'],
+                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+            ]);
 
-        return back()->with('success', 'Data berhasil diperbarui');
+            // Koreksi saldo awal
+            $selisih = $totalBayarBaru - $totalBayarLama;
+            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
+            if ($initialBalance) {
+                $initialBalance->update([
+                    'nominal' => $initialBalance->nominal + $selisih,
+                ]);
+            }
+
+            DB::commit();
+            return back()->with('info', [
+                'message' => 'Data pemasukan berhasil diubah',
+                'method' => 'update'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Gagal memperbarui data: ' . $e->getMessage()]);
+        }
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id, $unitId)
+    public function destroy(string $unitId, string $id)
     {
-       $user = auth()->user()->load('units');
+        $user = auth()->user()->load('units');
 
-    $unitIds = $user->units->pluck('id_units')->map(fn($val) => (int)$val)->toArray();
-    Log::info('Units yang dimiliki user: ', $unitIds);
-    Log::info('Unit ID yang dikirim di route: ' . $unitId);
+        // Ambil semua unit ID yang dimiliki user
+        $unitIds = $user->units->pluck('id_units')->map(fn($val) => (int) $val)->toArray();
 
-    if (!in_array((int) $unitId, $unitIds)) {
-        abort(403, 'Anda tidak memiliki akses ke unit ini');
+        // Validasi akses ke unit
+        if (!in_array((int) $unitId, $unitIds)) {
+            abort(403, 'Anda tidak memiliki akses ke unit ini');
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $rent = RentTransaction::with('income', 'tarif')->where('id_rent', $id)->firstOrFail();
+
+            if ((int) $rent->tarif->unit_id !== (int) $unitId) {
+                abort(403, 'Transaksi ini tidak berasal dari unit Anda');
+            }
+
+            // Update saldo awal jika income ada
+            if ($rent->income) {
+                $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
+
+                if ($initialBalance) {
+                    $initialBalance->update([
+                        'amount' => $initialBalance->amount - $rent->total_bayar,
+                    ]);
+                }
+
+                $rent->income->delete();
+            }
+
+            $rent->delete();
+
+            DB::commit();
+            return back()->with('info', [
+                'message' => 'Data pemasukan berhasil dihapus',
+                'method' => 'delete'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Gagal menghapus data: ' . $e->getMessage());
+            return back()->with('info', [
+                'message' => 'Gagal menghapus data',
+                'method' => 'delete'
+            ]);
+        }
     }
-
-    $rent = RentTransaction::findOrFail($id);
-
-    // Hapus income terkait
-    $income = Income::where('rent_id', $rent->id_rent)->first();
-    if ($income) {
-        $income->delete();
-    }
-
-    $rent->delete();
-
-    return back()->with('success', 'Data berhasil dihapus');
-}
 }
