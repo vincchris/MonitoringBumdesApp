@@ -241,7 +241,7 @@ class PemasukanMiniSocController extends Controller
 
                 if ($initialBalance) {
                     $initialBalance->update([
-                        'amount' => $initialBalance->amount - $rent->total_bayar,
+                        'nominal' => $initialBalance->nominal - $rent->total_bayar,
                     ]);
                 }
 
