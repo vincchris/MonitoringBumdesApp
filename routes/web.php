@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MiniSoc\KelolaLaporanMiniSocController;
+use App\Http\Controllers\Buper\KelolaLaporanBuperController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\MiniSoc\PemasukanMiniSocController;
 use App\Http\Controllers\Buper\PemasukanBuperController;
@@ -70,6 +71,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('pengeluaran', PengeluaranBuperController::class)->only(['index', 'store', 'update', 'destroy']);
         // Kelola Laporan
         Route::get('/kelolalaporan', [KelolaLaporanMiniSocController::class, 'index'])->name('laporan.kelola');
+        Route::get('/kelolalaporan', [KelolaLaporanBuperController::class, 'index'])->name('laporan.kelola');
+
 
         Route::middleware(['auth'])->group(function () {
             Route::get('/kelolalaporan/export-pdf', [KelolaLaporanMiniSocController::class, 'exportPDF']);

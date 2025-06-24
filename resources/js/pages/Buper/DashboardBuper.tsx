@@ -47,7 +47,7 @@ export default function Dashboard({ auth }: DashboardProps) {
       {/* Header atas: Selamat datang dan data user */}
       <div className="flex items-center justify-between px-6 pt-6 text-black">
         <h1 className="text-lg font-semibold text-black">
-          Selamat datang, Pengelola Buper
+          Selamat datang, Pengelola Bumi Perkemahan
         </h1>
         <div className="flex items-center gap-3">
           <img

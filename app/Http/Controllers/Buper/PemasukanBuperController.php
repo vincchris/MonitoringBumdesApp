@@ -60,7 +60,6 @@ class PemasukanBuperController extends Controller
         try {
             DB::beginTransaction();
 
-            // Buat Tarif Baru Inline Jika Perlu, atau gunakan default tarif `<=300` atau `>300`
             $kategori = $validated['jumlah_peserta'] > 300 ? '>300' : '<=300';
             $tarif = Tarif::where('unit_id', $unitId)->where('category_name', $kategori)->first();
 
@@ -68,13 +67,11 @@ class PemasukanBuperController extends Controller
                 throw new \Exception('Tarif tidak ditemukan');
             }
 
-            $totalBayar = $validated['jumlah_peserta'] * $validated['biaya_sewa'];
-
             $rent = RentTransaction::create([
                 'tarif_id' => $tarif->id_tarif,
                 'tenant_name' => $validated['keterangan'],
                 'nominal' => $validated['jumlah_peserta'],
-                'total_bayar' => $totalBayar,
+                'total_bayar' => $validated['biaya_sewa'],
                 'description' => '',
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
                 'updated_at' => now(),
@@ -86,10 +83,14 @@ class PemasukanBuperController extends Controller
                 'updated_at' => now(),
             ]);
 
-            InitialBalance::updateOrCreate(
-                ['unit_id' => $unitId],
-                ['nominal' => DB::raw("nominal + $totalBayar")]
-            );
+            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
+            if ($initialBalance) {
+                $initialBalance->update([
+                    'nominal' => $initialBalance->nominal + $validated['biaya_sewa'],
+                ]);
+            }
+
+            // dd($totalBayar);
 
             DB::commit();
 
@@ -112,8 +113,8 @@ class PemasukanBuperController extends Controller
             'biaya_sewa' => 'required|numeric|min:0',
         ]);
 
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
 
             $rent = RentTransaction::with(['income', 'tarif'])->findOrFail($id);
             $totalLama = $rent->total_bayar;
@@ -125,7 +126,7 @@ class PemasukanBuperController extends Controller
                 throw new \Exception('Tarif tidak ditemukan');
             }
 
-            $totalBaru = $validated['jumlah_peserta'] * $validated['biaya_sewa'];
+            $totalBaru = $validated['biaya_sewa'];
 
             $rent->update([
                 'tarif_id' => $tarif->id_tarif,
@@ -136,10 +137,12 @@ class PemasukanBuperController extends Controller
             ]);
 
             $selisih = $totalBaru - $totalLama;
-
-            InitialBalance::where('unit_id', $unitId)->update([
-                'nominal' => DB::raw("nominal + $selisih"),
-            ]);
+            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
+            if ($initialBalance) {
+                $initialBalance->update([
+                    'nominal' => $initialBalance->nominal + $selisih,
+                ]);
+            }
 
             DB::commit();
             return back()->with('info', [
@@ -160,11 +163,13 @@ class PemasukanBuperController extends Controller
             $rent = RentTransaction::with(['income', 'tarif'])->findOrFail($id);
 
             if ($rent->income) {
-                $totalBayar = $rent->total_bayar;
+                $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
 
-                InitialBalance::where('unit_id', $unitId)->update([
-                    'nominal' => DB::raw("nominal - $totalBayar"),
-                ]);
+                if ($initialBalance) {
+                    $initialBalance->update([
+                        'nominal' => $initialBalance->nominal - $rent->total_bayar,
+                    ]);
+                }
 
                 $rent->income->delete();
             }
