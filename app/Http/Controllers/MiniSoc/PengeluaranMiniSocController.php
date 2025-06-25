@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\MiniSoc;
 
 use App\Http\Controllers\Controller;
+use App\Models\BalanceHistory;
 use App\Models\Expense;
 use App\Models\InitialBalance;
 use Illuminate\Http\Request;
@@ -44,7 +45,7 @@ class PengeluaranMiniSocController extends Controller
             'unit_id' => $unitId,
             'user' => $user->only(['id_users', 'name', 'email', 'roles', 'image']),
             'pengeluaran' => $formatted,
-                        'pagination' => [
+            'pagination' => [
                 'total' => $totalItems,
                 'per_page' => $perPage,
                 'current_page' => (int) $page,
@@ -80,12 +81,22 @@ class PengeluaranMiniSocController extends Controller
                 'updated_at' => now(),
             ]);
 
-            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
-            if ($initialBalance) {
-                $initialBalance->update([
-                    'nominal' => $initialBalance->nominal - $validated['biaya'],
-                ]);
+            $saldoSebelumnya = BalanceHistory::where('unit_id', $unitId)->latest()->value('saldo_sekarang');
+            if (is_null($saldoSebelumnya)) {
+                $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
+                $saldoSebelumnya = $initialBalance?->nominal ?? 0;
+                $initialBalanceId = $initialBalance?->id_initial_balance;
+            } else {
+                $initialBalanceId = null;
             }
+
+            BalanceHistory::create([
+                'unit_id' => $unitId,
+                'initial_balance_id' => $initialBalanceId,
+                'saldo_sebelum' => $saldoSebelumnya,
+                'jenis' => 'Pengeluaran',
+                'saldo_sekarang' => $saldoSebelumnya - $validated['biaya'],
+            ]);
 
             DB::commit();
 
@@ -134,12 +145,12 @@ class PengeluaranMiniSocController extends Controller
                 'updated_at' => now(),
             ]);
 
-            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
-            if ($initialBalance) {
-                $initialBalance->update([
-                    'nominal' => $initialBalance->nominal - $selisih,
+            $lastHistory = BalanceHistory::where('unit_id', $unitId)->latest()->first();
+            if ($lastHistory) {
+                $lastHistory->update([
+                    'saldo_sekarang' => $lastHistory->saldo_sekarang - $selisih,
                 ]);
-            }
+            }   
 
             DB::commit();
 
@@ -175,11 +186,10 @@ class PengeluaranMiniSocController extends Controller
 
             $jumlah = $expense->nominal;
 
-            // Kembalikan saldo awal
-            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
-            if ($initialBalance) {
-                $initialBalance->update([
-                    'nominal' => $initialBalance->nominal + $jumlah,
+            $lastHistory = BalanceHistory::where('unit_id', $unitId)->latest()->first();
+            if ($lastHistory) {
+                $lastHistory->update([
+                    'saldo_sekarang' => $lastHistory->saldo_sekarang + $jumlah,
                 ]);
             }
 

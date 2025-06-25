@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
-import { Head, useForm, router, usePage } from '@inertiajs/react';
-import { CheckCircle, Pencil, RefreshCw, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { CheckCircle, ChevronLeft, ChevronRight, Pencil, RefreshCw, Trash2 } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react';
 
 interface PengeluaranItem {
@@ -26,7 +26,7 @@ interface Props {
         per_page: number;
         current_page: number;
         last_page: number;
-    }
+    };
     pengeluaran: PengeluaranItem[];
 }
 
@@ -34,7 +34,6 @@ interface FlashInfo {
     message?: string;
     method?: 'create' | 'update' | 'delete';
 }
-
 
 export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran, pagination }: Props) {
     const { flash } = usePage().props as unknown as {
@@ -125,7 +124,7 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran, paginat
             tanggal: item.tanggal,
             kategori: item.kategori,
             deskripsi: item.deskripsi,
-            biaya: item.biaya
+            biaya: item.biaya,
         });
         setEditing(item.id);
         setShowModal(true);
@@ -138,7 +137,6 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran, paginat
         }
         console.log('Unit ID:', unit_id);
     };
-
 
     return (
         <AppLayout>
@@ -157,11 +155,7 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran, paginat
             <div className="flex items-center justify-between px-6 pt-6 pb-8 text-black">
                 <h1 className="text-lg font-semibold text-black">Selamat datang, Pengelola Mini Soccer</h1>
                 <div className="flex items-center gap-3">
-                    <img
-                        src={user.image || '/assets/images/avatar.png'}
-                        alt="User Avatar"
-                        className="h-9 w-9 rounded-full object-cover"
-                    />
+                    <img src={user.image || '/assets/images/avatar.png'} alt="User Avatar" className="h-9 w-9 rounded-full object-cover" />
                     <div className="text-right">
                         <p className="text-sm font-semibold text-black">{user.name}</p>
                         <p className="mr-3 text-xs text-black">{user.roles}</p>
@@ -169,7 +163,7 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran, paginat
                 </div>
             </div>
 
-            <div className='bg-white px-2 py-4 rounded-2xl'>
+            <div className="rounded-2xl bg-white px-2 py-4">
                 <div className="mt-3 mb-4 flex items-center justify-between px-6">
                     <h2 className="text-xl font-semibold text-gray-800">Pengeluaran - Mini Soccer</h2>
                     <Button onClick={() => setShowModal(true)} className="bg-blue-700 text-white hover:bg-blue-500">
@@ -184,9 +178,7 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran, paginat
                             <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-black">
                                 ✕
                             </button>
-                            <h2 className="mb-4 text-lg font-semibold">
-                                {editing ? 'Edit Pengeluaran' : 'Tambah Pengeluaran'}
-                            </h2>
+                            <h2 className="mb-4 text-lg font-semibold">{editing ? 'Edit Pengeluaran' : 'Tambah Pengeluaran'}</h2>
 
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
@@ -219,7 +211,6 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran, paginat
                                         className="w-full rounded border bg-gray-100 px-4 py-2 outline-none"
                                         value={formData.deskripsi}
                                         onChange={(e) => setData('deskripsi', e.target.value)}
-                                        required
                                     />
                                 </div>
 
@@ -238,11 +229,15 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran, paginat
                                     <Button type="submit" disabled={processing} className="bg-blue-700 text-white hover:bg-blue-500">
                                         {editing ? 'Update' : 'Tambah'}
                                     </Button>
-                                    <Button type="button" className="bg-gray-300 text-black" onClick={() => {
-                                        setShowModal(false);
-                                        setEditing(null);
-                                        reset();
-                                    }}>
+                                    <Button
+                                        type="button"
+                                        className="bg-gray-300 text-black"
+                                        onClick={() => {
+                                            setShowModal(false);
+                                            setEditing(null);
+                                            reset();
+                                        }}
+                                    >
                                         Batal
                                     </Button>
                                 </div>
@@ -296,7 +291,7 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran, paginat
                             ))}
                         </tbody>
                     </table>
-                    <div className="mt-4 flex justify-end gap-2 items-center">
+                    <div className="mt-4 flex items-center justify-end gap-2">
                         <Button
                             variant="outline"
                             size="icon"
@@ -307,7 +302,7 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran, paginat
                                 }
                             }}
                         >
-                            <ChevronLeft className="w-4 h-4" />
+                            <ChevronLeft className="h-4 w-4" />
                         </Button>
 
                         {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => (
@@ -332,7 +327,7 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran, paginat
                                 }
                             }}
                         >
-                            <ChevronRight className="w-4 h-4" />
+                            <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>

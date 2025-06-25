@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\MiniSoc;
 
 use App\Http\Controllers\Controller;
+use App\Models\BalanceHistory;
 use App\Models\Income;
 use App\Models\Expense;
 use App\Models\InitialBalance;
+use App\Models\RentTransaction;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\LaporanExport;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -101,93 +104,60 @@ class KelolaLaporanMiniSocController extends Controller
 
         $tanggalDipilih = $request->get('tanggal');
 
-        // Ambil saldo awal terbaru dari initial_balances
-        $initialBalance = InitialBalance::where('unit_id', $unit->id_units)->value('nominal') ?? 0;
+        // Ambil histori saldo berdasarkan unit
 
-        // Ambil data pemasukan
-        $incomes = Income::whereHas('rent.tarif.unit', function ($query) use ($unit) {
-            $query->where('id_units', $unit->id_units);
-        })
-            ->with('rent')
+        $histories = BalanceHistory::where('unit_id', $unit->id_units)
+            ->when($tanggalDipilih, function ($query) use ($tanggalDipilih) {
+                $query->whereDate('created_at', $tanggalDipilih);
+            })
+            ->orderByDesc('created_at')
             ->get()
             ->map(function ($item) {
+                $tanggalAwal = Carbon::parse($item->created_at)->startOfDay();
+                $tanggalAkhir = Carbon::parse($item->created_at)->endOfDay();
+                
+
+                //  Bug in description not showing (maybe in relationship)
+                $description = '-';
+
+                if ($item->jenis === 'Pendapatan') {
+                    $income = Income::whereHas('rent.tarif.unit', function ($q) use ($item) {
+                        $q->where('id_units', $item->unit_id);
+                    })
+                        ->whereBetween('created_at', [$tanggalAwal, $tanggalAkhir])
+                        ->with('rent')
+                        ->latest('created_at')
+                        ->first();
+
+                    $description = optional($income?->rent)->description ?? '';
+                }
+
+                if ($item->jenis === 'Pengeluaran') {
+                    $expense = Expense::where('unit_id', $item->unit_id)
+                        ->whereBetween('created_at', [$tanggalAwal, $tanggalAkhir])
+                        ->latest('created_at')
+                        ->first();
+
+                    $description = $expense->description ?? '';
+                }
+
                 return [
                     'tanggal' => optional($item->created_at)->format('Y-m-d'),
-                    'keterangan' => $item->rent->description ?? 'Pemasukan',
-                    'jenis' => 'Pendapatan',
-                    'nominal' => (int) $item->rent->total_bayar ?? 0,
+                    'keterangan' => $description,
+                    'jenis' => $item->jenis,
+                    'selisih' => $item->jenis === 'Pendapatan'
+                        ? $item->saldo_sekarang - $item->saldo_sebelum
+                        : $item->saldo_sebelum - $item->saldo_sekarang,
+                    'saldo' => number_format($item->saldo_sekarang, 0, '', ','), // hasil dengan pemisah ribuan
                     'created_at' => $item->created_at,
                 ];
             });
-
-        // Ambil data pengeluaran
-        $expenses = Expense::where('unit_id', $unit->id_units)
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'tanggal' => optional($item->created_at)->format('Y-m-d'),
-                    'keterangan' => $item->description ?? 'Pengeluaran',
-                    'jenis' => 'Pengeluaran',
-                    'nominal' => (int) $item->nominal,
-                    'created_at' => $item->created_at,
-                ];
-            });
-
-        // Gabung dan urutkan berdasarkan waktu dibuat (ASC, agar saldo akurat)
-        $merged = $incomes->concat($expenses)->sortBy('created_at')->values();
-
-        $finalLaporan = collect();
-
-        if ($tanggalDipilih) {
-            // Filter transaksi di tanggal tertentu
-            $laporanTanggal = $merged->filter(fn($item) => $item['tanggal'] === $tanggalDipilih);
-
-            // Hitung saldo sebelumnya
-            $saldoSebelumnya = $merged
-                ->filter(fn($item) => $item['tanggal'] < $tanggalDipilih)
-                ->reduce(function ($carry, $item) {
-                    return $carry + ($item['jenis'] === 'Pendapatan' ? $item['nominal'] : -$item['nominal']);
-                }, $initialBalance);
-
-            $saldo = $saldoSebelumnya;
-
-            $finalLaporan = $laporanTanggal->map(function ($item) {
-                $selisih = $item['jenis'] === 'Pendapatan'
-                    ? $item['nominal']
-                    : -$item['nominal'];
-
-                return [
-                    ...$item,
-                    'selisih' => $selisih,
-                    'saldo' => $item['saldo'] ?? null, 
-                ];
-            });
-        } else {
-            // Hitung saldo penuh
-            $saldo = $initialBalance;
-
-            $finalLaporan = $merged->map(function ($item) use (&$saldo) {
-                $selisih = $item['jenis'] === 'Pendapatan'
-                    ? $item['nominal']
-                    : -$item['nominal'];
-                $saldo += $selisih;
-
-                return [
-                    ...$item,
-                    'selisih' => $selisih,
-                    'saldo' => number_format($saldo, 0, '', ','),
-                ];
-            });
-        }
-
-        // Urutkan tampilan berdasarkan yang terbaru (DESC), tapi saldo tetap benar
-        $finalLaporan = $finalLaporan->sortByDesc(fn($item) => $item['created_at'])->values();
 
         // Pagination manual
         $page = $request->get('page', 1);
         $perPage = 10;
-        $paged = $finalLaporan->forPage($page, $perPage)->values();
-        $totalItems = $finalLaporan->count();
+        $paged = $histories->forPage($page, $perPage)->values();
+        $totalItems = $histories->count();
 
         return Inertia::render('MiniSoc/KelolaLaporanMiniSoc', [
             'auth' => [
@@ -196,7 +166,7 @@ class KelolaLaporanMiniSocController extends Controller
             'unit_id' => $unit->id_units,
             'laporanKeuangan' => $paged,
             'tanggal_dipilih' => $tanggalDipilih,
-            'initial_balance' => $initialBalance,
+            'initial_balance' => InitialBalance::where('unit_id', $unit->id_units)->value('nominal') ?? 0,
             'pagination' => [
                 'total' => $totalItems,
                 'per_page' => $perPage,
