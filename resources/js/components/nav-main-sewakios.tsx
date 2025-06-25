@@ -39,21 +39,21 @@ export default function NavMain() {
   return (
     <nav className="p-4 space-y-6">
       <div className="space-y-2">
-        <NavLink href={`/unit/${unitId}/dashboardBuper`} icon={LayoutDashboard} label="Dashboard" />
+        <NavLink href={`/unit/${unitId}/dashboardSewkios`} icon={LayoutDashboard} label="Dashboard" />
       </div>
 
       <div>
         <div className="text-xs text-gray-500 uppercase px-4">Transaksi</div>
         <div className="mt-2 space-y-2">
-          <NavLink href={`/unit/${unitId}/pemasukan-buper`} icon={ArrowUpRight} label="Pemasukanw" />
-          <NavLink href={`/unit/${unitId}/pengeluaran-buper`} icon={ArrowDownLeft} label="Pengeluaran" />
+          <NavLink href={`/unit/${unitId}/pemasukan-sewkios`} icon={ArrowUpRight} label="Pemasukan" />
+          <NavLink href={`/unit/${unitId}/pengeluaran-sewkios`} icon={ArrowDownLeft} label="Pengeluaran" />
         </div>
       </div>
 
       <div>
         <div className="text-xs text-gray-500 uppercase px-4">Laporan</div>
         <div className="mt-2 space-y-2">
-          <NavLink href={`/unit/${unitId}/kelolalaporan-buper`} icon={FileText} label="Kelola laporan" />
+          <NavLink href={`/unit/${unitId}/kelolalaporan-sewkios`} icon={FileText} label="Kelola laporan" />
         </div>
       </div>
 

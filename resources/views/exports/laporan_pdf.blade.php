@@ -7,7 +7,7 @@
         body { font-family: sans-serif; font-size: 12px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-        th { background-color: #eee; }
+        th { background-color: #f3f4f6; } /* sesuai FE bg-gray-100 */
     </style>
 </head>
 <body>
@@ -20,19 +20,21 @@
                 <th>Tanggal</th>
                 <th>Keterangan</th>
                 <th>Jenis Transaksi</th>
-                <th>Nominal</th>
+                <th>Nominal</th> {{-- ini adalah selisih --}}
                 <th>Saldo Kas</th>
             </tr>
         </thead>
         <tbody>
-            @php $i = 1; @endphp
-            @foreach($laporan as $item)
+            @foreach($laporan as $i => $item)
                 <tr>
-                    <td>{{ $i++ }}</td>
+                    <td>{{ $i + 1 }}</td>
                     <td>{{ $item['tanggal'] }}</td>
                     <td>{{ $item['keterangan'] }}</td>
                     <td>{{ $item['jenis'] }}</td>
-                    <td>Rp {{ number_format($item['nominal'], 0, ',', '.') }}</td>
+                    <td>
+                        {{ $item['selisih'] >= 0 ? '+' : '-' }}
+                        Rp {{ number_format(abs($item['selisih']), 0, ',', '.') }}
+                    </td>
                     <td>Rp {{ number_format($item['saldo'], 0, ',', '.') }}</td>
                 </tr>
             @endforeach

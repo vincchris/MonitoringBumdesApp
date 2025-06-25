@@ -24,7 +24,7 @@ type PageProps = {
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Kelola Laporan - Mini soccer',
+        title: 'Kelola Laporan - Bumi Perkemahan',
         href: '/KelolaLaporanBuper',
     },
 ];
@@ -47,8 +47,9 @@ export default function KelolaLaporan({ auth, unit_id, laporanKeuangan }: PagePr
                 </div>
             </div>
 
+            <div className='bg-white px-2 py-4 rounded-2xl'>
             <div className="mb-4 px-6">
-                <h2 className="text-xl font-semibold text-gray-800">Kelola Laporan Keuangan - Buper</h2>
+                <h2 className="text-xl font-semibold text-gray-800">Kelola Laporan Keuangan - Bumi Perkemahan</h2>
             </div>
 
             <div className="mb-4 flex justify-end gap-2 px-6">
@@ -91,6 +92,7 @@ export default function KelolaLaporan({ auth, unit_id, laporanKeuangan }: PagePr
                     </tbody>
                 </table>
             </div>
+        </div>
         </AppLayout>
     );
 }

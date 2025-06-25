@@ -33,7 +33,7 @@ interface FlashInfo {
     method?: 'create' | 'update' | 'delete';
 }
 
-export default function PemasukanMiniSoc({ user, unit_id, pemasukan, tarifs }: Props) {
+export default function PemasukanBuper({ user, unit_id, pemasukan, tarifs }: Props) {
     const { flash } = usePage().props as unknown as {
         flash: { info?: { message?: string; method?: string } };
     };
@@ -116,7 +116,7 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, tarifs }: P
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
         const method = editing === null ? post : put;
-        const url = editing === null ? `/unit/${unit_id}/pemasukan` : `/unit/${unit_id}/pemasukan/${editing}`;
+        const url = editing === null ? `/unit/${unit_id}/pemasukan-buper` : `/unit/${unit_id}/pemasukan-buper/${editing}`;
 
         method(url, {
             onSuccess: () => {
@@ -139,9 +139,9 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, tarifs }: P
     };
 
     const handleDelete = (id: number) => {
-        console.log(`Deleting: /unit/${unit_id}/pemasukan/${id}`);
+        console.log(`Deleting: /unit/${unit_id}/pemasukan-buper/${id}`);
         if (confirm('Yakin ingin menghapus data ini?')) {
-            router.delete(`/unit/${unit_id}/pemasukan/${id}`);
+            router.delete(`/unit/${unit_id}/pemasukan-buper/${id}`);
         }
         console.log('Unit ID:', unit_id);
     };

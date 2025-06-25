@@ -52,10 +52,24 @@ class PemasukanMiniSocController extends Controller
                 'keterangan' => $item->rent->description ?? '-',
             ];
         });
+
+        // Pagination
+        $page = $request->get('page', 1);
+        $perPage = 10;
+
+        $paged = $incomes->forPage($page, $perPage)->values();
+        $totalItems = $incomes->count();
+
         return Inertia::render('MiniSoc/PemasukanMiniSoc', [
             'unit_id' => $unitId,
             'user' => $user->only(['id_users', 'name', 'email']),
             'pemasukan' => $formatted,
+            'pagination' => [
+                'total' => $totalItems,
+                'per_page' => $perPage,
+                'current_page' => (int) $page,
+                'last_page' => ceil($totalItems / $perPage),
+            ]
         ]);
 
         // return response()->json([

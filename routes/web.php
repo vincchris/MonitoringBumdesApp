@@ -55,6 +55,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $page = match ($unit->id_units) {
                 1 => 'MiniSoc/DashboardMiniSoc',
                 2 => 'Buper/DashboardBuper',
+                3 => 'SewaKios/DashboardSewKios',
+                4 => 'Airweslik/DashboardAirweslik',
+                5 => 'Internetdesa/DashboardInterdesa',
+
                 default => 'dashboard',
             };
 
@@ -64,14 +68,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         })->middleware(['auth', 'verified'])->name('dashboard');
 
         // Pemasukan
-        Route::resource('pemasukan', PemasukanMiniSocController::class);
-        Route::resource('pemasukan', PemasukanBuperController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('pemasukan-minisoc', PemasukanMiniSocController::class);
+        Route::resource('pemasukan-buper', PemasukanBuperController::class)->only(['index', 'store', 'update', 'destroy']);
         // Pengeluaran
-        Route::resource('pengeluaran', PengeluaranMiniSocController::class)->only(['index', 'store', 'update', 'destroy']);
-        Route::resource('pengeluaran', PengeluaranBuperController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('pengeluaran-minisoc', PengeluaranMiniSocController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('pengeluaran-buper', PengeluaranBuperController::class)->only(['index', 'store', 'update', 'destroy']);
         // Kelola Laporan
-        Route::get('/kelolalaporan', [KelolaLaporanMiniSocController::class, 'index'])->name('laporan.kelola');
-        Route::get('/kelolalaporan', [KelolaLaporanBuperController::class, 'index'])->name('laporan.kelola');
+        Route::get('/kelolalaporan-minisoc', [KelolaLaporanMiniSocController::class, 'index'])->name('laporan.minisoc.kelola');
+        Route::get('/kelolalaporan-buper', [KelolaLaporanBuperController::class, 'index'])->name('laporan.buper.kelola');
 
 
         Route::middleware(['auth'])->group(function () {

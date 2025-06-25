@@ -33,10 +33,23 @@ class PengeluaranMiniSocController extends Controller
             'biaya' => (int) $item->nominal,
         ]);
 
+        // Pagination
+        $page = $request->get('page', 1);
+        $perPage = 10;
+
+        $paged = $expenses->forPage($page, $perPage)->values();
+        $totalItems = $expenses->count();
+
         return Inertia::render('MiniSoc/PengeluaranMiniSoc', [
             'unit_id' => $unitId,
             'user' => $user->only(['id_users', 'name', 'email', 'roles', 'image']),
             'pengeluaran' => $formatted,
+                        'pagination' => [
+                'total' => $totalItems,
+                'per_page' => $perPage,
+                'current_page' => (int) $page,
+                'last_page' => ceil($totalItems / $perPage),
+            ]
         ]);
     }
 
