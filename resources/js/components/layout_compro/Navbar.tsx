@@ -36,8 +36,6 @@ const Navbar: React.FC = () => {
             ],
         },
         { name: 'Unit Usaha', href: '/unit-usaha' },
-        { name: 'Berita', href: '/berita' },
-        { name: 'Layanan', href: '/produk-layanan' },
         { name: 'Galeri', href: '/galeri' },
         { name: 'Laporan & Transparansi', href: '/laporan-transparansi' },
         { name: 'Kontak', href: '/kontak' },

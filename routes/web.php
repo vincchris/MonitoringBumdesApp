@@ -25,7 +25,7 @@ Route::post('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
-    return redirect('/login');
+    return redirect('/Login');
 })->name('logout');
 
 Route::get('/Home', [HomeController::class, 'index'])->name('HomeCompro');

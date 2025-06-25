@@ -32,7 +32,7 @@ class PemasukanBuperController extends Controller
                 'tanggal' => optional($item->updated_at)->format('Y-m-d'),
                 'keterangan' => $item->rent->tenant_name,
                 'jumlah_peserta' => (int) $item->rent->nominal,
-                'biaya_sewa' => $item->rent->tarif->harga_per_unit ?? 0,
+                'biaya_sewa' => number_format($item->rent->tarif->harga_per_unit ?? 0, 0, '', ','),
             ];
         });
 
