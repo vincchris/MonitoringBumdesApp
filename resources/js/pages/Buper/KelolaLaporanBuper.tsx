@@ -47,52 +47,53 @@ export default function KelolaLaporan({ auth, unit_id, laporanKeuangan }: PagePr
                 </div>
             </div>
 
-            <div className='bg-white px-2 py-4 rounded-2xl'>
-            <div className="mb-4 px-6">
-                <h2 className="text-xl font-semibold text-gray-800">Kelola Laporan Keuangan - Bumi Perkemahan</h2>
-            </div>
+            <div className="rounded-2xl bg-white px-2 py-4">
+                <div className="mb-4 px-6">
+                    <h2 className="text-xl font-semibold text-gray-800">Kelola Laporan Keuangan - Bumi Perkemahan</h2>
+                </div>
 
-            <div className="mb-4 flex justify-end gap-2 px-6">
-                <a href={`/unit/${unit_id}/kelolalaporan/export-pdf`} className="rounded-md bg-red-500 px-4 py-2 text-white hover:bg-red-600">
-                    Download PDF
-                </a>
-                <a href={`/unit/${unit_id}/kelolalaporan/export-excel`} className="rounded-md bg-green-500 px-4 py-2 text-white hover:bg-green-600">
-                    Download Excel
-                </a>
-            </div>
+                <div className="mb-4 flex justify-end gap-2 px-6">
+                    <a href={`/unit/${unit_id}/kelolalaporan/export-pdf`} className="rounded-md bg-red-500 px-4 py-2 text-white hover:bg-red-600">
+                        Download PDF
+                    </a>
+                    <a
+                        href={`/unit/${unit_id}/kelolalaporan/export-excel`}
+                        className="rounded-md bg-green-500 px-4 py-2 text-white hover:bg-green-600"
+                    >
+                        Download Excel
+                    </a>
+                </div>
 
-            <div className="overflow-x-auto rounded-xl border border-gray-200 px-6">
-                <table className="min-w-full bg-white text-sm text-black">
-                    <thead className="bg-gray-100 font-semibold text-black">
-                        <tr>
-                            <th className="px-4 py-3 text-left">No</th>
-                            <th className="px-4 py-3 text-left">Tanggal</th>
-                            <th className="px-4 py-3 text-left">Keterangan</th>
-                            <th className="px-4 py-3 text-left">Jenis Transaksi</th>
-                            {/* <th className="px-4 py-3 text-left">Nominal</th> */}
-                            <th className="px-4 py-3 text-left">Selisih saldo</th>
-                            <th className="px-4 py-3 text-left">Jumlah Saldo</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {laporanKeuangan.map((item, i) => (
-                            <tr key={i} className="border-t">
-                                <td className="px-4 py-3">{i + 1}</td>
-                                <td className="px-4 py-3">{item.tanggal}</td>
-                                <td className="px-4 py-3">{item.keterangan}</td>
-                                <td className="px-4 py-3">{item.jenis}</td>
-                                {/* <td className="px-4 py-3">Rp. {item.nominal.toLocaleString('id-ID')}</td> */}
-                                <td className={`px-4 py-3 ${item.selisih >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                    {item.selisih >= 0 ? '+' : '-'} Rp. {Math.abs(item.selisih).toLocaleString('id-ID')}
-                                </td>
-
-                                <td className="px-4 py-3">Rp. {item.saldo.toLocaleString('id-ID')}</td>
+                <div className="overflow-x-auto rounded-xl border border-gray-200 px-6">
+                    <table className="min-w-full bg-white text-sm text-black">
+                        <thead className="bg-gray-100 font-semibold text-black">
+                            <tr>
+                                <th className="px-4 py-3 text-left">No</th>
+                                <th className="px-4 py-3 text-left">Tanggal</th>
+                                <th className="px-4 py-3 text-left">Keterangan</th>
+                                <th className="px-4 py-3 text-left">Jenis Transaksi</th>
+                                <th className="px-4 py-3 text-left">Nominal</th>
+                                <th className="px-4 py-3 text-left">Jumlah Saldo</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {laporanKeuangan.map((item, i) => (
+                                <tr key={i} className="border-t">
+                                    <td className="px-4 py-3">{i + 1}</td>
+                                    <td className="px-4 py-3">{item.tanggal}</td>
+                                    <td className="px-4 py-3">{item.keterangan}</td>
+                                    <td className="px-4 py-3">{item.jenis}</td>
+                                    <td className={`px-4 py-3 ${item.jenis === 'Pendapatan' ? 'text-green-600' : 'text-red-600'}`}>
+                                        {item.jenis === 'Pendapatan' ? '+' : '-'} Rp. {Math.abs(item.selisih).toLocaleString('id-ID')}
+                                    </td>
+
+                                    <td className="px-4 py-3">Rp. {item.saldo.toLocaleString('id-ID')}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
         </AppLayout>
     );
 }

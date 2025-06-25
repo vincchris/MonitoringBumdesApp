@@ -44,12 +44,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('unit/{unitId}')->name('unit.')->group(function () {
 
         // Dashboard unit tertentu
-        Route::get('/dashboard', function () {
+        Route::get('/dashboard', function ($unitId) {
             $user = Auth::user();
-            $unit = $user->units()->first();
+            $unit = $user->units()->where('id_units', $unitId)->first();
 
             if (!$unit) {
-                abort(403, 'Anda tidak memiliki unit yang dapat diakses.');
+                abort(403, 'Anda tidak memiliki akses ke unit ini.');
             }
 
             $page = match ($unit->id_units) {
@@ -58,21 +58,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 3 => 'SewaKios/DashboardSewKios',
                 4 => 'Airweslik/DashboardAirweslik',
                 5 => 'Internetdesa/DashboardInterdesa',
-
-                default => 'dashboard',
+                default => 'Dashboard',
             };
 
             return Inertia::render($page, [
-                'unit_id' => $unit->id_units,
+                'unit_id' => (int) $unit->id_units,
+                'auth' => [
+                    'user' => $user
+                ]
             ]);
         })->middleware(['auth', 'verified'])->name('dashboard');
 
         // Pemasukan
         Route::resource('pemasukan-minisoc', PemasukanMiniSocController::class);
-        Route::resource('pemasukan-buper', PemasukanBuperController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('pemasukan-buper', PemasukanBuperController::class);
         // Pengeluaran
         Route::resource('pengeluaran-minisoc', PengeluaranMiniSocController::class)->only(['index', 'store', 'update', 'destroy']);
-        Route::resource('pengeluaran-buper', PengeluaranBuperController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('pengeluaran-buper', PengeluaranBuperController::class);
         // Kelola Laporan
         Route::get('/kelolalaporan-minisoc', [KelolaLaporanMiniSocController::class, 'index'])->name('laporan.minisoc.kelola');
         Route::get('/kelolalaporan-buper', [KelolaLaporanBuperController::class, 'index'])->name('laporan.buper.kelola');

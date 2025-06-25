@@ -1,8 +1,8 @@
-import AppLayout from '@/layouts/app-layout';
-import { Head, useForm, usePage, router } from '@inertiajs/react';
-import { FormEvent, useState, useEffect } from 'react';
-import { CheckCircle, Pencil, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import AppLayout from '@/layouts/app-layout';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { CheckCircle, Pencil, RefreshCw, Trash2 } from 'lucide-react';
+import { FormEvent, useEffect, useState } from 'react';
 
 interface ExpenseItem {
     id: number;
@@ -79,17 +79,10 @@ export default function PengeluaranBuper({ user, unit_id, pengeluaran }: Props) 
         }
     };
 
-
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<null | number>(null);
 
-    const {
-        data,
-        setData,
-        post,
-        put,
-        reset,
-    } = useForm({
+    const { data, setData, post, put, reset } = useForm({
         tanggal: '',
         kategori: '',
         deskripsi: '',
@@ -99,9 +92,7 @@ export default function PengeluaranBuper({ user, unit_id, pengeluaran }: Props) 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
         const method = editing === null ? post : put;
-        const url = editing === null
-            ? `/unit/${unit_id}/pengeluaran`
-            : `/unit/${unit_id}/pengeluaran/${editing}`;
+        const url = editing === null ? `/unit/${unit_id}/pengeluaran-buper` : `/unit/${unit_id}/pengeluaran-buper/${editing}`;
 
         method(url, {
             onSuccess: () => {
@@ -125,7 +116,7 @@ export default function PengeluaranBuper({ user, unit_id, pengeluaran }: Props) 
 
     const handleDelete = (id: number) => {
         if (confirm('Yakin ingin menghapus data ini?')) {
-            router.delete(`/unit/${unit_id}/pengeluaran/${id}`);
+            router.delete(`/unit/${unit_id}/pengeluaran-buper/${id}`);
         }
     };
 
@@ -144,11 +135,7 @@ export default function PengeluaranBuper({ user, unit_id, pengeluaran }: Props) 
             <div className="flex items-center justify-between px-6 pt-6 pb-8 text-black">
                 <h1 className="text-lg font-semibold text-black">Selamat datang, Pengelola Bumi Perkemahan</h1>
                 <div className="flex items-center gap-3">
-                    <img
-                        src={user.image || '/assets/images/avatar.png'}
-                        alt="User Avatar"
-                        className="h-9 w-9 rounded-full object-cover"
-                    />
+                    <img src={user.image || '/assets/images/avatar.png'} alt="User Avatar" className="h-9 w-9 rounded-full object-cover" />
                     <div className="text-right">
                         <p className="text-sm font-semibold text-black">{user.name}</p>
                         <p className="mr-3 text-xs text-black">{user.roles}</p>
@@ -156,16 +143,13 @@ export default function PengeluaranBuper({ user, unit_id, pengeluaran }: Props) 
                 </div>
             </div>
 
-            <div className='bg-white px-2 py-4 rounded-2xl'>
+            <div className="rounded-2xl bg-white px-2 py-4">
                 <div className="mt-3 mb-4 flex items-center justify-between px-6">
                     <h2 className="text-xl font-semibold text-gray-800">Pengeluaran - Bumi Perkemahan</h2>
                     <Button onClick={() => setShowModal(true)} className="bg-blue-700 text-white hover:bg-blue-500">
                         Tambah pengeluaran harian +
                     </Button>
                 </div>
-
-
-
 
                 {showModal && (
                     <div className="bg-opacity-30 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-[4px]">
@@ -246,7 +230,7 @@ export default function PengeluaranBuper({ user, unit_id, pengeluaran }: Props) 
                 )}
 
                 <div className="mx-6 overflow-x-auto rounded-xl border border-gray-200">
-                    <table className="min-w-full text-sm bg-white text-black">
+                    <table className="min-w-full bg-white text-sm text-black">
                         <thead className="bg-gray-100 text-black">
                             <tr>
                                 <th className="px-4 py-3 text-center">No</th>
@@ -267,10 +251,16 @@ export default function PengeluaranBuper({ user, unit_id, pengeluaran }: Props) 
                                     <td className="px-4 py-3 text-center">Rp {item.biaya.toLocaleString('id-ID')}</td>
                                     <td className="px-4 py-3 text-center">
                                         <div className="flex justify-center gap-2">
-                                            <button onClick={() => handleEdit(item)} className="bg-yellow-500 hover:bg-yellow-600 px-2 py-1 rounded text-white">
+                                            <button
+                                                onClick={() => handleEdit(item)}
+                                                className="rounded bg-yellow-500 px-2 py-1 text-white hover:bg-yellow-600"
+                                            >
                                                 <Pencil size={16} />
                                             </button>
-                                            <button onClick={() => handleDelete(item.id)} className="bg-red-600 hover:bg-red-700 px-2 py-1 rounded text-white">
+                                            <button
+                                                onClick={() => handleDelete(item.id)}
+                                                className="rounded bg-red-600 px-2 py-1 text-white hover:bg-red-700"
+                                            >
                                                 <Trash2 size={16} />
                                             </button>
                                         </div>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Buper;
 
 use App\Http\Controllers\Controller;
+use App\Models\BalanceHistory;
 use App\Models\Income;
 use App\Models\InitialBalance;
 use App\Models\RentTransaction;
@@ -83,14 +84,24 @@ class PemasukanBuperController extends Controller
                 'updated_at' => now(),
             ]);
 
-            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
-            if ($initialBalance) {
-                $initialBalance->update([
-                    'nominal' => $initialBalance->nominal + $validated['biaya_sewa'],
-                ]);
+            $saldoSebelumnya = BalanceHistory::where('unit_id', $unitId)->latest()->value('saldo_sekarang');
+
+            if (is_null($saldoSebelumnya)) {
+                $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
+                $saldoSebelumnya = $initialBalance?->nominal ?? 0;
+                $initialBalanceId = $initialBalance?->id_initial_balance;
+            } else {
+                $initialBalanceId = null;
             }
 
-            // dd($totalBayar);
+            BalanceHistory::create([
+                'unit_id' => $unitId,
+                'initial_balance_id' => $initialBalanceId,
+                'saldo_sebelum' => $saldoSebelumnya,
+                'jenis' => 'Pendapatan',
+                'saldo_sekarang' => $saldoSebelumnya + $validated['biaya_sewa'],
+            ]);
+
 
             DB::commit();
 
@@ -137,10 +148,15 @@ class PemasukanBuperController extends Controller
             ]);
 
             $selisih = $totalBaru - $totalLama;
-            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
-            if ($initialBalance) {
-                $initialBalance->update([
-                    'nominal' => $initialBalance->nominal + $selisih,
+            $lastHistory = BalanceHistory::where('unit_id', $unitId)->latest()->first();
+
+            if ($lastHistory) {
+                $saldoSebelum = $lastHistory->saldo_sekarang;
+                $saldoSesudah = $saldoSebelum + $selisih;
+
+                $lastHistory->update([
+                    'saldo_sebelum' => $saldoSebelum,
+                    'saldo_sekarang' => $saldoSesudah,
                 ]);
             }
 
@@ -161,19 +177,21 @@ class PemasukanBuperController extends Controller
             DB::beginTransaction();
 
             $rent = RentTransaction::with(['income', 'tarif'])->findOrFail($id);
+            $totalBayar = $rent->total_bayar ?? 0;
 
             if ($rent->income) {
-                $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
+                // Ambil histori saldo terakhir
+                $lastHistory = BalanceHistory::where('unit_id', $unitId)
+                    ->latest()
+                    ->first();
 
-                if ($initialBalance) {
-                    $initialBalance->update([
-                        'nominal' => $initialBalance->nominal - $rent->total_bayar,
-                    ]);
+                // Cek apakah histori terakhir ini punya nilai saldo_setelah yang sama (karena transaksi pemasukan ini)
+                if ($lastHistory && $lastHistory->saldo_sekarang == ($lastHistory->saldo_sebelum + $totalBayar)) {
+                    $lastHistory->delete();
                 }
 
                 $rent->income->delete();
             }
-
             $rent->delete();
 
             DB::commit();

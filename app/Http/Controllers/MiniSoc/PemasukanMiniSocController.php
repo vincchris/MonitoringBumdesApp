@@ -260,9 +260,9 @@ class PemasukanMiniSocController extends Controller
             abort(403, 'Anda tidak memiliki akses ke unit ini');
         }
 
-        DB::beginTransaction();
-
+        
         try {
+            DB::beginTransaction();
             $rent = RentTransaction::with('income', 'tarif')->where('id_rent', $id)->firstOrFail();
 
             if ((int) $rent->tarif->unit_id !== (int) $unitId) {
@@ -284,9 +284,6 @@ class PemasukanMiniSocController extends Controller
 
                 $rent->income->delete();
             }
-
-            $rent->delete();
-
             $rent->delete();
 
             DB::commit();

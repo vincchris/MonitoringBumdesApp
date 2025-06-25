@@ -36,12 +36,10 @@ class AuthenticatedSessionController extends Controller
         if ($user->roles === 'pengelola') {
 
             // Ambil unit pertama dari relasi unit_user
-            $unit = $user->units->first();
+            $unit = $user->units()->first(); // relasi ke tabel unit_user
 
             if ($unit) {
-                return redirect()->intended(
-                    route('unit.dashboard', ['unitId' => $unit->id_units], false)
-                );
+                return redirect()->route('unit.dashboard', ['unitId' => $unit->id_units]);
             }
 
             abort(403, 'Anda tidak memiliki unit yang bisa diakses.');
