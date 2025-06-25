@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\MiniSoc;
 
 use App\Http\Controllers\Controller;
+use App\Models\BalanceHistory;
 use App\Models\Income;
 use App\Models\InitialBalance;
 use App\Models\RentTransaction;
@@ -113,8 +114,8 @@ class PemasukanMiniSocController extends Controller
             'keterangan' => 'nullable|string|max:500',
         ]);
 
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
 
             $tarif = Tarif::where('unit_id', $unitId)
                 ->where('category_name', $validated['tipe'])
@@ -145,12 +146,26 @@ class PemasukanMiniSocController extends Controller
                 'updated_at' => now(),
             ]);
 
-            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
-            if ($initialBalance) {
-                $initialBalance->update([
-                    'nominal' => $initialBalance->nominal + $totalBayar,
-                ]);
+
+            $saldoSebelumnya = BalanceHistory::where('unit_id', $unitId)->latest()->value('saldo_sekarang');
+
+            if (is_null($saldoSebelumnya)) {
+                $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
+                $saldoSebelumnya = $initialBalance?->nominal ?? 0;
+                $initialBalanceId = $initialBalance?->id_initial_balance;
+            } else {
+                $initialBalanceId = null;
             }
+
+            BalanceHistory::create([
+                'unit_id' => $unitId,
+                'initial_balance_id' => $initialBalanceId,
+                'saldo_sebelum' => $saldoSebelumnya,
+                'jenis' => 'Pendapatan',
+                'saldo_sekarang' => $saldoSebelumnya + $totalBayar,
+            ]);
+
+            // dd($request);
 
             DB::commit();
             return back()->with('info', [
@@ -205,12 +220,17 @@ class PemasukanMiniSocController extends Controller
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
-            // Koreksi saldo awal
             $selisih = $totalBayarBaru - $totalBayarLama;
-            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
-            if ($initialBalance) {
-                $initialBalance->update([
-                    'nominal' => $initialBalance->nominal + $selisih,
+
+            $lastHistory = BalanceHistory::where('unit_id', $unitId)->latest()->first();
+
+            if ($lastHistory) {
+                $saldoSebelum = $lastHistory->saldo_sekarang;
+                $saldoSesudah = $saldoSebelum + $selisih;
+
+                $lastHistory->update([
+                    'saldo_sebelum' => $saldoSebelum,
+                    'saldo_sekarang' => $saldoSesudah,
                 ]);
             }
 
@@ -249,18 +269,23 @@ class PemasukanMiniSocController extends Controller
                 abort(403, 'Transaksi ini tidak berasal dari unit Anda');
             }
 
-            // Update saldo awal jika income ada
-            if ($rent->income) {
-                $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
+            $totalBayar = $rent->total_bayar ?? 0;
 
-                if ($initialBalance) {
-                    $initialBalance->update([
-                        'nominal' => $initialBalance->nominal - $rent->total_bayar,
-                    ]);
+            if ($rent->income) {
+                // Ambil histori saldo terakhir
+                $lastHistory = BalanceHistory::where('unit_id', $unitId)
+                    ->latest()
+                    ->first();
+
+                // Cek apakah histori terakhir ini punya nilai saldo_setelah yang sama (karena transaksi pemasukan ini)
+                if ($lastHistory && $lastHistory->saldo_sekarang == ($lastHistory->saldo_sebelum + $totalBayar)) {
+                    $lastHistory->delete();
                 }
 
                 $rent->income->delete();
             }
+
+            $rent->delete();
 
             $rent->delete();
 

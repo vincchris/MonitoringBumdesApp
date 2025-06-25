@@ -99,17 +99,16 @@ class KelolaLaporanMiniSocController extends Controller
             abort(403, 'Anda tidak memiliki unit yang dapat diakses.');
         }
 
-        // Ambil tanggal dari query parameter (contoh: ?tanggal=2025-06-25)
         $tanggalDipilih = $request->get('tanggal');
 
-        // Ambil saldo awal unit
+        // Ambil saldo awal terbaru dari initial_balances
         $initialBalance = InitialBalance::where('unit_id', $unit->id_units)->value('nominal') ?? 0;
 
-        // Ambil pemasukan (Income)
+        // Ambil data pemasukan
         $incomes = Income::whereHas('rent.tarif.unit', function ($query) use ($unit) {
             $query->where('id_units', $unit->id_units);
         })
-            ->with(['rent'])
+            ->with('rent')
             ->get()
             ->map(function ($item) {
                 return [
@@ -117,11 +116,11 @@ class KelolaLaporanMiniSocController extends Controller
                     'keterangan' => $item->rent->description ?? 'Pemasukan',
                     'jenis' => 'Pendapatan',
                     'nominal' => (int) $item->rent->total_bayar ?? 0,
-                    'created_at' => optional($item->created_at)->format('Y-m-d'),
+                    'created_at' => $item->created_at,
                 ];
             });
 
-        // Ambil pengeluaran (Expense)
+        // Ambil data pengeluaran
         $expenses = Expense::where('unit_id', $unit->id_units)
             ->get()
             ->map(function ($item) {
@@ -130,19 +129,20 @@ class KelolaLaporanMiniSocController extends Controller
                     'keterangan' => $item->description ?? 'Pengeluaran',
                     'jenis' => 'Pengeluaran',
                     'nominal' => (int) $item->nominal,
-                    'created_at' => optional($item->created_at)->format('Y-m-d'),
+                    'created_at' => $item->created_at,
                 ];
             });
 
-        // Gabungkan pemasukan dan pengeluaran
-        $merged = $incomes->concat($expenses)->sortByDesc('tanggal')->values();
+        // Gabung dan urutkan berdasarkan waktu dibuat (ASC, agar saldo akurat)
+        $merged = $incomes->concat($expenses)->sortBy('created_at')->values();
 
-        // Hitung saldo hanya pada tanggal yang dipilih (jika ada)
         $finalLaporan = collect();
+
         if ($tanggalDipilih) {
+            // Filter transaksi di tanggal tertentu
             $laporanTanggal = $merged->filter(fn($item) => $item['tanggal'] === $tanggalDipilih);
 
-            // Hitung total pemasukan dan pengeluaran sebelum tanggal ini untuk mengetahui saldo awal harian
+            // Hitung saldo sebelumnya
             $saldoSebelumnya = $merged
                 ->filter(fn($item) => $item['tanggal'] < $tanggalDipilih)
                 ->reduce(function ($carry, $item) {
@@ -151,28 +151,25 @@ class KelolaLaporanMiniSocController extends Controller
 
             $saldo = $saldoSebelumnya;
 
-            $finalLaporan = $laporanTanggal->map(function ($item) use (&$saldo) {
+            $finalLaporan = $laporanTanggal->map(function ($item) {
                 $selisih = $item['jenis'] === 'Pendapatan'
                     ? $item['nominal']
                     : -$item['nominal'];
 
-                $saldo += $selisih;
-
                 return [
                     ...$item,
                     'selisih' => $selisih,
-                    'saldo' => number_format($saldo, 0, '', ','),
+                    'saldo' => $item['saldo'] ?? null, 
                 ];
             });
         } else {
-            // Jika tidak memilih tanggal, tampilkan semua dengan saldo akumulatif penuh
+            // Hitung saldo penuh
             $saldo = $initialBalance;
 
             $finalLaporan = $merged->map(function ($item) use (&$saldo) {
                 $selisih = $item['jenis'] === 'Pendapatan'
                     ? $item['nominal']
                     : -$item['nominal'];
-
                 $saldo += $selisih;
 
                 return [
@@ -183,10 +180,12 @@ class KelolaLaporanMiniSocController extends Controller
             });
         }
 
-        // Pagination
+        // Urutkan tampilan berdasarkan yang terbaru (DESC), tapi saldo tetap benar
+        $finalLaporan = $finalLaporan->sortByDesc(fn($item) => $item['created_at'])->values();
+
+        // Pagination manual
         $page = $request->get('page', 1);
         $perPage = 10;
-
         $paged = $finalLaporan->forPage($page, $perPage)->values();
         $totalItems = $finalLaporan->count();
 
@@ -195,8 +194,9 @@ class KelolaLaporanMiniSocController extends Controller
                 'user' => $user->only(['name', 'role', 'image']),
             ],
             'unit_id' => $unit->id_units,
-            'laporanKeuangan' => $finalLaporan,
+            'laporanKeuangan' => $paged,
             'tanggal_dipilih' => $tanggalDipilih,
+            'initial_balance' => $initialBalance,
             'pagination' => [
                 'total' => $totalItems,
                 'per_page' => $perPage,
