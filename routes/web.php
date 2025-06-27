@@ -9,7 +9,6 @@ use App\Http\Controllers\Buper\PemasukanBuperController;
 use App\Http\Controllers\SewaKios\PemasukanSewKiosController;
 use App\Http\Controllers\Buper\PengeluaranBuperController;
 use App\Http\Controllers\MiniSoc\PengeluaranMiniSocController;
-use App\Http\Controllers\SewaKios\DashboardController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -57,18 +56,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $page = match ($unit->id_units) {
                 1 => 'MiniSoc/DashboardMiniSoc',
                 2 => 'Buper/DashboardBuper',
-                3 => 'Sewakios/DashboardSewKios',
+                3 => 'Sewakios/DashboardSewakios',
                 4 => 'Airweslik/DashboardAirweslik',
                 5 => 'Internetdesa/DashboardInterdesa',
                 default => 'Dashboard',
             };
 
-            return Inertia::render($page, [
-                'unit_id' => (int) $unit->id_units,
-                'auth' => [
-                    'user' => $user
-                ]
-            ]);
+            try {
+                return Inertia::render($page, [
+                    'unit_id' => $unit->id_units,
+                    'auth' => [
+                        'user' => $user
+                    ]
+                ]);
+            } catch (\Exception $e) {
+                // Tampilkan error yang sebenarnya (misalnya file tidak ditemukan)
+                dd("Gagal me-render halaman '$page': " . $e->getMessage());
+            }
         })->middleware(['auth', 'verified'])->name('dashboard');
 
         // Pemasukan
