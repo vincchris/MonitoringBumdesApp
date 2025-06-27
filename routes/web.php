@@ -30,6 +30,7 @@ Route::post('/logout', function () {
 })->name('logout');
 
 Route::get('/Home', [HomeController::class, 'index'])->name('HomeCompro');
+Route::get('/profil/tentang-kami', fn() => Inertia::render('Profil/TentangKami'));
 Route::get('/tes', fn() => 'Tes kolab');
 
 // =============================

@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { ArrowRight, Building, Calendar, Heart, Users } from 'lucide-react';
+import { ArrowRight, BanknoteIcon, Building, Calendar } from 'lucide-react';
 import React from 'react';
 import MainLayout from '../components/layout_compro/MainLayout';
 
@@ -48,9 +48,9 @@ interface HomeProps {
 const Home: React.FC<HomeProps> = ({ unitUsaha = [], beritaTerbaru = [], galeriHome = [], testimoni = [], stats = [] }) => {
     const dummyStats: Stat[] = [
         { number: '7', label: 'Unit Usaha', icon: Building },
-        { number: '500+', label: 'Warga Terlayani', icon: Users },
         { number: '2019', label: 'Tahun Berdiri', icon: Calendar },
-        { number: '95%', label: 'Kepuasan Pelanggan', icon: Heart },
+        { number: 'Rp.300,000', label: 'Pendapatan bulan ini', icon: BanknoteIcon },
+        { number: 'Rp.300,000', label: 'Pengeluaran bulan ini', icon: BanknoteIcon },
     ];
 
     const dataStats = stats.length > 0 ? stats : dummyStats;
@@ -87,22 +87,24 @@ const Home: React.FC<HomeProps> = ({ unitUsaha = [], beritaTerbaru = [], galeriH
                                 </Link>
                             </div>
                         </div>
-                        <div className="relative">
-                            <div className="aspect-video overflow-hidden rounded-2xl bg-white/10 backdrop-blur-sm">
-                                <iframe
-                                    width="100%"
-                                    height="100%"
-                                    src="https://www.youtube.com/embed/WVjI5t5TLU0?si=KQve-XQ7utjeUu3g"
-                                    title="YouTube video player"
-                                    frameBorder="0"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                    referrerPolicy="strict-origin-when-cross-origin"
-                                    allowFullScreen
-                                    className="h-full w-full rounded-2xl"
-                                ></iframe>
+                        <div className="group relative">
+                            {/* Background blur & ring */}
+                            <div className="aspect-video overflow-hidden rounded-2xl bg-gradient-to-br from-white/10 to-blue-100/10 shadow-xl backdrop-blur-sm transition-transform duration-300 group-hover:scale-[1.015]">
+                                <img
+                                    src="/assets/images/foto_bumdes.jpg"
+                                    alt="Kantor BUMDes Bagja Waluya"
+                                    className="h-full w-full rounded-2xl object-cover"
+                                />
                             </div>
-                            <div className="absolute -top-4 -right-4 h-24 w-24 rounded-full bg-yellow-400/20"></div>
-                            <div className="absolute -bottom-4 -left-4 h-16 w-16 rounded-full bg-white/20"></div>
+
+                            {/* Animated decorative blobs */}
+                            <div className="absolute -top-4 -right-4 h-24 w-24 animate-pulse rounded-full bg-yellow-300/20 blur-lg"></div>
+                            <div className="absolute -bottom-4 -left-4 h-16 w-16 animate-ping rounded-full bg-blue-200/20 blur-md"></div>
+
+                            {/* Optional caption / overlay */}
+                            <div className="absolute bottom-4 left-4 rounded-full bg-black/40 px-3 py-1 text-sm text-white backdrop-blur-sm">
+                                Sekretariat BUMDes Bagja Waluya
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -134,27 +136,17 @@ const Home: React.FC<HomeProps> = ({ unitUsaha = [], beritaTerbaru = [], galeriH
                     </div>
                 </div>
             </section>
-
+            
             {/* Section Sambutan Kepala Desa */}
-            <section className="bg-white py-20">
+            <section className="bg-gradient-to-br from-white via-blue-50 to-white py-20">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="animate-fade-up grid items-center gap-10 duration-700 md:grid-cols-2">
-                        {/* Foto Kepala Desa */}
-                        <div className="flex flex-col items-center text-center">
-                            <img
-                                src="https://cdn.pixabay.com/photo/2021/07/09/14/22/photographer-6399191_1280.jpg"
-                                alt="Kepala Desa"
-                                className="h-60 w-60 rounded-4xl object-cover shadow-md"
-                            />
-                            <div className="mt-4 text-lg font-bold text-gray-800">Muhammad Dhafa</div>
-                            <div className="text-md mt-1 font-semibold text-blue-700">Kepala desa</div>
-                            <div className="text-sm text-gray-700">2025-2030</div>
-                        </div>
-
+                    <div className="grid items-center gap-12 md:grid-cols-2 md:gap-20">
                         {/* Sambutan */}
-                        <div>
-                            <h2 className="inline-block rounded-lg bg-blue-100 px-4 py-1 font-bold text-blue-700 md:text-xl">Sambutan Kepala Desa</h2>
-                            <p className="mt-4 text-base text-gray-700 sm:text-lg">
+                        <div className="order-2 md:order-1">
+                            <h2 className="inline-block rounded-full bg-blue-100 px-5 py-2 text-base font-semibold text-blue-700 sm:text-lg">
+                                Sambutan Kepala Desa
+                            </h2>
+                            <p className="mt-5 text-lg leading-relaxed text-gray-700 sm:text-xl sm:text">
                                 Assalamu’alaikum warahmatullahi wabarakatuh.
                                 <br />
                                 <br />
@@ -164,6 +156,20 @@ const Home: React.FC<HomeProps> = ({ unitUsaha = [], beritaTerbaru = [], galeriH
                                 desa yang lebih baik.
                             </p>
                             <p className="mt-6 font-semibold text-blue-700">- Kepala Desa</p>
+                        </div>
+
+                        {/* Foto Kepala Desa */}
+                        <div className="order-1 flex flex-col items-center text-center md:order-2">
+                            <div className="relative h-60 w-60 overflow-hidden rounded-4xl shadow-lg ring-4 ring-blue-100 transition-transform duration-300 hover:scale-105">
+                                <img
+                                    src="https://cdn.pixabay.com/photo/2021/07/09/14/22/photographer-6399191_1280.jpg"
+                                    alt="Kepala Desa"
+                                    className="h-full w-full object-cover"
+                                />
+                            </div>
+                            <div className="mt-4 text-xl font-bold text-gray-800">Muhammad Dhafa</div>
+                            <div className="text-md mt-1 font-semibold text-blue-600">Kepala Desa</div>
+                            <div className="text-sm text-gray-600">2025 - 2030</div>
                         </div>
                     </div>
                 </div>
