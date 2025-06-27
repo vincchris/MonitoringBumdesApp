@@ -1,6 +1,8 @@
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 type PageProps = {
     auth: {
@@ -16,10 +18,15 @@ type PageProps = {
         tanggal: string;
         keterangan: string;
         jenis: string;
-        // nominal: number;
         selisih: number;
-        saldo: number;
+        saldo: number | string;
     }[];
+    pagination?: {
+        total: number;
+        per_page: number;
+        current_page: number;
+        last_page: number;
+    };
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -29,7 +36,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function KelolaLaporan({ auth, unit_id, laporanKeuangan }: PageProps) {
+export default function KelolaLaporan({ auth, unit_id, laporanKeuangan, pagination }: PageProps) {
     const user = auth.user;
 
     return (
@@ -65,33 +72,88 @@ export default function KelolaLaporan({ auth, unit_id, laporanKeuangan }: PagePr
                 </div>
 
                 <div className="overflow-x-auto rounded-xl border border-gray-200 px-6">
-                    <table className="min-w-full bg-white text-sm text-black">
-                        <thead className="bg-gray-100 font-semibold text-black">
-                            <tr>
-                                <th className="px-4 py-3 text-left">No</th>
-                                <th className="px-4 py-3 text-left">Tanggal</th>
-                                <th className="px-4 py-3 text-left">Keterangan</th>
-                                <th className="px-4 py-3 text-left">Jenis Transaksi</th>
-                                <th className="px-4 py-3 text-left">Nominal</th>
-                                <th className="px-4 py-3 text-left">Jumlah Saldo</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {laporanKeuangan.map((item, i) => (
-                                <tr key={i} className="border-t">
-                                    <td className="px-4 py-3">{i + 1}</td>
-                                    <td className="px-4 py-3">{item.tanggal}</td>
-                                    <td className="px-4 py-3">{item.keterangan}</td>
-                                    <td className="px-4 py-3">{item.jenis}</td>
-                                    <td className={`px-4 py-3 ${item.jenis === 'Pendapatan' ? 'text-green-600' : 'text-red-600'}`}>
-                                        {item.jenis === 'Pendapatan' ? '+' : '-'} Rp. {Math.abs(item.selisih).toLocaleString('id-ID')}
-                                    </td>
+                    {laporanKeuangan && laporanKeuangan.length > 0 ? (
+                        <>
+                            <table className="min-w-full bg-white text-sm text-black">
+                                <thead className="bg-gray-100 font-semibold text-black">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left">No</th>
+                                        <th className="px-4 py-3 text-left">Tanggal</th>
+                                        <th className="px-4 py-3 text-left">Keterangan</th>
+                                        <th className="px-4 py-3 text-left">Jenis Transaksi</th>
+                                        <th className="px-4 py-3 text-left">Nominal</th>
+                                        <th className="px-4 py-3 text-left">Jumlah Saldo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {laporanKeuangan.map((item, i) => (
+                                        <tr key={i} className="border-t">
+                                            <td className="px-4 py-3">{i + 1}</td>
+                                            <td className="px-4 py-3">{item.tanggal || '-'}</td>
+                                            <td className="px-4 py-3">{item.keterangan || '-'}</td>
+                                            <td className="px-4 py-3">{item.jenis || '-'}</td>
+                                            <td className={`px-4 py-3 ${item.jenis === 'Pendapatan' ? 'text-green-600' : 'text-red-600'}`}>
+                                                {item.jenis === 'Pendapatan' ? '+' : '-'} Rp. {Math.abs(item.selisih || 0).toLocaleString('id-ID')}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                Rp. {typeof item.saldo === 'string' ? item.saldo : (item.saldo || 0).toLocaleString('id-ID')}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
 
-                                    <td className="px-4 py-3">Rp. {item.saldo.toLocaleString('id-ID')}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            {/* Pagination */}
+                            {pagination && pagination.last_page > 1 && (
+                                <div className="mt-4 flex items-center justify-end gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        disabled={pagination.current_page === 1}
+                                        onClick={() => {
+                                            if (pagination.current_page > 1) {
+                                                router.get(route().current()!, { page: pagination.current_page - 1 }, { preserveState: true });
+                                            }
+                                        }}
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </Button>
+
+                                    {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => (
+                                        <Button
+                                            key={page}
+                                            variant={page === pagination.current_page ? 'default' : 'outline'}
+                                            onClick={() => {
+                                                router.get(route().current()!, { page }, { preserveState: true });
+                                            }}
+                                        >
+                                            {page}
+                                        </Button>
+                                    ))}
+
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        disabled={pagination.current_page === pagination.last_page}
+                                        onClick={() => {
+                                            if (pagination.current_page < pagination.last_page) {
+                                                router.get(route().current()!, { page: pagination.current_page + 1 }, { preserveState: true });
+                                            }
+                                        }}
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className="flex items-center justify-center py-8">
+                            <div className="text-center">
+                                <p className="text-gray-500 text-lg mb-2">Tidak ada data laporan</p>
+                                <p className="text-gray-400 text-sm">Belum ada transaksi yang tercatat untuk unit ini</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </AppLayout>

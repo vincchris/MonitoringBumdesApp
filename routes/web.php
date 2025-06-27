@@ -6,8 +6,10 @@ use App\Http\Controllers\Buper\KelolaLaporanBuperController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\MiniSoc\PemasukanMiniSocController;
 use App\Http\Controllers\Buper\PemasukanBuperController;
+use App\Http\Controllers\SewaKios\PemasukanSewKiosController;
 use App\Http\Controllers\Buper\PengeluaranBuperController;
 use App\Http\Controllers\MiniSoc\PengeluaranMiniSocController;
+use App\Http\Controllers\SewaKios\DashboardController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -55,7 +57,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $page = match ($unit->id_units) {
                 1 => 'MiniSoc/DashboardMiniSoc',
                 2 => 'Buper/DashboardBuper',
-                3 => 'SewaKios/DashboardSewKios',
+                3 => 'Sewakios/DashboardSewKios',
                 4 => 'Airweslik/DashboardAirweslik',
                 5 => 'Internetdesa/DashboardInterdesa',
                 default => 'Dashboard',
@@ -72,6 +74,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Pemasukan
         Route::resource('pemasukan-minisoc', PemasukanMiniSocController::class);
         Route::resource('pemasukan-buper', PemasukanBuperController::class);
+        Route::resource('pemasukan-sewakios', PemasukanSewKiosController::class);
+
         // Pengeluaran
         Route::resource('pengeluaran-minisoc', PengeluaranMiniSocController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('pengeluaran-buper', PengeluaranBuperController::class);

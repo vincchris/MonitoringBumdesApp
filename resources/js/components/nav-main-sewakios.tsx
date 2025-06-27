@@ -39,7 +39,7 @@ export default function NavMain() {
   return (
     <nav className="p-4 space-y-6">
       <div className="space-y-2">
-        <NavLink href={`/unit/${unitId}/dashboardSewkios`} icon={LayoutDashboard} label="Dashboard" />
+        <NavLink href={`/unit/${unitId}/dashboard`} icon={LayoutDashboard} label="Dashboard" />
       </div>
 
       <div>

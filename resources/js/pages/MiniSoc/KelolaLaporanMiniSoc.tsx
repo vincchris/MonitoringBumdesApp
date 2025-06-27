@@ -88,7 +88,7 @@ export default function KelolaLaporan({ auth, unit_id, laporanKeuangan, paginati
                                 <tr key={i} className="border-t">
                                     <td className="px-4 py-3">{i + 1}</td>
                                     <td className="px-4 py-3">{item.tanggal}</td>
-                                    <td className="px-4 py-3">{item.keterangan}</td>
+                                    <td className="px-4 py-3">{item.keterangan || "-"}</td>
                                     <td className="px-4 py-3">{item.jenis}</td>
                                     <td className={`px-4 py-3 ${item.jenis === 'Pendapatan' ? 'text-green-600' : 'text-red-600'}`}>
                                         {item.jenis === 'Pendapatan' ? '+' : '-'} Rp. {Math.abs(item.selisih).toLocaleString('id-ID')}

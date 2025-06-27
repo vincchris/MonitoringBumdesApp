@@ -10,6 +10,7 @@ use App\Models\InitialBalance;
 use App\Models\RentTransaction;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Log;
 use App\Exports\LaporanExport;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -48,7 +49,7 @@ class KelolaLaporanMiniSocController extends Controller
         return Excel::download(new LaporanExport($laporan), 'laporan_keuangan.xlsx');
     }
 
-    // Refcator Data agar tidak duplikat
+    // Refactor Data agar tidak duplikat
     private function getLaporanData()
     {
         $user = auth()->user();
@@ -105,7 +106,6 @@ class KelolaLaporanMiniSocController extends Controller
         $tanggalDipilih = $request->get('tanggal');
 
         // Ambil histori saldo berdasarkan unit
-
         $histories = BalanceHistory::where('unit_id', $unit->id_units)
             ->when($tanggalDipilih, function ($query) use ($tanggalDipilih) {
                 $query->whereDate('created_at', $tanggalDipilih);
@@ -115,30 +115,59 @@ class KelolaLaporanMiniSocController extends Controller
             ->map(function ($item) {
                 $tanggalAwal = Carbon::parse($item->created_at)->startOfDay();
                 $tanggalAkhir = Carbon::parse($item->created_at)->endOfDay();
-                
 
-                //  Bug in description not showing (maybe in relationship)
+                // Perbaikan untuk mendapatkan description
                 $description = '-';
 
                 if ($item->jenis === 'Pendapatan') {
+                    // Cari income berdasarkan tanggal dan unit
                     $income = Income::whereHas('rent.tarif.unit', function ($q) use ($item) {
                         $q->where('id_units', $item->unit_id);
                     })
                         ->whereBetween('created_at', [$tanggalAwal, $tanggalAkhir])
-                        ->with('rent')
-                        ->latest('created_at')
+                        ->with(['rent' => function($query) {
+                            $query->select('id_rent', 'description', 'total_bayar');
+                        }])
+                        ->orderBy('created_at', 'desc')
                         ->first();
 
-                    $description = optional($income?->rent)->description ?? '';
+                    if ($income && $income->rent) {
+                        $description = $income->rent->description ?? 'Pemasukan dari sewa';
+                    } else {
+                        // Fallback: cari rent transaction langsung
+                        $rent = RentTransaction::whereHas('tarif.unit', function ($q) use ($item) {
+                            $q->where('id_units', $item->unit_id);
+                        })
+                            ->whereBetween('created_at', [$tanggalAwal, $tanggalAkhir])
+                            ->orderBy('created_at', 'desc')
+                            ->first();
+
+                        $description = $rent ? ($rent->description ?? 'Pemasukan dari sewa') : 'Pemasukan';
+                    }
+
+                    Log::info('Income Description Debug:', [
+                        'unit_id' => $item->unit_id,
+                        'tanggal' => $item->created_at->format('Y-m-d H:i:s'),
+                        'income_found' => $income ? 'Yes' : 'No',
+                        'rent_data' => $income ? $income->rent : null,
+                        'final_description' => $description,
+                    ]);
                 }
 
                 if ($item->jenis === 'Pengeluaran') {
                     $expense = Expense::where('unit_id', $item->unit_id)
                         ->whereBetween('created_at', [$tanggalAwal, $tanggalAkhir])
-                        ->latest('created_at')
+                        ->orderBy('created_at', 'desc')
                         ->first();
 
-                    $description = $expense->description ?? '';
+                    $description = $expense ? ($expense->description ?? 'Pengeluaran operasional') : 'Pengeluaran';
+
+                    Log::info('Expense Description Debug:', [
+                        'unit_id' => $item->unit_id,
+                        'tanggal' => $item->created_at->format('Y-m-d H:i:s'),
+                        'expense_found' => $expense ? 'Yes' : 'No',
+                        'final_description' => $description,
+                    ]);
                 }
 
                 return [

@@ -2,14 +2,14 @@ import NavMainBuper from '@/components/nav-main-buper';
 import NavMainMiniSoc from '@/components/nav-main-minisoc';
 import { usePage } from '@inertiajs/react';
 // Import nav components lainnya sesuai kebutuhan
-// import NavMainSewaKios from '@/components/nav-main-sewakios';
+import NavMainSewaKios from '@/components/nav-main-sewakios';
 // import NavMainAirweslik from '@/components/nav-main-airweslik';
 // import NavMainInterdesa from '@/components/nav-main-interdesa';
 
 export default function AppSidebarLayout({ children }: { children: React.ReactNode }) {
     const { props } = usePage<{ unit_id: number }>();
     const unitId = Number(props.unit_id);
-    
+
     // Pilih komponen navigasi berdasarkan unit_id
     const getNavComponent = () => {
         switch (unitId) {
@@ -18,8 +18,7 @@ export default function AppSidebarLayout({ children }: { children: React.ReactNo
             case 2:
                 return <NavMainBuper />;
             case 3:
-                // return <NavMainSewaKios />;
-                return <NavMainMiniSoc />;
+                return <NavMainSewaKios />;
             case 4:
                 // return <NavMainAirweslik />;
                 return <NavMainMiniSoc />;
