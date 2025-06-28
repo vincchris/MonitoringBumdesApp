@@ -186,7 +186,7 @@ const Navbar: React.FC = () => {
                             className="bg-blue-600 text-white transition-colors duration-200 hover:bg-blue-700"
                             size="default"
                         >
-                            <Link href="/login">Login</Link>
+                            <Link href="/Login">Login</Link>
                         </Button>
                     </div>
 

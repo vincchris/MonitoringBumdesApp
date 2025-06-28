@@ -9,6 +9,7 @@ use App\Http\Controllers\Buper\PemasukanBuperController;
 use App\Http\Controllers\SewaKios\PemasukanSewKiosController;
 use App\Http\Controllers\Buper\PengeluaranBuperController;
 use App\Http\Controllers\MiniSoc\PengeluaranMiniSocController;
+use App\Http\Controllers\UnitUsahaPageController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -29,9 +30,18 @@ Route::post('/logout', function () {
     return redirect('/Login');
 })->name('logout');
 
+// =============================
+// Public Routes for company profile
+// =============================
+
 Route::get('/Home', [HomeController::class, 'index'])->name('HomeCompro');
-Route::get('/profil/tentang-kami', fn() => Inertia::render('Profil/TentangKami'));
-Route::get('/tes', fn() => 'Tes kolab');
+Route::get('/unit-usaha', [UnitUsahaPageController::class, 'index'])->name('UnitUsahaPage');
+Route::prefix('profil')->group(function () {
+    Route::get('/tentang-kami', fn() => Inertia::render('Profil/TentangKami'));
+    Route::get('/struktur-organisasi', fn() => Inertia::render('Profil/StrukturOrganisasi'));
+    Route::get('/legalitas', fn() => Inertia::render('Profil/legalitas'));
+});
+
 
 // =============================
 // Protected Routes (authenticated & verified users)
