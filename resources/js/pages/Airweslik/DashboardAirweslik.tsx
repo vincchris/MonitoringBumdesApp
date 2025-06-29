@@ -14,7 +14,7 @@ import { Banknote, PiggyBank, Wallet } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
-    title: 'Selamat datang, Pengelola Bumi Perkemahan',
+    title: 'Selamat datang, Pengelola Air Weslik',
     href: '/dashboard',
   },
 ];

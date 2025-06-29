@@ -45,15 +45,15 @@ export default function NavMain() {
       <div>
         <div className="text-xs text-gray-500 uppercase px-4">Transaksi</div>
         <div className="mt-2 space-y-2">
-          <NavLink href={`/unit/${unitId}/pemasukan-sewakios`} icon={ArrowUpRight} label="Pemasukan" />
-          <NavLink href={`/unit/${unitId}/pengeluaran-sewakios`} icon={ArrowDownLeft} label="Pengeluaran" />
+          <NavLink href={`/unit/${unitId}/pemasukan-airweslik`} icon={ArrowUpRight} label="Pemasukan" />
+          <NavLink href={`/unit/${unitId}/pengeluaran-airweslik`} icon={ArrowDownLeft} label="Pengeluaran" />
         </div>
       </div>
 
       <div>
         <div className="text-xs text-gray-500 uppercase px-4">Laporan</div>
         <div className="mt-2 space-y-2">
-          <NavLink href={`/unit/${unitId}/kelolalaporan-sewakios`} icon={FileText} label="Kelola laporan" />
+          <NavLink href={`/unit/${unitId}/kelolalaporan-airweslik`} icon={FileText} label="Kelola laporan" />
         </div>
       </div>
 

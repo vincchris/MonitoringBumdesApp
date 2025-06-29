@@ -3,7 +3,7 @@ import NavMainMiniSoc from '@/components/nav-main-minisoc';
 import { usePage } from '@inertiajs/react';
 // Import nav components lainnya sesuai kebutuhan
 import NavMainSewaKios from '@/components/nav-main-sewakios';
-// import NavMainAirweslik from '@/components/nav-main-airweslik';
+import NavMainAirweslik from '@/components/nav-main-airweslik';
 // import NavMainInterdesa from '@/components/nav-main-interdesa';
 
 export default function AppSidebarLayout({ children }: { children: React.ReactNode }) {
@@ -20,8 +20,7 @@ export default function AppSidebarLayout({ children }: { children: React.ReactNo
             case 3:
                 return <NavMainSewaKios />;
             case 4:
-                // return <NavMainAirweslik />;
-                return <NavMainMiniSoc />;
+                return <NavMainAirweslik />;
             case 5:
                 // return <NavMainInterdesa />;
                 return <NavMainMiniSoc />;

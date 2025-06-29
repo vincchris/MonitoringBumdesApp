@@ -1,5 +1,5 @@
 import { NavFooter } from '@/components/nav-footer';
-import { NavMain } from '@/components/nav-main-minisoc';
+import { NavMain } from '@/components/nav-main-airweslik';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
@@ -15,17 +15,17 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Pemasukan',
-        href: '/PemasukanSewkios',
+        href: '/PemasukanAirweslik',
         icon: ArrowUp,
     },
     {
         title: 'Pengeluaran',
-        href: '/PengeluaranSewkios',
+        href: '/PengeluaranAirweslik',
         icon: ArrowDown,
     },
     {
         title: 'Kelola Laporan',
-        href: '/KelolaLaporanSewkios',
+        href: '/KelolaLaporanAirweslik',
         icon: BookOpenCheck,
     },
     {

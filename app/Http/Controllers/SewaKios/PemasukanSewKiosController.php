@@ -30,15 +30,17 @@ class PemasukanSewKiosController extends Controller
             return [
                 'id' => $item->rent->id_rent,
                 'tanggal' => optional($item->updated_at)->format('Y-m-d'),
-                'keterangan' => $item->rent->tenant_name,
-                'jumlah_peserta' => (int) $item->rent->nominal,
-                'biaya_sewa' => number_format($item->rent->tarif->harga_per_unit ?? 0, 0, '', ','),
+                'penyewa' => $item->rent->tenant_name,
+                'lokasi_kios' => $item->rent->tarif->category_name ?? '-',
+                'durasi_sewa' => $item->rent->durasi ?? 1,
+                'biaya_sewa' => $item->rent->tarif->harga_per_unit ?? 0,
+                'total_pembayaran' => $item->rent->total_bayar ?? 0,
             ];
         });
 
         $tarifs = Tarif::where('unit_id', $unitId)
-            ->whereIn('category_name', ['>300', '<=300'])
-            ->get(['category_name', 'harga_per_unit']);
+            ->where('satuan', 'tahun') // hanya ambil yang sewa tahunan (kios)
+            ->get(['id_tarif', 'category_name', 'harga_per_unit']);
 
         return Inertia::render('Sewakios/PemasukanSewkios', [
             'unit_id' => $unitId,
@@ -52,27 +54,35 @@ class PemasukanSewKiosController extends Controller
     {
         $validated = $request->validate([
             'tanggal' => 'required|date',
-            'keterangan' => 'required|string|max:255',
-            'jumlah_peserta' => 'required|integer|min:1',
+            'penyewa' => 'required|string|max:255', // Ubah dari 'keterangan' ke 'penyewa'
+            'lokasi_kios' => 'required|string', // Tambahkan validasi untuk lokasi_kios
             'biaya_sewa' => 'required|numeric|min:0',
+            'durasi_sewa' => 'required|integer|min:1',
+            'keterangan' => 'nullable|string|max:255', // Buat optional
         ]);
 
         try {
             DB::beginTransaction();
 
-            $kategori = $validated['jumlah_peserta'] > 300 ? '>300' : '<=300';
-            $tarif = Tarif::where('unit_id', $unitId)->where('category_name', $kategori)->first();
+            // Cari tarif berdasarkan lokasi_kios
+            $tarif = Tarif::where('unit_id', $unitId)
+                ->where('satuan', 'tahun')
+                ->where('category_name', $validated['lokasi_kios'])
+                ->first();
 
             if (!$tarif) {
-                throw new \Exception('Tarif tidak ditemukan');
+                throw new \Exception('Tarif untuk lokasi kios tidak ditemukan');
             }
+
+            $totalBayar = $validated['biaya_sewa'] * $validated['durasi_sewa'];
 
             $rent = RentTransaction::create([
                 'tarif_id' => $tarif->id_tarif,
-                'tenant_name' => $validated['keterangan'],
-                'nominal' => $validated['jumlah_peserta'],
-                'total_bayar' => $validated['biaya_sewa'],
-                'description' => '',
+                'tenant_name' => $validated['penyewa'],
+                'nominal' => $validated['biaya_sewa'], // Gunakan biaya_sewa sebagai nominal
+                'durasi' => $validated['durasi_sewa'],
+                'total_bayar' => $totalBayar,
+                'description' => $validated['keterangan'] ?? '',
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
                 'updated_at' => now(),
             ]);
@@ -86,21 +96,20 @@ class PemasukanSewKiosController extends Controller
             $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
             if ($initialBalance) {
                 $initialBalance->update([
-                    'nominal' => $initialBalance->nominal + $validated['biaya_sewa'],
+                    'nominal' => $initialBalance->nominal + $totalBayar,
                 ]);
             }
 
-            // dd($totalBayar);
-
             DB::commit();
 
-            return back()->with('info', [
+            return redirect()->back()->with('info', [
                 'message' => 'Data pemasukan berhasil ditambah',
                 'method' => 'create',
             ]);
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Gagal menyimpan data: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Gagal menyimpan data: ' . $e->getMessage()]);
         }
     }
 
@@ -108,32 +117,38 @@ class PemasukanSewKiosController extends Controller
     {
         $validated = $request->validate([
             'tanggal' => 'required|date',
-            'keterangan' => 'required|string|max:255',
-            'jumlah_peserta' => 'required|integer|min:1',
+            'penyewa' => 'required|string|max:255',
+            'lokasi_kios' => 'required|string',
             'biaya_sewa' => 'required|numeric|min:0',
+            'durasi_sewa' => 'required|integer|min:1',
+            'keterangan' => 'nullable|string|max:255',
         ]);
 
         DB::beginTransaction();
         try {
-
             $rent = RentTransaction::with(['income', 'tarif'])->findOrFail($id);
             $totalLama = $rent->total_bayar;
 
-            $kategori = $validated['jumlah_peserta'] > 300 ? '>300' : '<=300';
-            $tarif = Tarif::where('unit_id', $unitId)->where('category_name', $kategori)->first();
+            $tarif = Tarif::where('unit_id', $unitId)
+                ->where('satuan', 'tahun')
+                ->where('category_name', $validated['lokasi_kios'])
+                ->first();
 
             if (!$tarif) {
-                throw new \Exception('Tarif tidak ditemukan');
+                throw new \Exception('Tarif untuk lokasi kios tidak ditemukan');
             }
 
-            $totalBaru = $validated['biaya_sewa'];
+            $totalBaru = $validated['biaya_sewa'] * $validated['durasi_sewa'];
 
             $rent->update([
                 'tarif_id' => $tarif->id_tarif,
-                'tenant_name' => $validated['keterangan'],
-                'nominal' => $validated['jumlah_peserta'],
+                'tenant_name' => $validated['penyewa'],
+                'nominal' => $validated['biaya_sewa'],
+                'durasi' => $validated['durasi_sewa'],
                 'total_bayar' => $totalBaru,
+                'description' => $validated['keterangan'] ?? '',
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'updated_at' => now(),
             ]);
 
             $selisih = $totalBaru - $totalLama;
@@ -145,13 +160,13 @@ class PemasukanSewKiosController extends Controller
             }
 
             DB::commit();
-            return back()->with('info', [
+            return redirect()->back()->with('info', [
                 'message' => 'Data pemasukan berhasil diubah',
                 'method' => 'update',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Gagal mengubah data: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Gagal mengubah data: ' . $e->getMessage()]);
         }
     }
 
@@ -177,13 +192,13 @@ class PemasukanSewKiosController extends Controller
             $rent->delete();
 
             DB::commit();
-            return back()->with('info', [
+            return redirect()->back()->with('info', [
                 'message' => 'Data pemasukan berhasil dihapus',
                 'method' => 'delete',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Gagal menghapus data: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Gagal menghapus data: ' . $e->getMessage()]);
         }
     }
 }

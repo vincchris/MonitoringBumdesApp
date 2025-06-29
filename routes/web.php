@@ -1,14 +1,27 @@
 <?php
 
+use App\Http\Controllers\Airweslik\KelolaLaporanAirweslikController;
+use App\Http\Controllers\Airweslik\PemasukanAirweslikController;
+use App\Http\Controllers\Airweslik\PengeluaranAirweslikController;
 use App\Http\Controllers\HomeController;
+
+// Kelola Laporan Controller
 use App\Http\Controllers\MiniSoc\KelolaLaporanMiniSocController;
 use App\Http\Controllers\Buper\KelolaLaporanBuperController;
+
 use App\Http\Controllers\LoginController;
+
+// Pemasukan Controller
 use App\Http\Controllers\MiniSoc\PemasukanMiniSocController;
 use App\Http\Controllers\Buper\PemasukanBuperController;
 use App\Http\Controllers\SewaKios\PemasukanSewKiosController;
+
+// Pengeluaran Controller
 use App\Http\Controllers\Buper\PengeluaranBuperController;
 use App\Http\Controllers\MiniSoc\PengeluaranMiniSocController;
+use App\Http\Controllers\SewaKios\KelolaLaporanSewKiosController;
+use App\Http\Controllers\SewaKios\PengeluaranSewKiosController;
+
 use App\Http\Controllers\UnitUsahaPageController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -90,18 +103,39 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('pemasukan-minisoc', PemasukanMiniSocController::class);
         Route::resource('pemasukan-buper', PemasukanBuperController::class);
         Route::resource('pemasukan-sewakios', PemasukanSewKiosController::class);
+        Route::resource('pemasukan-airweslik', PemasukanAirweslikController::class);
+
 
         // Pengeluaran
         Route::resource('pengeluaran-minisoc', PengeluaranMiniSocController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('pengeluaran-buper', PengeluaranBuperController::class);
+        Route::resource('pengeluaran-sewakios', PengeluaranSewKiosController::class);
+        Route::resource('pengeluaran-airweslik', PengeluaranAirweslikController::class);
+
         // Kelola Laporan
         Route::get('/kelolalaporan-minisoc', [KelolaLaporanMiniSocController::class, 'index'])->name('laporan.minisoc.kelola');
         Route::get('/kelolalaporan-buper', [KelolaLaporanBuperController::class, 'index'])->name('laporan.buper.kelola');
+        Route::get('/kelolalaporan-sewakios', [KelolaLaporanSewKiosController::class, 'index'])->name('laporan.sewakios.kelola');
+        Route::get('/kelolalaporan-airweslik', [KelolaLaporanAirweslikController::class, 'index'])->name('laporan.airweslik.kelola');
+
+
 
 
         Route::middleware(['auth'])->group(function () {
             Route::get('/kelolalaporan/export-pdf', [KelolaLaporanMiniSocController::class, 'exportPDF']);
             Route::get('/kelolalaporan/export-excel', [KelolaLaporanMiniSocController::class, 'exportExcel']);
+        });
+        Route::middleware(['auth'])->group(function () {
+            Route::get('/kelolalaporan/export-pdf', [KelolaLaporanBuperController::class, 'exportPDF']);
+            Route::get('/kelolalaporan/export-excel', [KelolaLaporanBuperController::class, 'exportExcel']);
+        });
+        Route::middleware(['auth'])->group(function () {
+            Route::get('/kelolalaporan/export-pdf', [KelolaLaporanSewKiosController::class, 'exportPDF']);
+            Route::get('/kelolalaporan/export-excel', [KelolaLaporanSewKiosController::class, 'exportExcel']);
+        });
+        Route::middleware(['auth'])->group(function () {
+            Route::get('/kelolalaporan/export-pdf', [KelolaLaporanAirweslikController::class, 'exportPDF']);
+            Route::get('/kelolalaporan/export-excel', [KelolaLaporanAirweslikController::class, 'exportExcel']);
         });
     });
 
