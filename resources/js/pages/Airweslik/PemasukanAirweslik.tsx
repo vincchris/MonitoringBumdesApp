@@ -34,6 +34,10 @@ interface Props {
 }
 
 export default function PemasukanAirweslik({ user, unit_id, pemasukan, tarifs }: Props) {
+
+    console.log('Data pemasukan dari backend:', pemasukan);
+    console.log('Data tarifs:', tarifs);
+    
     const { flash, errors } = usePage().props as unknown as {
         flash: { info?: { message?: string; method?: string } };
         errors: Record<string, string>;
@@ -330,7 +334,7 @@ export default function PemasukanAirweslik({ user, unit_id, pemasukan, tarifs }:
                                         <td className="px-4 py-3 text-center">{item.tanggal}</td>
                                         <td className="px-4 py-3 text-center">{item.pelanggan}</td>
                                         <td className="px-4 py-3 text-center">{item.kategori}</td>
-                                        <td className="px-4 py-3 text-center">{item.pemakaian}</td>
+                                        <td className="px-4 py-3 text-center">{item.pemakaian} m³</td> {/* Pastikan menampilkan nilai yang benar */}
                                         <td className="px-4 py-3 text-center">Rp. {item.tarif.toLocaleString('id-ID')}</td>
                                         <td className="px-4 py-3 text-center">Rp. {item.total.toLocaleString('id-ID')}</td>
                                         <td className="px-4 py-3 text-center">
@@ -353,7 +357,6 @@ export default function PemasukanAirweslik({ user, unit_id, pemasukan, tarifs }:
                                 </tr>
                             )}
                         </tbody>
-
                     </table>
                 </div>
             </div>

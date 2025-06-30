@@ -8,16 +8,18 @@ use App\Http\Controllers\HomeController;
 // Kelola Laporan Controller
 use App\Http\Controllers\MiniSoc\KelolaLaporanMiniSocController;
 use App\Http\Controllers\Buper\KelolaLaporanBuperController;
-
+use App\Http\Controllers\Internetdesa\KelolaLaporanInterdesaController;
 use App\Http\Controllers\LoginController;
 
 // Pemasukan Controller
 use App\Http\Controllers\MiniSoc\PemasukanMiniSocController;
 use App\Http\Controllers\Buper\PemasukanBuperController;
 use App\Http\Controllers\SewaKios\PemasukanSewKiosController;
+use App\Http\Controllers\Internetdesa\PemasukanInterdesaController;
 
 // Pengeluaran Controller
 use App\Http\Controllers\Buper\PengeluaranBuperController;
+use App\Http\Controllers\Internetdesa\PengeluaranInterdesaController;
 use App\Http\Controllers\MiniSoc\PengeluaranMiniSocController;
 use App\Http\Controllers\SewaKios\KelolaLaporanSewKiosController;
 use App\Http\Controllers\SewaKios\PengeluaranSewKiosController;
@@ -104,6 +106,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('pemasukan-buper', PemasukanBuperController::class);
         Route::resource('pemasukan-sewakios', PemasukanSewKiosController::class);
         Route::resource('pemasukan-airweslik', PemasukanAirweslikController::class);
+        Route::resource('pemasukan-interdesa', PemasukanInterdesaController::class);
+
 
 
         // Pengeluaran
@@ -111,12 +115,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('pengeluaran-buper', PengeluaranBuperController::class);
         Route::resource('pengeluaran-sewakios', PengeluaranSewKiosController::class);
         Route::resource('pengeluaran-airweslik', PengeluaranAirweslikController::class);
+        Route::resource('pengeluaran-interdesa', PengeluaranInterdesaController::class);
+
 
         // Kelola Laporan
         Route::get('/kelolalaporan-minisoc', [KelolaLaporanMiniSocController::class, 'index'])->name('laporan.minisoc.kelola');
         Route::get('/kelolalaporan-buper', [KelolaLaporanBuperController::class, 'index'])->name('laporan.buper.kelola');
         Route::get('/kelolalaporan-sewakios', [KelolaLaporanSewKiosController::class, 'index'])->name('laporan.sewakios.kelola');
         Route::get('/kelolalaporan-airweslik', [KelolaLaporanAirweslikController::class, 'index'])->name('laporan.airweslik.kelola');
+        Route::get('/kelolalaporan-interdesa', [KelolaLaporanInterdesaController::class, 'index'])->name('laporan.airweslik.kelola');
+
 
 
 
@@ -136,6 +144,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::middleware(['auth'])->group(function () {
             Route::get('/kelolalaporan/export-pdf', [KelolaLaporanAirweslikController::class, 'exportPDF']);
             Route::get('/kelolalaporan/export-excel', [KelolaLaporanAirweslikController::class, 'exportExcel']);
+        });
+        Route::middleware(['auth'])->group(function () {
+            Route::get('/kelolalaporan/export-pdf', [KelolaLaporanInterdesaController::class, 'exportPDF']);
+            Route::get('/kelolalaporan/export-excel', [KelolaLaporanInterdesaController::class, 'exportExcel']);
         });
     });
 

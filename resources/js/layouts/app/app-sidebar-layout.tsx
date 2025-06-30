@@ -4,7 +4,7 @@ import { usePage } from '@inertiajs/react';
 // Import nav components lainnya sesuai kebutuhan
 import NavMainSewaKios from '@/components/nav-main-sewakios';
 import NavMainAirweslik from '@/components/nav-main-airweslik';
-// import NavMainInterdesa from '@/components/nav-main-interdesa';
+import NavMainInterdesa from '@/components/nav-main-interdesa';
 
 export default function AppSidebarLayout({ children }: { children: React.ReactNode }) {
     const { props } = usePage<{ unit_id: number }>();
@@ -22,8 +22,7 @@ export default function AppSidebarLayout({ children }: { children: React.ReactNo
             case 4:
                 return <NavMainAirweslik />;
             case 5:
-                // return <NavMainInterdesa />;
-                return <NavMainMiniSoc />;
+                return <NavMainInterdesa />;
             default:
                 console.warn('Unknown unit_id:', unitId, 'fallback to MiniSoc nav');
                 return <NavMainMiniSoc />;
