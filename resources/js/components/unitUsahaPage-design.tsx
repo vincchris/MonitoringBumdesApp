@@ -1,6 +1,6 @@
 import MainLayout from '@/components/layout_compro/MainLayout';
 import { Building2, Clock, Globe, LucideIcon, MapPin, ShoppingBag, Volleyball, Waves, X } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -45,7 +45,7 @@ const units: BusinessUnit[] = [
         location: 'Jl. Desa Utama No. 15, Bagja Waluya',
         terms: ['Booking minimal 1 jam sebelumnya', 'DP 50% untuk konfirmasi booking', 'Pembayaran cash/transfer'],
         calculationType: 'duration',
-        unit: 'jam'
+        unit: 'jam',
     },
     {
         title: 'Bumi Perkemahan (Buper)',
@@ -62,7 +62,7 @@ const units: BusinessUnit[] = [
         location: 'Area Perkemahan Desa, Bagja Waluya',
         terms: ['Booking minimal 1 minggu sebelumnya', 'DP 30% untuk konfirmasi', 'Termasuk fasilitas dasar'],
         calculationType: 'none', // Harga tetap per kegiatan
-        unit: 'kegiatan'
+        unit: 'kegiatan',
     },
     {
         title: 'Kios',
@@ -80,7 +80,7 @@ const units: BusinessUnit[] = [
         location: 'Berbagai lokasi strategis di Desa',
         terms: ['Kontrak minimal 1 tahun', 'Pembayaran di muka', 'Deposit keamanan Rp500.000'],
         calculationType: 'none', // Harga tetap per tahun
-        unit: 'tahun'
+        unit: 'tahun',
     },
     {
         title: 'Air Weslik',
@@ -98,7 +98,7 @@ const units: BusinessUnit[] = [
         location: 'Seluruh area Desa Bagja Waluya',
         terms: ['Pendaftaran dengan KTP', 'Deposit meter Rp200.000', 'Pembayaran bulanan'],
         calculationType: 'participants', // Menggunakan untuk volume m³
-        unit: 'm³'
+        unit: 'm³',
     },
     {
         title: 'Internet Desa',
@@ -112,7 +112,7 @@ const units: BusinessUnit[] = [
         location: 'Seluruh area Desa Bagja Waluya',
         terms: ['Instalasi gratis', 'Kontrak minimal 6 bulan', 'Pembayaran di awal bulan'],
         calculationType: 'duration', // Untuk berapa bulan
-        unit: 'bulan'
+        unit: 'bulan',
     },
 ];
 
@@ -137,7 +137,7 @@ const faqs: FAQ[] = [
 
 const UnitUsaha: React.FC = () => {
     const [selectedUnit, setSelectedUnit] = useState<BusinessUnit | null>(null);
-    const [selectedPackage, setSelectedPackage] = useState<{label: string; detail: string; basePrice: number} | null>(null);
+    const [selectedPackage, setSelectedPackage] = useState<{ label: string; detail: string; basePrice: number } | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [namaPenyewa, setNamaPenyewa] = useState<string>('');
     const [quantity, setQuantity] = useState<string>('1');
@@ -155,7 +155,7 @@ const UnitUsaha: React.FC = () => {
         }
     }, [selectedPackage, quantity, selectedUnit]);
 
-    const handlePackageSelect = (pkg: {label: string; detail: string; basePrice: number}) => {
+    const handlePackageSelect = (pkg: { label: string; detail: string; basePrice: number }) => {
         setSelectedPackage(pkg);
     };
 
@@ -171,10 +171,13 @@ const UnitUsaha: React.FC = () => {
         }
 
         const detailHarga = `\nTotal Harga: Rp${totalPrice.toLocaleString('id-ID')}`;
-        
-        alert(
-            `Booking berhasil untuk ${namaPenyewa}\nUnit: ${selectedUnit?.title}\nPaket: ${selectedPackage.label}${detailQuantity}\nTanggal: ${selectedDate?.toLocaleDateString()}${detailHarga}`,
-        );
+        const pesan = `Halo, saya ingin booking:\n\nNama: ${namaPenyewa}\nUnit: ${selectedUnit?.title}\nPaket: ${selectedPackage.label}${detailQuantity}\nTanggal: ${selectedDate?.toLocaleDateString()}${detailHarga}`;
+
+        const nomorAdmin = '6287737709694';
+        const encodedPesan = encodeURIComponent(pesan);
+        const whatsappURL = `https://wa.me/${nomorAdmin}?text=${encodedPesan}`;
+
+        window.open(whatsappURL, '_blank');
 
         // Reset form
         setSelectedUnit(null);
@@ -389,14 +392,14 @@ const UnitUsaha: React.FC = () => {
                                                     : 'border-gray-200 bg-white'
                                             }`}
                                         >
-                                            <div className={`font-semibold ${
-                                                selectedPackage?.label === pkg.label ? 'text-blue-700' : 'text-gray-800'
-                                            }`}>
+                                            <div
+                                                className={`font-semibold ${
+                                                    selectedPackage?.label === pkg.label ? 'text-blue-700' : 'text-gray-800'
+                                                }`}
+                                            >
                                                 {pkg.label}
                                             </div>
-                                            <div className={`text-sm ${
-                                                selectedPackage?.label === pkg.label ? 'text-blue-600' : 'text-gray-600'
-                                            }`}>
+                                            <div className={`text-sm ${selectedPackage?.label === pkg.label ? 'text-blue-600' : 'text-gray-600'}`}>
                                                 {pkg.detail}
                                             </div>
                                         </div>
@@ -408,7 +411,7 @@ const UnitUsaha: React.FC = () => {
                             {selectedPackage && (
                                 <div className="space-y-4 border-t pt-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Nama Penyewa *</label>
+                                        <label className="mb-2 block text-sm font-medium text-gray-700">Nama Penyewa *</label>
                                         <input
                                             type="text"
                                             className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
@@ -420,9 +423,7 @@ const UnitUsaha: React.FC = () => {
 
                                     {(selectedUnit.calculationType === 'duration' || selectedUnit.calculationType === 'participants') && (
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                {getQuantityLabel(selectedUnit)} *
-                                            </label>
+                                            <label className="mb-2 block text-sm font-medium text-gray-700">{getQuantityLabel(selectedUnit)} *</label>
                                             <input
                                                 type="number"
                                                 min="1"
@@ -435,7 +436,7 @@ const UnitUsaha: React.FC = () => {
                                     )}
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Tanggal *</label>
+                                        <label className="mb-2 block text-sm font-medium text-gray-700">Tanggal *</label>
                                         <DatePicker
                                             selected={selectedDate}
                                             onChange={(date) => setSelectedDate(date)}
@@ -448,14 +449,12 @@ const UnitUsaha: React.FC = () => {
 
                                     {/* Total Harga */}
                                     <div className="rounded-lg bg-blue-50 p-4">
-                                        <div className="flex justify-between items-center">
+                                        <div className="flex items-center justify-between">
                                             <span className="font-medium text-gray-700">Total Harga:</span>
-                                            <span className="text-xl font-bold text-blue-700">
-                                                Rp{totalPrice.toLocaleString('id-ID')}
-                                            </span>
+                                            <span className="text-xl font-bold text-blue-700">Rp{totalPrice.toLocaleString('id-ID')}</span>
                                         </div>
                                         {(selectedUnit.calculationType === 'duration' || selectedUnit.calculationType === 'participants') && (
-                                            <div className="text-sm text-gray-600 mt-1">
+                                            <div className="mt-1 text-sm text-gray-600">
                                                 {selectedPackage.detail} × {quantity} {selectedUnit.unit}
                                             </div>
                                         )}
@@ -489,7 +488,7 @@ const UnitUsaha: React.FC = () => {
                             {/* Terms & Contact Info */}
                             <div className="mt-6 space-y-4 border-t pt-6">
                                 <div>
-                                    <h4 className="font-semibold text-gray-900 mb-2">Syarat & Ketentuan:</h4>
+                                    <h4 className="mb-2 font-semibold text-gray-900">Syarat & Ketentuan:</h4>
                                     <ul className="space-y-1 text-sm text-gray-600">
                                         {selectedUnit.terms.map((term, i) => (
                                             <li key={i} className="flex items-start gap-2">
@@ -502,11 +501,11 @@ const UnitUsaha: React.FC = () => {
 
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <div>
-                                        <h4 className="font-semibold text-gray-900 mb-1">Jam Operasional:</h4>
+                                        <h4 className="mb-1 font-semibold text-gray-900">Jam Operasional:</h4>
                                         <p className="text-sm text-gray-600">{selectedUnit.operatingHours}</p>
                                     </div>
                                     <div>
-                                        <h4 className="font-semibold text-gray-900 mb-1">Kontak:</h4>
+                                        <h4 className="mb-1 font-semibold text-gray-900">Kontak:</h4>
                                         <p className="text-sm text-gray-600">{selectedUnit.contact}</p>
                                     </div>
                                 </div>
