@@ -9,7 +9,7 @@ interface PemasukanItem {
     tanggal: string;
     pelanggan: string;
     kategori: string;
-    pemakaian: number;
+    durasi: number;
     tarif: number;
     total: number;
 }
@@ -101,7 +101,7 @@ export default function PemasukanInterdesa({ user, unit_id, pemasukan, tarifs }:
         tanggal: '',
         pelanggan: '',
         kategori: '',
-        pemakaian: 1,
+        durasi: 1,
         tarif: 0,
         total: '',
     });
@@ -142,7 +142,7 @@ export default function PemasukanInterdesa({ user, unit_id, pemasukan, tarifs }:
             tanggal: item.tanggal,
             pelanggan: item.pelanggan,
             kategori: item.kategori,
-            pemakaian: item.pemakaian,
+            durasi: item.durasi,
             tarif: item.tarif,
             total: '',
         });
@@ -206,7 +206,7 @@ export default function PemasukanInterdesa({ user, unit_id, pemasukan, tarifs }:
                                 ✕
                             </button>
                             <h2 className="mb-4 text-lg font-semibold">
-                                {editing ? 'Edit Pemasukan' : 'Tambah Pemasukan'} Sewa Kios
+                                {editing ? 'Edit Pemasukan' : 'Tambah Pemasukan'} Internet Desa
                             </h2>
 
                             {/* Display errors */}
@@ -267,19 +267,19 @@ export default function PemasukanInterdesa({ user, unit_id, pemasukan, tarifs }:
                                 </div>
 
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">Pemakaian (m³)</label>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Durasi (bulan)</label>
                                     <input
                                         type="number"
                                         min="1"
                                         className="w-full rounded border bg-gray-100 px-4 py-2 outline-none"
-                                        value={formData.pemakaian}
-                                        onChange={(e) => setData('pemakaian', Number(e.target.value))}
+                                        value={formData.durasi}
+                                        onChange={(e) => setData('durasi', Number(e.target.value))}
                                         required
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">Tarif / m³</label>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Tarif / bulan</label>
                                     <input
                                         type="number"
                                         className="w-full rounded border bg-gray-100 px-4 py-2 outline-none"
@@ -290,7 +290,7 @@ export default function PemasukanInterdesa({ user, unit_id, pemasukan, tarifs }:
                                 </div>
 
                                 <p className="mt-2 text-sm">
-                                    Total bayar: <strong>Rp. {(formData.pemakaian * formData.tarif).toLocaleString('id-ID')}</strong>
+                                    Total bayar: <strong>Rp. {(formData.durasi * formData.tarif).toLocaleString('id-ID')}</strong>
                                 </p>
 
                                 <div className="flex justify-end gap-2 pt-2">
@@ -316,8 +316,8 @@ export default function PemasukanInterdesa({ user, unit_id, pemasukan, tarifs }:
                                 <th className="px-4 py-3 text-center">Tanggal</th>
                                 <th className="px-4 py-3 text-center">Pelanggan</th>
                                 <th className="px-4 py-3 text-center">Kategori</th>
-                                <th className="px-4 py-3 text-center">Pemakaian (m³)</th>
-                                <th className="px-4 py-3 text-center">Tarif/m³</th>
+                                <th className="px-4 py-3 text-center">Durasi (bulan)</th>
+                                <th className="px-4 py-3 text-center">Tarif/bulan</th>
                                 <th className="px-4 py-3 text-center">Total Bayar</th>
                                 <th className="px-4 py-3 text-center">Aksi</th>
                             </tr>
@@ -330,7 +330,7 @@ export default function PemasukanInterdesa({ user, unit_id, pemasukan, tarifs }:
                                         <td className="px-4 py-3 text-center">{item.tanggal}</td>
                                         <td className="px-4 py-3 text-center">{item.pelanggan}</td>
                                         <td className="px-4 py-3 text-center">{item.kategori}</td>
-                                        <td className="px-4 py-3 text-center">{item.pemakaian}</td>
+                                        <td className="px-4 py-3 text-center">{item.durasi}</td>
                                         <td className="px-4 py-3 text-center">Rp. {item.tarif.toLocaleString('id-ID')}</td>
                                         <td className="px-4 py-3 text-center">Rp. {item.total.toLocaleString('id-ID')}</td>
                                         <td className="px-4 py-3 text-center">
