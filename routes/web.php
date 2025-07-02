@@ -6,6 +6,7 @@ use App\Http\Controllers\Airweslik\PengeluaranAirweslikController;
 use App\Http\Controllers\HomeController;
 
 // Kelola Laporan Controller
+use App\Http\Controllers\laporanTransparansiController;
 use App\Http\Controllers\MiniSoc\KelolaLaporanMiniSocController;
 use App\Http\Controllers\Buper\KelolaLaporanBuperController;
 use App\Http\Controllers\Internetdesa\KelolaLaporanInterdesaController;
@@ -51,6 +52,10 @@ Route::post('/logout', function () {
 
 Route::get('/Home', [HomeController::class, 'index'])->name('HomeCompro');
 Route::get('/unit-usaha', [UnitUsahaPageController::class, 'index'])->name('UnitUsahaPage');
+Route::get('/galeri', fn() => Inertia::render('galeri'));
+Route::get('/laporan-transparansi', [laporanTransparansiController::class, 'index'])->name('laporan-transparansi');
+Route::get('/laporan-transparansi/download', [laporanTransparansiController::class, 'download'])->name('laporan.download');
+
 Route::prefix('profil')->group(function () {
     Route::get('/tentang-kami', fn() => Inertia::render('Profil/TentangKami'));
     Route::get('/struktur-organisasi', fn() => Inertia::render('Profil/StrukturOrganisasi'));

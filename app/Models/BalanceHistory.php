@@ -9,6 +9,10 @@ class BalanceHistory extends Model
     protected $table = 'balance_histories';
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'created_at' => 'datetime',
+    ];
+
     public function unit()
     {
         return $this->belongsTo(Unit::class, 'unit_id', 'id_units');
