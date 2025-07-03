@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import { Head } from '@inertiajs/react';
+import { Toaster } from 'react-hot-toast';
 import Navbar from './Navbar';
 import Footer from './Footer';
 
@@ -53,6 +54,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
                 <Navbar />
                 <main className="pt-16">{children}</main>
                 <Footer />
+                <Toaster position="bottom-center" reverseOrder={false} />
             </div>
         </>
     );

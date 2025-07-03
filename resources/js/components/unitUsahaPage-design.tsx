@@ -3,6 +3,7 @@ import { Building2, Clock, Globe, LucideIcon, MapPin, ShoppingBag, Volleyball, W
 import React, { useEffect, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import toast from 'react-hot-toast';
 
 interface BusinessUnit {
     title: string;
@@ -160,8 +161,9 @@ const UnitUsaha: React.FC = () => {
     };
 
     const handleSubmit = () => {
+        const toastId = null;
         if (!selectedPackage || !selectedDate || !namaPenyewa) {
-            alert('Mohon lengkapi semua data booking');
+            toast.error('Mohon lengkapi semua data booking', { id: toastId });
             return;
         }
 

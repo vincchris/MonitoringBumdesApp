@@ -142,15 +142,19 @@ const Navbar: React.FC = () => {
                                         onMouseLeave={() => setActiveDropdown(null)}
                                     >
                                         <button
-                                            className={`flex items-center px-3 py-2 text-sm font-medium transition-colors duration-200 ${
-                                                hasActiveSubmenu(item.submenu) ? 'font-semibold text-blue-600' : 'text-gray-700 hover:text-blue-600'
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleDropdown(index);
+                                            }}
+                                            className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200 ${
+                                                hasActiveSubmenu(item.submenu)
+                                                    ? 'bg-blue-50 font-semibold text-blue-600'
+                                                    : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
                                             }`}
                                         >
                                             {item.name}
                                             <ChevronDown
-                                                className={`ml-1 h-4 w-4 transition-transform duration-200 ${
-                                                    activeDropdown === index ? 'rotate-180' : ''
-                                                }`}
+                                                className={`h-4 w-4 transition-transform duration-200 ${activeDropdown === index ? 'rotate-180' : ''}`}
                                             />
                                         </button>
 
@@ -216,7 +220,10 @@ const Navbar: React.FC = () => {
                             {item.submenu ? (
                                 <div>
                                     <button
-                                        onClick={() => toggleDropdown(index)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleDropdown(index);
+                                        }}
                                         className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200 ${
                                             hasActiveSubmenu(item.submenu)
                                                 ? 'bg-blue-50 font-semibold text-blue-600'

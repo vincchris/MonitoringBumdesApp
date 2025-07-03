@@ -67,6 +67,21 @@
             background-color: #e6f2e6;
             font-weight: bold;
         }
+
+        .sub-table {
+            margin-top: 5px;
+            margin-bottom: 40px;
+        }
+
+        .unit-title {
+            margin-top: 40px;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .sub-table th {
+            background-color: #f9f9f9;
+        }
     </style>
 </head>
 
@@ -121,6 +136,33 @@
             </tr>
         </tfoot>
     </table>
+
+    <h3>Detail Transaksi per Unit Usaha</h3>
+    @foreach ($rincian as $unit)
+        <div class="unit-title">{{ $unit['unit_usaha'] }}</div>
+        <table class="sub-table">
+            <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Jenis</th>
+                    <th>Saldo Sebelum</th>
+                    <th>Saldo Sekarang</th>
+                    <th>Selisih</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($unit['transaksi'] as $trx)
+                    <tr>
+                        <td>{{ $trx['tanggal'] }}</td>
+                        <td>{{ $trx['jenis'] }}</td>
+                        <td class="text-right">{{ $trx['saldo_sebelum'] }}</td>
+                        <td class="text-right">{{ $trx['saldo_sekarang'] }}</td>
+                        <td class="text-right">{{ $trx['selisih'] }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endforeach
 
     <div class="footer">
         Dicetak pada {{ \Carbon\Carbon::now()->translatedFormat('d F Y') }}

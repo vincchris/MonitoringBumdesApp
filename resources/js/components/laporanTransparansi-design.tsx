@@ -1,7 +1,8 @@
 import MainLayout from '@/components/layout_compro/MainLayout';
 import { usePage } from '@inertiajs/react';
-import { BarChart3, FileDown } from 'lucide-react';
-import React from 'react';
+import { BarChart3, FileDown, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 type GrafikItem = {
@@ -26,6 +27,37 @@ const Laporan: React.FC = () => {
     const { grafik, ringkasan } = props;
 
     const formatRupiah = (val: number) => `Rp${val.toLocaleString('id-ID')}`;
+
+    const [loading, setLoading] = useState(false);
+
+    const handleDownload = async () => {
+        setLoading(true);
+        const toastId = toast.loading('Menyiapkan laporan PDF...');
+
+        try {
+            const response = await fetch(route('laporan.download'), {
+                method: 'GET',
+            });
+
+            if (!response.ok) throw new Error('Gagal mengunduh laporan');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'laporan-keuangan.pdf';
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            toast.success('Laporan berhasil diunduh!', { id: toastId });
+        } catch (error) {
+            toast.error('Terjadi kesalahan saat mengunduh!', { id: toastId });
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <MainLayout title="Laporan Keuangan">
@@ -103,14 +135,23 @@ const Laporan: React.FC = () => {
                     <p className="mb-8 text-blue-700">
                         Anda dapat mengunduh laporan lengkap dalam format PDF untuk tahun {new Date().getFullYear()}.
                     </p>
-                    <a
-                        href={route('laporan.download')}
-                        className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    <button
+                        onClick={handleDownload}
+                        disabled={loading}
+                        className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-70"
                     >
-                        <FileDown className="h-5 w-5" /> Unduh Laporan PDF
-                    </a>
+                        {loading ? (
+                            <>
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                                Menyiapkan...
+                            </>
+                        ) : (
+                            <>
+                                <FileDown className="h-5 w-5" />
+                                Unduh Laporan PDF
+                            </>
+                        )}
+                    </button>
                 </div>
             </section>
 

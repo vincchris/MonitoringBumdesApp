@@ -53,8 +53,13 @@ Route::post('/logout', function () {
 Route::get('/Home', [HomeController::class, 'index'])->name('HomeCompro');
 Route::get('/unit-usaha', [UnitUsahaPageController::class, 'index'])->name('UnitUsahaPage');
 Route::get('/galeri', fn() => Inertia::render('galeri'));
-Route::get('/laporan-transparansi', [laporanTransparansiController::class, 'index'])->name('laporan-transparansi');
-Route::get('/laporan-transparansi/download', [laporanTransparansiController::class, 'download'])->name('laporan.download');
+
+Route::prefix('laporan-transparansi')->controller(laporanTransparansiController::class)->group(function(){
+    Route::get('/', 'index')->name('laporan-transparansi');
+    Route::get('download', 'download')->name('laporan.download');
+});
+
+Route::get('/kontak', fn() => Inertia::render('kontak'));
 
 Route::prefix('profil')->group(function () {
     Route::get('/tentang-kami', fn() => Inertia::render('Profil/TentangKami'));

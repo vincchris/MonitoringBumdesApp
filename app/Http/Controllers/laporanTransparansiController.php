@@ -70,7 +70,7 @@ class laporanTransparansiController extends Controller
     public function download()
     {
         // Eager load relasi 'unit'
-        $histories = BalanceHistory::with('unit')->get();
+        $histories = BalanceHistory::with('unit')->orderBy('created_at', 'asc')->get();
 
         // Ringkasan total
         $pemasukan = $histories->where('jenis', 'Pendapatan')->sum(fn($item) => $item->saldo_sekarang - $item->saldo_sebelum);
@@ -85,22 +85,33 @@ class laporanTransparansiController extends Controller
             'saldo_akhir' => 'Rp' . number_format($saldo_akhir, 0, ',', '.'),
         ];
 
-        // Rincian berdasarkan unit usaha
+        // Rincian berdasarkan unit usaha + transaksi + tanggal
         $rincian = $histories->groupBy(fn($item) => $item->unit->unit_name ?? 'Tidak Diketahui')
             ->map(function ($items, $nama_unit) {
                 $pemasukan = $items->where('jenis', 'Pendapatan')->sum(fn($item) => $item->saldo_sekarang - $item->saldo_sebelum);
                 $pengeluaran = $items->where('jenis', 'Pengeluaran')->sum(fn($item) => $item->saldo_sebelum - $item->saldo_sekarang);
 
+                $transaksi = $items->map(function ($item) {
+                    return [
+                        'tanggal' => \Carbon\Carbon::parse($item->created_at)->translatedFormat('d F Y'),
+                        'jenis' => $item->jenis,
+                        'saldo_sebelum' => 'Rp' . number_format($item->saldo_sebelum, 0, ',', '.'),
+                        'saldo_sekarang' => 'Rp' . number_format($item->saldo_sekarang, 0, ',', '.'),
+                        'selisih' => 'Rp' . number_format(abs($item->saldo_sekarang - $item->saldo_sebelum), 0, ',', '.'),
+                    ];
+                });
+
                 return [
                     'unit_usaha' => $nama_unit,
                     'pemasukan' => 'Rp' . number_format($pemasukan, 0, ',', '.'),
                     'pengeluaran' => 'Rp' . number_format($pengeluaran, 0, ',', '.'),
+                    'transaksi' => $transaksi,
                 ];
             })->values();
 
+        // Total keseluruhan
         $total_pemasukan = 0;
         $total_pengeluaran = 0;
-
         foreach ($rincian as $item) {
             $total_pemasukan += (float) str_replace(['Rp', '.', ' '], '', $item['pemasukan']);
             $total_pengeluaran += (float) str_replace(['Rp', '.', ' '], '', $item['pengeluaran']);
@@ -112,6 +123,7 @@ class laporanTransparansiController extends Controller
             'surplus' => $total_pemasukan - $total_pengeluaran,
         ];
 
+        // Kirim ke view PDF
         $pdf = Pdf::loadView('pdf.laporan-keuangan', compact('ringkasan', 'rincian', 'total_keseluruhan'));
 
         return $pdf->download('laporan-keuangan.pdf');
