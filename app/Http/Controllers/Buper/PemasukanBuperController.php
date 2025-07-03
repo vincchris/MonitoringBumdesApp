@@ -75,13 +75,13 @@ class PemasukanBuperController extends Controller
                 'total_bayar' => $validated['biaya_sewa'],
                 'description' => '',
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
             Income::create([
                 'rent_id' => $rent->id_rent,
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
             $saldoSebelumnya = BalanceHistory::where('unit_id', $unitId)->latest()->value('saldo_sekarang');
@@ -100,6 +100,7 @@ class PemasukanBuperController extends Controller
                 'saldo_sebelum' => $saldoSebelumnya,
                 'jenis' => 'Pendapatan',
                 'saldo_sekarang' => $saldoSebelumnya + $validated['biaya_sewa'],
+                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
 
@@ -144,7 +145,7 @@ class PemasukanBuperController extends Controller
                 'tenant_name' => $validated['keterangan'],
                 'nominal' => $validated['jumlah_peserta'],
                 'total_bayar' => $totalBaru,
-                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
             $selisih = $totalBaru - $totalLama;
@@ -157,6 +158,7 @@ class PemasukanBuperController extends Controller
                 $lastHistory->update([
                     'saldo_sebelum' => $saldoSebelum,
                     'saldo_sekarang' => $saldoSesudah,
+                    'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
                 ]);
             }
 

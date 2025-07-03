@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Airweslik;
 
 use App\Http\Controllers\Controller;
+use App\Models\BalanceHistory;
 use App\Models\Income;
 use App\Models\InitialBalance;
 use App\Models\RentTransaction;
@@ -116,7 +117,7 @@ class PemasukanAirweslikController extends Controller
                 'total_bayar' => $totalBayar,
                 'description' => '',
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
             // Debug: Cek data yang tersimpan
@@ -125,15 +126,28 @@ class PemasukanAirweslikController extends Controller
             Income::create([
                 'rent_id' => $rent->id_rent,
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
-            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
-            if ($initialBalance) {
-                $initialBalance->update([
-                    'nominal' => $initialBalance->nominal + $totalBayar,
-                ]);
+            $saldoSebelumnya = BalanceHistory::where('unit_id', $unitId)->latest()->value('saldo_sekarang');
+
+            if (is_null($saldoSebelumnya)) {
+                $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
+                $saldoSebelumnya = $initialBalance?->nominal ?? 0;
+                $initialBalanceId = $initialBalance?->id_initial_balance;
+            } else {
+                $initialBalanceId = null;
             }
+
+            BalanceHistory::create([
+                'unit_id' => $unitId,
+                'initial_balance_id' => $initialBalanceId,
+                'saldo_sebelum' => $saldoSebelumnya,
+                'jenis' => 'Pendapatan',
+                'saldo_sekarang' => $saldoSebelumnya + $totalBayar,
+                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+            ]);
 
             DB::commit();
             return redirect()->back()->with('info', [

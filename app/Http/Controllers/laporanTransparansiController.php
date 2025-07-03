@@ -18,11 +18,15 @@ class laporanTransparansiController extends Controller
         // Grup per bulan dan hitung pemasukan + pengeluaran per bulan
         $grafik = $histories
             ->groupBy(function ($item) {
-                return Carbon::parse($item->created_at)->format('M'); // contoh: Jan, Feb, etc
+                return Carbon::parse($item->created_at)->format('M');
             })
             ->map(function ($items) {
                 $pemasukan = $items->where('jenis', 'Pendapatan')->sum(function ($item) {
-                    return $item->saldo_sekarang - $item->saldo_sebelum;
+                    return $item->saldo_sekarang === $item->saldo_sebelum
+                        ? $item->saldo_sekarang
+                        : ($item->jenis === 'Pendapatan'
+                            ? $item->saldo_sekarang - $item->saldo_sebelum
+                            : $item->saldo_sebelum - $item->saldo_sekarang);
                 });
 
                 $pengeluaran = $items->where('jenis', 'Pengeluaran')->sum(function ($item) {
@@ -90,10 +94,11 @@ class laporanTransparansiController extends Controller
             ->map(function ($items, $nama_unit) {
                 $pemasukan = $items->where('jenis', 'Pendapatan')->sum(fn($item) => $item->saldo_sekarang - $item->saldo_sebelum);
                 $pengeluaran = $items->where('jenis', 'Pengeluaran')->sum(fn($item) => $item->saldo_sebelum - $item->saldo_sekarang);
+                $selisih = $pemasukan - $pengeluaran;
 
                 $transaksi = $items->map(function ($item) {
                     return [
-                        'tanggal' => \Carbon\Carbon::parse($item->created_at)->translatedFormat('d F Y'),
+                        'tanggal' => Carbon::parse($item->created_at)->translatedFormat('d F Y'),
                         'jenis' => $item->jenis,
                         'saldo_sebelum' => 'Rp' . number_format($item->saldo_sebelum, 0, ',', '.'),
                         'saldo_sekarang' => 'Rp' . number_format($item->saldo_sekarang, 0, ',', '.'),
@@ -105,22 +110,15 @@ class laporanTransparansiController extends Controller
                     'unit_usaha' => $nama_unit,
                     'pemasukan' => 'Rp' . number_format($pemasukan, 0, ',', '.'),
                     'pengeluaran' => 'Rp' . number_format($pengeluaran, 0, ',', '.'),
+                    'selisih' => 'Rp' . number_format($selisih, 0, ',', '.'),
                     'transaksi' => $transaksi,
                 ];
             })->values();
 
-        // Total keseluruhan
-        $total_pemasukan = 0;
-        $total_pengeluaran = 0;
-        foreach ($rincian as $item) {
-            $total_pemasukan += (float) str_replace(['Rp', '.', ' '], '', $item['pemasukan']);
-            $total_pengeluaran += (float) str_replace(['Rp', '.', ' '], '', $item['pengeluaran']);
-        }
-
         $total_keseluruhan = [
-            'pemasukan' => $total_pemasukan,
-            'pengeluaran' => $total_pengeluaran,
-            'surplus' => $total_pemasukan - $total_pengeluaran,
+            'pemasukan' => $pemasukan,
+            'pengeluaran' => $pengeluaran,
+            'surplus' => $surplus,
         ];
 
         // Kirim ke view PDF

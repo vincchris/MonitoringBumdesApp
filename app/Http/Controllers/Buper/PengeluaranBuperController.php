@@ -78,7 +78,7 @@ class PengeluaranBuperController extends Controller
                 'description' => $validated['deskripsi'],
                 'nominal' => $validated['biaya'],
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
             $saldoSebelumnya = BalanceHistory::where('unit_id', $unitId)->latest()->value('saldo_sekarang');
@@ -96,6 +96,8 @@ class PengeluaranBuperController extends Controller
                 'saldo_sebelum' => $saldoSebelumnya,
                 'jenis' => 'Pengeluaran',
                 'saldo_sekarang' => $saldoSebelumnya - $validated['biaya'],
+                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
             DB::commit();
@@ -141,14 +143,14 @@ class PengeluaranBuperController extends Controller
                 'category_expense' => $validated['kategori'],
                 'description' => $validated['deskripsi'],
                 'nominal' => $biayaBaru,
-                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
             $lastHistory = BalanceHistory::where('unit_id', $unitId)->latest()->first();
             if ($lastHistory) {
                 $lastHistory->update([
                     'saldo_sekarang' => $lastHistory->saldo_sekarang - $selisih,
+                    'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
                 ]);
             }
 
@@ -169,37 +171,43 @@ class PengeluaranBuperController extends Controller
     {
         $user = auth()->user()->load('units');
 
-        if (!$user->units->contains('id_units', $unitId)) {
+        $unitIds = $user->units->pluck('id_units')->map(fn($val) => (int) $val)->toArray();
+
+        // Validasi akses ke unit
+        if (!in_array((int) $unitId, $unitIds)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
         }
 
         try {
-            DB::beginTransaction();
+            DB::transaction(function () use ($unitId, $id) {
+                $expense = Expense::where('id_expense', $id)
+                    ->where('unit_id', $unitId)
+                    ->firstOrFail();
 
-            // Fix: Gunakan primary key yang benar
-            $expense = Expense::where('id_expense', $id) // Primary key adalah id_expense
-                ->where('unit_id', $unitId)
-                ->firstOrFail();
+                $jumlah = $expense->nominal;
 
-            $jumlah = $expense->nominal;
+                // Cari histori pengeluaran yang sesuai untuk dihapus
+                $history = BalanceHistory::where('unit_id', $unitId)
+                    ->where('jenis', 'Pengeluaran')
+                    ->where('saldo_sebelum', '>=', $jumlah) // bantu filter aman
+                    ->where('saldo_sekarang', DB::raw('saldo_sebelum - ' . $jumlah))
+                    ->orderByDesc('created_at')
+                    ->first();
 
-            $lastHistory = BalanceHistory::where('unit_id', $unitId)->latest()->first();
-            if ($lastHistory) {
-                $lastHistory->update([
-                    'saldo_sekarang' => $lastHistory->saldo_sekarang + $jumlah,
-                ]);
-            }
+                if (!$history) {
+                    throw new \Exception('Tidak ditemukan histori pengeluaran yang sesuai.');
+                }
 
-            $expense->delete();
-
-            DB::commit();
+                // Hapus histori dan pengeluaran
+                $history->delete();
+                $expense->delete();
+            });
 
             return back()->with('info', [
                 'message' => 'Data pengeluaran berhasil dihapus',
-                'method' => 'delete'
+                'method' => 'delete',
             ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
+        } catch (\Throwable $e) {
             Log::error('Gagal hapus pengeluaran: ' . $e->getMessage());
             return back()->withErrors(['error' => 'Gagal menghapus data.']);
         }

@@ -44,7 +44,7 @@ class PemasukanMiniSocController extends Controller
         $formatted = $incomes->map(function ($item) {
             return [
                 'id' => $item->rent->id_rent,
-                'tanggal' => optional($item->updated_at)->format('Y-m-d'),
+                'tanggal' => optional($item->rent->updated_at)->format('Y-m-d'),
                 'penyewa' => $item->rent->tenant_name ?? '-',
                 'durasi' => (int) $item->rent->nominal ?? 0,
                 'tipe_penyewa' => $item->rent->tarif->category_name ?? '-',
@@ -72,20 +72,6 @@ class PemasukanMiniSocController extends Controller
                 'last_page' => ceil($totalItems / $perPage),
             ]
         ]);
-
-        // return response()->json([
-        //     'unit_id' => $unitId,
-        //     'user' => $user->only(['id_users', 'name', 'email']),
-        //     'pemasukan' => $formatted,
-        // ]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
     }
 
     /**
@@ -136,14 +122,14 @@ class PemasukanMiniSocController extends Controller
                 'total_bayar' => $totalBayar,
                 'description' => $validated['keterangan'] ?? '',
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
             // Buat income record
             Income::create([
                 'rent_id' => $rentTransaction->id_rent,
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' =>  $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
 
@@ -163,6 +149,7 @@ class PemasukanMiniSocController extends Controller
                 'saldo_sebelum' => $saldoSebelumnya,
                 'jenis' => 'Pendapatan',
                 'saldo_sekarang' => $saldoSebelumnya + $totalBayar,
+                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
             // dd($request);
@@ -217,7 +204,7 @@ class PemasukanMiniSocController extends Controller
                 'nominal' => $validated['durasi'],
                 'total_bayar' => $totalBayarBaru,
                 'description' => $validated['keterangan'],
-                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
             $selisih = $totalBayarBaru - $totalBayarLama;
@@ -225,15 +212,23 @@ class PemasukanMiniSocController extends Controller
             $lastHistory = BalanceHistory::where('unit_id', $unitId)->latest()->first();
 
             if ($lastHistory) {
-                $saldoSebelum = $lastHistory->saldo_sekarang;
-                $saldoSesudah = $saldoSebelum + $selisih;
+                // Jika nominal berubah, update saldo
+                if ($selisih !== 0) {
+                    $saldoSebelum = $lastHistory->saldo_sekarang;
+                    $saldoSesudah = $saldoSebelum + $selisih;
 
-                $lastHistory->update([
-                    'saldo_sebelum' => $saldoSebelum,
-                    'saldo_sekarang' => $saldoSesudah,
-                ]);
+                    $lastHistory->update([
+                        'saldo_sebelum' => $saldoSebelum,
+                        'saldo_sekarang' => $saldoSesudah,
+                        'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                    ]);
+                } else {
+                    // Jika nominal tidak berubah, cukup update waktu saja (jika kamu mau simpan tanggal baru)
+                    $lastHistory->update([
+                        'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                    ]);
+                }
             }
-
             DB::commit();
             return back()->with('info', [
                 'message' => 'Data pemasukan berhasil diubah',
@@ -260,7 +255,7 @@ class PemasukanMiniSocController extends Controller
             abort(403, 'Anda tidak memiliki akses ke unit ini');
         }
 
-        
+
         try {
             DB::beginTransaction();
             $rent = RentTransaction::with('income', 'tarif')->where('id_rent', $id)->firstOrFail();

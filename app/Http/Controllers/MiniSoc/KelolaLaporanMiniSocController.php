@@ -108,13 +108,13 @@ class KelolaLaporanMiniSocController extends Controller
         // Ambil histori saldo berdasarkan unit
         $histories = BalanceHistory::where('unit_id', $unit->id_units)
             ->when($tanggalDipilih, function ($query) use ($tanggalDipilih) {
-                $query->whereDate('created_at', $tanggalDipilih);
+                $query->whereDate('updated_at', $tanggalDipilih);
             })
-            ->orderByDesc('created_at')
+            ->orderByDesc('updated_at')
             ->get()
             ->map(function ($item) {
-                $tanggalAwal = Carbon::parse($item->created_at)->startOfDay();
-                $tanggalAkhir = Carbon::parse($item->created_at)->endOfDay();
+                $tanggalAwal = Carbon::parse($item->updated_at)->startOfDay();
+                $tanggalAkhir = Carbon::parse($item->updated_at)->endOfDay();
 
                 // Perbaikan untuk mendapatkan description
                 $description = '-';
@@ -124,11 +124,11 @@ class KelolaLaporanMiniSocController extends Controller
                     $income = Income::whereHas('rent.tarif.unit', function ($q) use ($item) {
                         $q->where('id_units', $item->unit_id);
                     })
-                        ->whereBetween('created_at', [$tanggalAwal, $tanggalAkhir])
+                        ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
                         ->with(['rent' => function($query) {
                             $query->select('id_rent', 'description', 'total_bayar');
                         }])
-                        ->orderBy('created_at', 'desc')
+                        ->orderBy('updated_at', 'desc')
                         ->first();
 
                     if ($income && $income->rent) {
@@ -138,8 +138,8 @@ class KelolaLaporanMiniSocController extends Controller
                         $rent = RentTransaction::whereHas('tarif.unit', function ($q) use ($item) {
                             $q->where('id_units', $item->unit_id);
                         })
-                            ->whereBetween('created_at', [$tanggalAwal, $tanggalAkhir])
-                            ->orderBy('created_at', 'desc')
+                            ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
+                            ->orderBy('updated_at', 'desc')
                             ->first();
 
                         $description = $rent ? ($rent->description ?? 'Pemasukan dari sewa') : 'Pemasukan';
@@ -147,7 +147,7 @@ class KelolaLaporanMiniSocController extends Controller
 
                     Log::info('Income Description Debug:', [
                         'unit_id' => $item->unit_id,
-                        'tanggal' => $item->created_at->format('Y-m-d H:i:s'),
+                        'tanggal' => $item->updated_at->format('Y-m-d H:i:s'),
                         'income_found' => $income ? 'Yes' : 'No',
                         'rent_data' => $income ? $income->rent : null,
                         'final_description' => $description,
@@ -156,29 +156,29 @@ class KelolaLaporanMiniSocController extends Controller
 
                 if ($item->jenis === 'Pengeluaran') {
                     $expense = Expense::where('unit_id', $item->unit_id)
-                        ->whereBetween('created_at', [$tanggalAwal, $tanggalAkhir])
-                        ->orderBy('created_at', 'desc')
+                        ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
+                        ->orderBy('updated_at', 'desc')
                         ->first();
 
                     $description = $expense ? ($expense->description ?? 'Pengeluaran operasional') : 'Pengeluaran';
 
                     Log::info('Expense Description Debug:', [
                         'unit_id' => $item->unit_id,
-                        'tanggal' => $item->created_at->format('Y-m-d H:i:s'),
+                        'tanggal' => $item->updated_at->format('Y-m-d H:i:s'),
                         'expense_found' => $expense ? 'Yes' : 'No',
                         'final_description' => $description,
                     ]);
                 }
 
                 return [
-                    'tanggal' => optional($item->created_at)->format('Y-m-d'),
+                    'tanggal' => optional($item->updated_at)->format('Y-m-d'),
                     'keterangan' => $description,
                     'jenis' => $item->jenis,
                     'selisih' => $item->jenis === 'Pendapatan'
                         ? $item->saldo_sekarang - $item->saldo_sebelum
                         : $item->saldo_sebelum - $item->saldo_sekarang,
-                    'saldo' => number_format($item->saldo_sekarang, 0, '', ','), // hasil dengan pemisah ribuan
-                    'created_at' => $item->created_at,
+                    'saldo' => number_format($item->saldo_sekarang, 0, '', ','),
+                    'updated_at' => $item->updated_at,
                 ];
             });
 

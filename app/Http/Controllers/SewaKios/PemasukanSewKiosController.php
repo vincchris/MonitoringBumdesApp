@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\SewaKios;
 
 use App\Http\Controllers\Controller;
+use App\Models\BalanceHistory;
 use App\Models\Income;
 use App\Models\InitialBalance;
 use App\Models\RentTransaction;
@@ -54,11 +55,11 @@ class PemasukanSewKiosController extends Controller
     {
         $validated = $request->validate([
             'tanggal' => 'required|date',
-            'penyewa' => 'required|string|max:255', // Ubah dari 'keterangan' ke 'penyewa'
-            'lokasi_kios' => 'required|string', // Tambahkan validasi untuk lokasi_kios
+            'penyewa' => 'required|string|max:255',
+            'lokasi_kios' => 'required|string',
             'biaya_sewa' => 'required|numeric|min:0',
             'durasi_sewa' => 'required|integer|min:1',
-            'keterangan' => 'nullable|string|max:255', // Buat optional
+            'keterangan' => 'nullable|string|max:255',
         ]);
 
         try {
@@ -79,26 +80,39 @@ class PemasukanSewKiosController extends Controller
             $rent = RentTransaction::create([
                 'tarif_id' => $tarif->id_tarif,
                 'tenant_name' => $validated['penyewa'],
-                'nominal' => $validated['biaya_sewa'], // Gunakan biaya_sewa sebagai nominal
+                'nominal' => $validated['biaya_sewa'],
                 'durasi' => $validated['durasi_sewa'],
                 'total_bayar' => $totalBayar,
                 'description' => $validated['keterangan'] ?? '',
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
             Income::create([
                 'rent_id' => $rent->id_rent,
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
-            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
-            if ($initialBalance) {
-                $initialBalance->update([
-                    'nominal' => $initialBalance->nominal + $totalBayar,
-                ]);
+            $saldoSebelumnya = BalanceHistory::where('unit_id', $unitId)->latest()->value('saldo_sekarang');
+
+            if (is_null($saldoSebelumnya)) {
+                $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
+                $saldoSebelumnya = $initialBalance?->nominal ?? 0;
+                $initialBalanceId = $initialBalance?->id_initial_balance;
+            } else {
+                $initialBalanceId = null;
             }
+
+            BalanceHistory::create([
+                'unit_id' => $unitId,
+                'initial_balance_id' => $initialBalanceId,
+                'saldo_sebelum' => $saldoSebelumnya,
+                'jenis' => 'Pendapatan',
+                'saldo_sekarang' => $saldoSebelumnya + $totalBayar,
+                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+            ]);
 
             DB::commit();
 
@@ -106,7 +120,6 @@ class PemasukanSewKiosController extends Controller
                 'message' => 'Data pemasukan berhasil ditambah',
                 'method' => 'create',
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->withErrors(['error' => 'Gagal menyimpan data: ' . $e->getMessage()]);
@@ -147,15 +160,21 @@ class PemasukanSewKiosController extends Controller
                 'durasi' => $validated['durasi_sewa'],
                 'total_bayar' => $totalBaru,
                 'description' => $validated['keterangan'] ?? '',
-                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
             $selisih = $totalBaru - $totalLama;
-            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
-            if ($initialBalance) {
-                $initialBalance->update([
-                    'nominal' => $initialBalance->nominal + $selisih,
+
+            $lastHistory = BalanceHistory::where('unit_id', $unitId)->latest()->first();
+
+            if ($lastHistory) {
+                $saldoSebelum = $lastHistory->saldo_sekarang;
+                $saldoSesudah = $saldoSebelum + $selisih;
+
+                $lastHistory->update([
+                    'saldo_sebelum' => $saldoSebelum,
+                    'saldo_sekarang' => $saldoSesudah,
+                    'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
                 ]);
             }
 
