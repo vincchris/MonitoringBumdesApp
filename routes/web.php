@@ -54,7 +54,7 @@ Route::get('/Home', [HomeController::class, 'index'])->name('HomeCompro');
 Route::get('/unit-usaha', [UnitUsahaPageController::class, 'index'])->name('UnitUsahaPage');
 Route::get('/galeri', fn() => Inertia::render('galeri'));
 
-Route::prefix('laporan-transparansi')->controller(laporanTransparansiController::class)->group(function(){
+Route::prefix('laporan-transparansi')->controller(laporanTransparansiController::class)->group(function () {
     Route::get('/', 'index')->name('laporan-transparansi');
     Route::get('download', 'download')->name('laporan.download');
 });
@@ -111,54 +111,36 @@ Route::middleware(['auth', 'verified'])->group(function () {
             }
         })->middleware(['auth', 'verified'])->name('dashboard');
 
-        // Pemasukan
+        // ========== Rute Pemasukan ==========
         Route::resource('pemasukan-minisoc', PemasukanMiniSocController::class);
         Route::resource('pemasukan-buper', PemasukanBuperController::class);
         Route::resource('pemasukan-sewakios', PemasukanSewKiosController::class);
         Route::resource('pemasukan-airweslik', PemasukanAirweslikController::class);
         Route::resource('pemasukan-interdesa', PemasukanInterdesaController::class);
 
-
-
-        // Pengeluaran
+        // ========== Rute Pengeluaran ==========
         Route::resource('pengeluaran-minisoc', PengeluaranMiniSocController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('pengeluaran-buper', PengeluaranBuperController::class);
         Route::resource('pengeluaran-sewakios', PengeluaranSewKiosController::class);
         Route::resource('pengeluaran-airweslik', PengeluaranAirweslikController::class);
         Route::resource('pengeluaran-interdesa', PengeluaranInterdesaController::class);
 
+        // ========== Kelola Laporan + Ekspor ==========
+        $laporanUnits = [
+            'minisoc'     => KelolaLaporanMiniSocController::class,
+            'buper'       => KelolaLaporanBuperController::class,
+            'sewakios'    => KelolaLaporanSewKiosController::class,
+            'airweslik'   => KelolaLaporanAirweslikController::class,
+            'interdesa'   => KelolaLaporanInterdesaController::class,
+        ];
 
-        // Kelola Laporan
-        Route::get('/kelolalaporan-minisoc', [KelolaLaporanMiniSocController::class, 'index'])->name('laporan.minisoc.kelola');
-        Route::get('/kelolalaporan-buper', [KelolaLaporanBuperController::class, 'index'])->name('laporan.buper.kelola');
-        Route::get('/kelolalaporan-sewakios', [KelolaLaporanSewKiosController::class, 'index'])->name('laporan.sewakios.kelola');
-        Route::get('/kelolalaporan-airweslik', [KelolaLaporanAirweslikController::class, 'index'])->name('laporan.airweslik.kelola');
-        Route::get('/kelolalaporan-interdesa', [KelolaLaporanInterdesaController::class, 'index'])->name('laporan.airweslik.kelola');
-
-
-
-
-
-        Route::middleware(['auth'])->group(function () {
-            Route::get('/kelolalaporan/export-pdf', [KelolaLaporanMiniSocController::class, 'exportPDF']);
-            Route::get('/kelolalaporan/export-excel', [KelolaLaporanMiniSocController::class, 'exportExcel']);
-        });
-        Route::middleware(['auth'])->group(function () {
-            Route::get('/kelolalaporan/export-pdf', [KelolaLaporanBuperController::class, 'exportPDF']);
-            Route::get('/kelolalaporan/export-excel', [KelolaLaporanBuperController::class, 'exportExcel']);
-        });
-        Route::middleware(['auth'])->group(function () {
-            Route::get('/kelolalaporan/export-pdf', [KelolaLaporanSewKiosController::class, 'exportPDF']);
-            Route::get('/kelolalaporan/export-excel', [KelolaLaporanSewKiosController::class, 'exportExcel']);
-        });
-        Route::middleware(['auth'])->group(function () {
-            Route::get('/kelolalaporan/export-pdf', [KelolaLaporanAirweslikController::class, 'exportPDF']);
-            Route::get('/kelolalaporan/export-excel', [KelolaLaporanAirweslikController::class, 'exportExcel']);
-        });
-        Route::middleware(['auth'])->group(function () {
-            Route::get('/kelolalaporan/export-pdf', [KelolaLaporanInterdesaController::class, 'exportPDF']);
-            Route::get('/kelolalaporan/export-excel', [KelolaLaporanInterdesaController::class, 'exportExcel']);
-        });
+        foreach ($laporanUnits as $key => $controller) {
+            Route::prefix("kelolalaporan-{$key}")->name("laporan.{$key}.")->group(function () use ($controller) {
+                Route::get('/', [$controller, 'index'])->name('kelola');
+                Route::get('/export-pdf', [$controller, 'exportPDF'])->name('export.pdf');
+                Route::get('/export-excel', [$controller, 'exportExcel'])->name('export.excel');
+            });
+        }
     });
 
 

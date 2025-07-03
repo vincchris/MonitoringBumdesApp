@@ -46,7 +46,7 @@ class PemasukanAirweslikController extends Controller
                 'tanggal' => optional($item->updated_at)->format('Y-m-d'),
                 'pelanggan' => $item->rent->tenant_name,
                 'kategori' => $item->rent->tarif->category_name ?? '-',
-                'pemakaian' => (int) $item->rent->durasi, // Ini harus menampilkan nilai yang diinput user
+                'pemakaian' => (int) $item->rent->nominal, // Ini harus menampilkan nilai yang diinput user
                 'tarif' => (int) ($item->rent->tarif->harga_per_unit ?? 0),
                 'total' => (int) ($item->rent->total_bayar ?? 0),
             ];
@@ -75,9 +75,6 @@ class PemasukanAirweslikController extends Controller
 
     public function store(Request $request, $unitId)
     {
-        // Debug: Cek data yang diterima dari frontend
-        \Log::info('Store request data:', $request->all());
-
         $validated = $request->validate([
             'tanggal' => 'required|date',
             'pelanggan' => 'required|string|max:255',
@@ -85,9 +82,6 @@ class PemasukanAirweslikController extends Controller
             'pemakaian' => 'required|integer|min:1',
             'tarif' => 'required|numeric|min:0',
         ]);
-
-        Log::info('Validated data:', $validated);
-
         try {
             DB::beginTransaction();
 
@@ -102,18 +96,10 @@ class PemasukanAirweslikController extends Controller
 
             $totalBayar = $validated['pemakaian'] * $validated['tarif'];
 
-            // Debug: Cek perhitungan
-            Log::info('Calculation:', [
-                'pemakaian' => $validated['pemakaian'],
-                'tarif' => $validated['tarif'],
-                'total_bayar' => $totalBayar
-            ]);
-
             $rent = RentTransaction::create([
                 'tarif_id' => $tarif->id_tarif,
                 'tenant_name' => $validated['pelanggan'],
-                'nominal' => $validated['tarif'],
-                'durasi' => $validated['pemakaian'], // PENTING: Ini yang menyimpan nilai pemakaian (100)
+                'nominal' => $validated['pemakaian'],
                 'total_bayar' => $totalBayar,
                 'description' => '',
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
