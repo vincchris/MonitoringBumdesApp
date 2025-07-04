@@ -95,6 +95,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 3 => 'Sewakios/DashboardSewakios',
                 4 => 'Airweslik/DashboardAirweslik',
                 5 => 'Internetdesa/DashboardInterdesa',
+                6 => 'Bumdes/DashboardBumdes',
                 default => 'Dashboard',
             };
 
