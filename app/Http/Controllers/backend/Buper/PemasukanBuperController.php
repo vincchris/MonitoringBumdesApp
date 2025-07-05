@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Buper;
+namespace App\Http\Controllers\backend\Buper;
 
 use App\Http\Controllers\Controller;
 use App\Models\BalanceHistory;
@@ -10,13 +10,14 @@ use App\Models\RentTransaction;
 use App\Models\Tarif;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class PemasukanBuperController extends Controller
 {
     public function index(Request $request, $unitId)
     {
-        $user = auth()->user()->load('units');
+        $user = Auth::user()->load('units');
 
         if (!$user->units->contains('id_units', $unitId)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
@@ -149,7 +150,10 @@ class PemasukanBuperController extends Controller
             ]);
 
             $selisih = $totalBaru - $totalLama;
-            $lastHistory = BalanceHistory::where('unit_id', $unitId)->latest()->first();
+            $lastHistory = BalanceHistory::where('unit_id', $unitId)
+                ->where('jenis', 'Pendapatan')
+                ->latest()
+                ->first();
 
             if ($lastHistory) {
                 $saldoSebelum = $lastHistory->saldo_sekarang;

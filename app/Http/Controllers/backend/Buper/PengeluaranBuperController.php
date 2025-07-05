@@ -1,21 +1,24 @@
 <?php
 
-namespace App\Http\Controllers\SewaKios;
+namespace App\Http\Controllers\backend\Buper;
 
 use App\Http\Controllers\Controller;
 use App\Models\BalanceHistory;
 use App\Models\Expense;
 use App\Models\InitialBalance;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
-class PengeluaranSewKiosController extends Controller
+class PengeluaranBuperController extends Controller
 {
+    
     public function index(Request $request, $unitId)
     {
-        $user = auth()->user()->load('units');
+        
+        $user = Auth::user()->load('units');
 
         if (!$user->units->contains('id_units', $unitId)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
@@ -41,7 +44,7 @@ class PengeluaranSewKiosController extends Controller
         $paged = $expenses->forPage($page, $perPage)->values();
         $totalItems = $expenses->count();
 
-        return Inertia::render('Sewakios/PengeluaranSewkios', [
+        return Inertia::render('Buper/PengeluaranBuper', [
             'unit_id' => $unitId,
             'user' => $user->only(['id_users', 'name', 'email', 'roles', 'image']),
             'pengeluaran' => $formatted,
@@ -56,7 +59,7 @@ class PengeluaranSewKiosController extends Controller
 
     public function store(Request $request, $unitId)
     {
-        $user = auth()->user()->load('units');
+        $user = Auth::user()->load('units');
 
         if (!$user->units->contains('id_units', $unitId)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
@@ -72,16 +75,9 @@ class PengeluaranSewKiosController extends Controller
         try {
             DB::beginTransaction();
 
-            Expense::create([
-                'unit_id' => $unitId,
-                'category_expense' => $validated['kategori'],
-                'description' => $validated['deskripsi'],
-                'nominal' => $validated['biaya'],
-                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-            ]);
-
+            $waktuTransaksi = $validated['tanggal'] . ' ' . now()->format('H:i:s');
             $saldoSebelumnya = BalanceHistory::where('unit_id', $unitId)->latest()->value('saldo_sekarang');
+
             if (is_null($saldoSebelumnya)) {
                 $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
                 $saldoSebelumnya = $initialBalance?->nominal ?? 0;
@@ -89,17 +85,23 @@ class PengeluaranSewKiosController extends Controller
             } else {
                 $initialBalanceId = null;
             }
-
+            Expense::create([
+                'unit_id' => $unitId,
+                'category_expense' => $validated['kategori'],
+                'description' => $validated['deskripsi'],
+                'nominal' => $validated['biaya'],
+                'created_at' => $waktuTransaksi,
+                'updated_at' => $waktuTransaksi,
+            ]);
             BalanceHistory::create([
                 'unit_id' => $unitId,
                 'initial_balance_id' => $initialBalanceId,
                 'saldo_sebelum' => $saldoSebelumnya,
                 'jenis' => 'Pengeluaran',
                 'saldo_sekarang' => $saldoSebelumnya - $validated['biaya'],
-                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'created_at' => $waktuTransaksi,
+                'updated_at' => $waktuTransaksi,
             ]);
-
             DB::commit();
 
             return back()->with('info', [
@@ -114,7 +116,7 @@ class PengeluaranSewKiosController extends Controller
 
     public function update(Request $request, $unitId, $id)
     {
-        $user = auth()->user()->load('units');
+        $user = Auth::user()->load('units');
 
         if (!$user->units->contains('id_units', $unitId)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
@@ -130,26 +132,31 @@ class PengeluaranSewKiosController extends Controller
         try {
             DB::beginTransaction();
 
-            // Fix: Gunakan primary key yang benar
             $expense = Expense::where('unit_id', $unitId)
-                ->where('id_expense', $id) // Primary key adalah id_expense
+                ->where('id_expense', $id)
                 ->firstOrFail();
 
             $biayaLama = $expense->nominal;
             $biayaBaru = $validated['biaya'];
             $selisih = $biayaBaru - $biayaLama;
+            $waktuUpdate = $validated['tanggal'] . ' ' . now()->format('H:i:s');
 
             $expense->update([
                 'category_expense' => $validated['kategori'],
                 'description' => $validated['deskripsi'],
                 'nominal' => $biayaBaru,
-                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'updated_at' => $waktuUpdate,
             ]);
 
-            $lastHistory = BalanceHistory::where('unit_id', $unitId)->latest()->first();
+            $lastHistory = BalanceHistory::where('unit_id', $unitId)
+                ->where('jenis', 'Pengeluaran')
+                ->latest()
+                ->first();
+
             if ($lastHistory) {
                 $lastHistory->update([
                     'saldo_sekarang' => $lastHistory->saldo_sekarang - $selisih,
+                    'updated_at' => $waktuUpdate,
                 ]);
             }
 
@@ -161,13 +168,14 @@ class PengeluaranSewKiosController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Gagal update pengeluaran: ' . $e->getMessage());
             return back()->withErrors(['error' => 'Gagal memperbarui data: ' . $e->getMessage()]);
         }
     }
 
     public function destroy(string $unitId, string $id)
     {
-        $user = auth()->user()->load('units');
+        $user = Auth::user()->load('units');
 
         $unitIds = $user->units->pluck('id_units')->map(fn($val) => (int) $val)->toArray();
 

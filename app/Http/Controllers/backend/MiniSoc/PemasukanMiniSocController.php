@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\MiniSoc;
+namespace App\Http\Controllers\backend\MiniSoc;
 
 use App\Http\Controllers\Controller;
 use App\Models\BalanceHistory;
@@ -10,6 +10,7 @@ use App\Models\RentTransaction;
 use App\Models\Tarif;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -21,7 +22,7 @@ class PemasukanMiniSocController extends Controller
      */
     public function index(Request $request, $unitId)
     {
-        $user = auth()->user();
+        $user = Auth::user()->load('units');
 
         $user->load('units');
 
@@ -79,9 +80,7 @@ class PemasukanMiniSocController extends Controller
      */
     public function store(Request $request, $unitId)
     {
-        // Masih ngebug
-
-        $user = auth()->user();
+        $user = Auth::user()->load('units');
 
         $user->load('units');
 
@@ -170,7 +169,7 @@ class PemasukanMiniSocController extends Controller
      */
     public function update(Request $request, string $unitId, string $id)
     {
-        $user = auth()->user();
+        $user = Auth::user()->load('units');
 
         $user->load('units');
 
@@ -207,9 +206,17 @@ class PemasukanMiniSocController extends Controller
                 'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
+            if ($rent->income) {
+                $rent->income->update([
+                    'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                ]);
+            }
             $selisih = $totalBayarBaru - $totalBayarLama;
 
-            $lastHistory = BalanceHistory::where('unit_id', $unitId)->latest()->first();
+            $lastHistory = BalanceHistory::where('unit_id', $unitId)
+                ->where('jenis', 'Pendapatan')
+                ->latest()
+                ->first();
 
             if ($lastHistory) {
                 // Jika nominal berubah, update saldo
@@ -245,7 +252,7 @@ class PemasukanMiniSocController extends Controller
      */
     public function destroy(string $unitId, string $id)
     {
-        $user = auth()->user()->load('units');
+        $user = Auth::user()->load('units');
 
         // Ambil semua unit ID yang dimiliki user
         $unitIds = $user->units->pluck('id_units')->map(fn($val) => (int) $val)->toArray();

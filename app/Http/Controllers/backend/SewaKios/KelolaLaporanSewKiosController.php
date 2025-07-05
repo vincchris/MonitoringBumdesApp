@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Airweslik;
+namespace App\Http\Controllers\backend\SewaKios;
 
 use App\Http\Controllers\Controller;
 use App\Models\BalanceHistory;
@@ -14,9 +14,10 @@ use Illuminate\Support\Facades\Log;
 use App\Exports\LaporanExport;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
-class KelolaLaporanAirweslikController extends Controller
+class KelolaLaporanSewKiosController extends Controller
 {
     public function exportPDF()
     {
@@ -96,7 +97,7 @@ class KelolaLaporanAirweslikController extends Controller
 
     public function index(Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::user()->load('units');
         $unit = $user->units()->first();
 
         if (!$unit) {
@@ -108,15 +109,14 @@ class KelolaLaporanAirweslikController extends Controller
         // Ambil histori saldo berdasarkan unit
         $histories = BalanceHistory::where('unit_id', $unit->id_units)
             ->when($tanggalDipilih, function ($query) use ($tanggalDipilih) {
-                $query->whereDate('created_at', $tanggalDipilih);
+                $query->whereDate('updated_at', $tanggalDipilih);
             })
-            ->orderByDesc('created_at')
+            ->orderByDesc('updated_at')
             ->get()
             ->map(function ($item) {
-                $tanggalAwal = Carbon::parse($item->created_at)->startOfDay();
-                $tanggalAkhir = Carbon::parse($item->created_at)->endOfDay();
+                $tanggalAwal = Carbon::parse($item->updated_at)->startOfDay();
+                $tanggalAkhir = Carbon::parse($item->updated_at)->endOfDay();
 
-                // Perbaikan untuk mendapatkan description
                 $description = '-';
 
                 if ($item->jenis === 'Pendapatan') {
@@ -124,61 +124,46 @@ class KelolaLaporanAirweslikController extends Controller
                     $income = Income::whereHas('rent.tarif.unit', function ($q) use ($item) {
                         $q->where('id_units', $item->unit_id);
                     })
-                        ->whereBetween('created_at', [$tanggalAwal, $tanggalAkhir])
-                        ->with(['rent' => function($query) {
-                            $query->select('id_rent', 'description', 'total_bayar');
+                        ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
+                        ->with(['rent' => function ($query) {
+                            $query->select('id_rent', 'tenant_name', 'total_bayar');
                         }])
-                        ->orderBy('created_at', 'desc')
+                        ->orderBy('updated_at', 'desc')
                         ->first();
 
                     if ($income && $income->rent) {
-                        $description = $income->rent->description ?? 'Pemasukan dari sewa';
+                        $description = $income->rent->tenant_name ?? 'Pemasukan dari sewa';
                     } else {
                         // Fallback: cari rent transaction langsung
                         $rent = RentTransaction::whereHas('tarif.unit', function ($q) use ($item) {
                             $q->where('id_units', $item->unit_id);
                         })
-                            ->whereBetween('created_at', [$tanggalAwal, $tanggalAkhir])
-                            ->orderBy('created_at', 'desc')
+                            ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
+                            ->orderBy('updated_at', 'desc')
                             ->first();
 
                         $description = $rent ? ($rent->description ?? 'Pemasukan dari sewa') : 'Pemasukan';
                     }
-
-                    Log::info('Income Description Debug:', [
-                        'unit_id' => $item->unit_id,
-                        'tanggal' => $item->created_at->format('Y-m-d H:i:s'),
-                        'income_found' => $income ? 'Yes' : 'No',
-                        'rent_data' => $income ? $income->rent : null,
-                        'final_description' => $description,
-                    ]);
                 }
 
                 if ($item->jenis === 'Pengeluaran') {
                     $expense = Expense::where('unit_id', $item->unit_id)
-                        ->whereBetween('created_at', [$tanggalAwal, $tanggalAkhir])
-                        ->orderBy('created_at', 'desc')
+                        ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
+                        ->orderBy('updated_at', 'desc')
                         ->first();
 
                     $description = $expense ? ($expense->description ?? 'Pengeluaran operasional') : 'Pengeluaran';
-
-                    Log::info('Expense Description Debug:', [
-                        'unit_id' => $item->unit_id,
-                        'tanggal' => $item->created_at->format('Y-m-d H:i:s'),
-                        'expense_found' => $expense ? 'Yes' : 'No',
-                        'final_description' => $description,
-                    ]);
                 }
 
                 return [
-                    'tanggal' => optional($item->created_at)->format('Y-m-d'),
+                    'tanggal' => optional($item->updated_at)->format('Y-m-d'),
                     'keterangan' => $description,
                     'jenis' => $item->jenis,
                     'selisih' => $item->jenis === 'Pendapatan'
                         ? $item->saldo_sekarang - $item->saldo_sebelum
                         : $item->saldo_sebelum - $item->saldo_sekarang,
-                    'saldo' => number_format($item->saldo_sekarang, 0, '', ','), // hasil dengan pemisah ribuan
-                    'created_at' => $item->created_at,
+                    'saldo' => number_format($item->saldo_sekarang, 0, '', ','),
+                    'updated_at' => $item->updated_at,
                 ];
             });
 
@@ -188,7 +173,7 @@ class KelolaLaporanAirweslikController extends Controller
         $paged = $histories->forPage($page, $perPage)->values();
         $totalItems = $histories->count();
 
-        return Inertia::render('Airweslik/KelolaLaporanAirweslik', [
+        return Inertia::render('Sewakios/KelolaLaporanSewkios', [
             'auth' => [
                 'user' => $user->only(['name', 'role', 'image']),
             ],

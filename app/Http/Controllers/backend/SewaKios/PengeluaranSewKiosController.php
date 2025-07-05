@@ -1,21 +1,22 @@
 <?php
 
-namespace App\Http\Controllers\Internetdesa;
+namespace App\Http\Controllers\backend\SewaKios;
 
 use App\Http\Controllers\Controller;
 use App\Models\BalanceHistory;
 use App\Models\Expense;
 use App\Models\InitialBalance;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
-class PengeluaranInterdesaController extends Controller
+class PengeluaranSewKiosController extends Controller
 {
     public function index(Request $request, $unitId)
     {
-        $user = auth()->user()->load('units');
+        $user = Auth::user()->load('units');
 
         if (!$user->units->contains('id_units', $unitId)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
@@ -41,7 +42,7 @@ class PengeluaranInterdesaController extends Controller
         $paged = $expenses->forPage($page, $perPage)->values();
         $totalItems = $expenses->count();
 
-        return Inertia::render('Internetdesa/PengeluaranInterdesa', [
+        return Inertia::render('Sewakios/PengeluaranSewkios', [
             'unit_id' => $unitId,
             'user' => $user->only(['id_users', 'name', 'email', 'roles', 'image']),
             'pengeluaran' => $formatted,
@@ -56,7 +57,7 @@ class PengeluaranInterdesaController extends Controller
 
     public function store(Request $request, $unitId)
     {
-        $user = auth()->user()->load('units');
+        $user = Auth::user()->load('units');
 
         if (!$user->units->contains('id_units', $unitId)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
@@ -72,16 +73,9 @@ class PengeluaranInterdesaController extends Controller
         try {
             DB::beginTransaction();
 
-            Expense::create([
-                'unit_id' => $unitId,
-                'category_expense' => $validated['kategori'],
-                'description' => $validated['deskripsi'],
-                'nominal' => $validated['biaya'],
-                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
-            ]);
-
+            $waktuTransaksi = $validated['tanggal'] . ' ' . now()->format('H:i:s');
             $saldoSebelumnya = BalanceHistory::where('unit_id', $unitId)->latest()->value('saldo_sekarang');
+
             if (is_null($saldoSebelumnya)) {
                 $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
                 $saldoSebelumnya = $initialBalance?->nominal ?? 0;
@@ -89,15 +83,23 @@ class PengeluaranInterdesaController extends Controller
             } else {
                 $initialBalanceId = null;
             }
-
+            Expense::create([
+                'unit_id' => $unitId,
+                'category_expense' => $validated['kategori'],
+                'description' => $validated['deskripsi'],
+                'nominal' => $validated['biaya'],
+                'created_at' => $waktuTransaksi,
+                'updated_at' => $waktuTransaksi,
+            ]);
             BalanceHistory::create([
                 'unit_id' => $unitId,
                 'initial_balance_id' => $initialBalanceId,
                 'saldo_sebelum' => $saldoSebelumnya,
                 'jenis' => 'Pengeluaran',
                 'saldo_sekarang' => $saldoSebelumnya - $validated['biaya'],
+                'created_at' => $waktuTransaksi,
+                'updated_at' => $waktuTransaksi,
             ]);
-
             DB::commit();
 
             return back()->with('info', [
@@ -112,7 +114,7 @@ class PengeluaranInterdesaController extends Controller
 
     public function update(Request $request, $unitId, $id)
     {
-        $user = auth()->user()->load('units');
+        $user = Auth::user()->load('units');
 
         if (!$user->units->contains('id_units', $unitId)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
@@ -136,19 +138,24 @@ class PengeluaranInterdesaController extends Controller
             $biayaLama = $expense->nominal;
             $biayaBaru = $validated['biaya'];
             $selisih = $biayaBaru - $biayaLama;
+            $waktuUpdate = $validated['tanggal'] . ' ' . now()->format('H:i:s');
 
             $expense->update([
                 'category_expense' => $validated['kategori'],
                 'description' => $validated['deskripsi'],
                 'nominal' => $biayaBaru,
-                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' => $waktuUpdate,
             ]);
 
-            $lastHistory = BalanceHistory::where('unit_id', $unitId)->latest()->first();
+            $lastHistory = BalanceHistory::where('unit_id', $unitId)
+                ->where('jenis', 'Pengeluaran')
+                ->latest()
+                ->first();
+
             if ($lastHistory) {
                 $lastHistory->update([
                     'saldo_sekarang' => $lastHistory->saldo_sekarang - $selisih,
+                    'updated_at' => $waktuUpdate,
                 ]);
             }
 
@@ -160,14 +167,13 @@ class PengeluaranInterdesaController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Gagal update pengeluaran: ' . $e->getMessage());
             return back()->withErrors(['error' => 'Gagal memperbarui data: ' . $e->getMessage()]);
         }
     }
 
     public function destroy(string $unitId, string $id)
     {
-        $user = auth()->user()->load('units');
+        $user = Auth::user()->load('units');
 
         $unitIds = $user->units->pluck('id_units')->map(fn($val) => (int) $val)->toArray();
 
@@ -177,32 +183,35 @@ class PengeluaranInterdesaController extends Controller
         }
 
         try {
-            DB::beginTransaction();
+            DB::transaction(function () use ($unitId, $id) {
+                $expense = Expense::where('id_expense', $id)
+                    ->where('unit_id', $unitId)
+                    ->firstOrFail();
 
-            // Fix: Gunakan primary key yang benar
-            $expense = Expense::where('id_expense', $id) // Primary key adalah id_expense
-                ->where('unit_id', $unitId)
-                ->firstOrFail();
+                $jumlah = $expense->nominal;
 
-            $jumlah = $expense->nominal;
+                // Cari histori pengeluaran yang sesuai untuk dihapus
+                $history = BalanceHistory::where('unit_id', $unitId)
+                    ->where('jenis', 'Pengeluaran')
+                    ->where('saldo_sebelum', '>=', $jumlah) // bantu filter aman
+                    ->where('saldo_sekarang', DB::raw('saldo_sebelum - ' . $jumlah))
+                    ->orderByDesc('created_at')
+                    ->first();
 
-            $lastHistory = BalanceHistory::where('unit_id', $unitId)->latest()->first();
-            if ($lastHistory) {
-                $lastHistory->update([
-                    'saldo_sekarang' => $lastHistory->saldo_sekarang + $jumlah,
-                ]);
-            }
+                if (!$history) {
+                    throw new \Exception('Tidak ditemukan histori pengeluaran yang sesuai.');
+                }
 
-            $expense->delete();
-
-            DB::commit();
+                // Hapus histori dan pengeluaran
+                $history->delete();
+                $expense->delete();
+            });
 
             return back()->with('info', [
                 'message' => 'Data pengeluaran berhasil dihapus',
-                'method' => 'delete'
+                'method' => 'delete',
             ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
+        } catch (\Throwable $e) {
             Log::error('Gagal hapus pengeluaran: ' . $e->getMessage());
             return back()->withErrors(['error' => 'Gagal menghapus data.']);
         }

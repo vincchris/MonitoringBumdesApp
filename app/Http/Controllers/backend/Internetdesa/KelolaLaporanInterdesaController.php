@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\SewaKios;
+namespace App\Http\Controllers\backend\Internetdesa;
 
 use App\Http\Controllers\Controller;
 use App\Models\BalanceHistory;
@@ -14,9 +14,10 @@ use Illuminate\Support\Facades\Log;
 use App\Exports\LaporanExport;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
-class KelolaLaporanSewKiosController extends Controller
+class KelolaLaporanInterdesaController extends Controller
 {
     public function exportPDF()
     {
@@ -96,7 +97,7 @@ class KelolaLaporanSewKiosController extends Controller
 
     public function index(Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::user()->load('units');
         $unit = $user->units()->first();
 
         if (!$unit) {
@@ -172,7 +173,7 @@ class KelolaLaporanSewKiosController extends Controller
         $paged = $histories->forPage($page, $perPage)->values();
         $totalItems = $histories->count();
 
-        return Inertia::render('Sewakios/KelolaLaporanSewkios', [
+        return Inertia::render('Internetdesa/KelolaLaporanInterdesa', [
             'auth' => [
                 'user' => $user->only(['name', 'role', 'image']),
             ],

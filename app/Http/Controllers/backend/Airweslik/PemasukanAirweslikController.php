@@ -1,21 +1,24 @@
 <?php
 
-namespace App\Http\Controllers\Internetdesa;
+namespace App\Http\Controllers\backend\Airweslik;
 
 use App\Http\Controllers\Controller;
+use App\Models\BalanceHistory;
 use App\Models\Income;
 use App\Models\InitialBalance;
 use App\Models\RentTransaction;
 use App\Models\Tarif;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
-class PemasukanInterdesaController extends Controller
+class PemasukanAirweslikController extends Controller
 {
     public function index(Request $request, $unitId)
     {
-        $user = auth()->user()->load('units');
+        $user = Auth::user()->load('units');
 
         if (!$user->units->contains('id_units', $unitId)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
@@ -27,22 +30,32 @@ class PemasukanInterdesaController extends Controller
             ->get();
 
         $formatted = $incomes->map(function ($item) {
-            return [
+            // Debug: Cek setiap item
+            Log::info('Processing item:', [
+                'rent_id' => $item->rent->id_rent,
+                'durasi' => $item->rent->durasi,
+                'tenant_name' => $item->rent->tenant_name,
+                'total_bayar' => $item->rent->total_bayar,
+                'tarif_info' => $item->rent->tarif ? $item->rent->tarif->toArray() : null
+            ]);
+
+            $result = [
                 'id' => $item->rent->id_rent,
                 'tanggal' => optional($item->updated_at)->format('Y-m-d'),
                 'pelanggan' => $item->rent->tenant_name,
                 'kategori' => $item->rent->tarif->category_name ?? '-',
-                'pemakaian' => $item->rent->durasi,
-                'tarif' => $item->rent->tarif->harga_per_unit ?? 0,
-                'total' => $item->rent->total_bayar ?? 0,
+                'pemakaian' => (int) $item->rent->nominal,
+                'tarif' => (int) ($item->rent->tarif->harga_per_unit ?? 0),
+                'total' => (int) ($item->rent->total_bayar ?? 0),
             ];
+            return $result;
         });
 
         $tarifs = Tarif::where('unit_id', $unitId)
-            ->where('satuan', 'm3') // Hanya ambil tarif air (per m³)
+            ->where('satuan', 'm3')
             ->get(['id_tarif', 'category_name', 'harga_per_unit']);
 
-        return Inertia::render('Internetdesa/PemasukanInterdesa', [
+        return Inertia::render('Airweslik/PemasukanAirweslik', [
             'unit_id' => $unitId,
             'user' => $user->only(['id_users', 'name', 'email', 'roles', 'image']),
             'pemasukan' => $formatted,
@@ -59,7 +72,6 @@ class PemasukanInterdesaController extends Controller
             'pemakaian' => 'required|integer|min:1',
             'tarif' => 'required|numeric|min:0',
         ]);
-
         try {
             DB::beginTransaction();
 
@@ -77,26 +89,38 @@ class PemasukanInterdesaController extends Controller
             $rent = RentTransaction::create([
                 'tarif_id' => $tarif->id_tarif,
                 'tenant_name' => $validated['pelanggan'],
-                'nominal' => $validated['tarif'],
-                'durasi' => $validated['pemakaian'],
+                'nominal' => $validated['pemakaian'],
                 'total_bayar' => $totalBayar,
-                'description' => '', // Tidak pakai keterangan
+                'description' => '',
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
             Income::create([
                 'rent_id' => $rent->id_rent,
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
-            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
-            if ($initialBalance) {
-                $initialBalance->update([
-                    'nominal' => $initialBalance->nominal + $totalBayar,
-                ]);
+            $saldoSebelumnya = BalanceHistory::where('unit_id', $unitId)->latest()->value('saldo_sekarang');
+
+            if (is_null($saldoSebelumnya)) {
+                $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
+                $saldoSebelumnya = $initialBalance?->nominal ?? 0;
+                $initialBalanceId = $initialBalance?->id_initial_balance;
+            } else {
+                $initialBalanceId = null;
             }
+
+            BalanceHistory::create([
+                'unit_id' => $unitId,
+                'initial_balance_id' => $initialBalanceId,
+                'saldo_sebelum' => $saldoSebelumnya,
+                'jenis' => 'Pendapatan',
+                'saldo_sekarang' => $saldoSebelumnya + $totalBayar,
+                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+            ]);
 
             DB::commit();
             return redirect()->back()->with('info', [
@@ -119,9 +143,11 @@ class PemasukanInterdesaController extends Controller
             'tarif' => 'required|numeric|min:0',
         ]);
 
-        DB::beginTransaction();
         try {
+            DB::beginTransaction();
+
             $rent = RentTransaction::with(['income', 'tarif'])->findOrFail($id);
+
             $totalLama = $rent->total_bayar;
 
             $tarif = Tarif::where('unit_id', $unitId)
@@ -130,40 +156,61 @@ class PemasukanInterdesaController extends Controller
                 ->first();
 
             if (!$tarif) {
-                throw new \Exception('Tarif air untuk kategori ini tidak ditemukan');
+                throw new \Exception('Tarif air untuk kategori ini tidak ditemukan.');
             }
 
             $totalBaru = $validated['pemakaian'] * $validated['tarif'];
+            $waktuUpdate = $validated['tanggal'] . ' ' . now()->format('H:i:s');
 
+            // Update data sewa
             $rent->update([
                 'tarif_id' => $tarif->id_tarif,
                 'tenant_name' => $validated['pelanggan'],
-                'nominal' => $validated['tarif'],
-                'durasi' => $validated['pemakaian'],
+                'nominal' => $validated['pemakaian'],
                 'total_bayar' => $totalBaru,
-                'description' => '',
-                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => now(),
+                'updated_at' => $waktuUpdate,
             ]);
 
+            // Update income jika ada
+            if ($rent->income) {
+                $rent->income->update([
+                    'updated_at' => $waktuUpdate,
+                ]);
+            }
+
+            // Update saldo history (khusus pendapatan)
             $selisih = $totalBaru - $totalLama;
-            $initialBalance = InitialBalance::where('unit_id', $unitId)->first();
-            if ($initialBalance) {
-                $initialBalance->update([
-                    'nominal' => $initialBalance->nominal + $selisih,
+
+            $lastHistory = BalanceHistory::where('unit_id', $unitId)
+                ->where('jenis', 'Pendapatan')
+                ->latest()
+                ->first();
+
+            if ($lastHistory) {
+                $saldoSebelum = $lastHistory->saldo_sebelum;
+                $saldoSesudah = $saldoSebelum + $totalBaru;
+
+                $lastHistory->update([
+                    'saldo_sebelum' => $saldoSebelum,
+                    'saldo_sekarang' => $saldoSesudah,
+                    'updated_at' => $waktuUpdate,
                 ]);
             }
 
             DB::commit();
+
             return redirect()->back()->with('info', [
                 'message' => 'Data pemasukan berhasil diubah',
                 'method' => 'update',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->withErrors(['error' => 'Gagal mengubah data: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors([
+                'error' => 'Gagal mengubah data: ' . $e->getMessage(),
+            ]);
         }
     }
+
 
     public function destroy(string $unitId, string $id)
     {

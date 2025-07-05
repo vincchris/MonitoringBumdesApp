@@ -1,41 +1,41 @@
 <?php
 
-use App\Http\Controllers\Airweslik\KelolaLaporanAirweslikController;
-use App\Http\Controllers\Airweslik\PemasukanAirweslikController;
-use App\Http\Controllers\Airweslik\PengeluaranAirweslikController;
-use App\Http\Controllers\HomeController;
-
-// Kelola Laporan Controller
-use App\Http\Controllers\laporanTransparansiController;
-use App\Http\Controllers\MiniSoc\KelolaLaporanMiniSocController;
-use App\Http\Controllers\Buper\KelolaLaporanBuperController;
-use App\Http\Controllers\Internetdesa\KelolaLaporanInterdesaController;
-use App\Http\Controllers\LoginController;
-
-// Pemasukan Controller
-use App\Http\Controllers\MiniSoc\PemasukanMiniSocController;
-use App\Http\Controllers\Buper\PemasukanBuperController;
-use App\Http\Controllers\SewaKios\PemasukanSewKiosController;
-use App\Http\Controllers\Internetdesa\PemasukanInterdesaController;
-
-// Pengeluaran Controller
-use App\Http\Controllers\Buper\PengeluaranBuperController;
-use App\Http\Controllers\Internetdesa\PengeluaranInterdesaController;
-use App\Http\Controllers\MiniSoc\PengeluaranMiniSocController;
-use App\Http\Controllers\SewaKios\KelolaLaporanSewKiosController;
-use App\Http\Controllers\SewaKios\PengeluaranSewKiosController;
-
-use App\Http\Controllers\UnitUsahaPageController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\frontend\HomeController;
+use App\Http\Controllers\frontend\UnitUsahaPageController;
+
+// Kelola Laporan Controller
+use App\Http\Controllers\frontend\laporanTransparansiController;
+use App\Http\Controllers\backend\MiniSoc\KelolaLaporanMiniSocController;
+use App\Http\Controllers\backend\Buper\KelolaLaporanBuperController;
+use App\Http\Controllers\backend\SewaKios\KelolaLaporanSewKiosController;
+use App\Http\Controllers\backend\Internetdesa\KelolaLaporanInterdesaController;
+use App\Http\Controllers\backend\Airweslik\KelolaLaporanAirweslikController;
+
+// Pemasukan Controller
+use App\Http\Controllers\backend\MiniSoc\PemasukanMiniSocController;
+use App\Http\Controllers\backend\Buper\PemasukanBuperController;
+use App\Http\Controllers\backend\SewaKios\PemasukanSewKiosController;
+use App\Http\Controllers\backend\Airweslik\PemasukanAirweslikController;
+use App\Http\Controllers\backend\Internetdesa\PemasukanInterdesaController;
+
+// Pengeluaran Controller
+use App\Http\Controllers\backend\Buper\PengeluaranBuperController;
+use App\Http\Controllers\backend\Internetdesa\PengeluaranInterdesaController;
+use App\Http\Controllers\backend\Airweslik\PengeluaranAirweslikController;
+use App\Http\Controllers\backend\MiniSoc\PengeluaranMiniSocController;
+use App\Http\Controllers\backend\SewaKios\PengeluaranSewKiosController;
 
 // =============================
 // Public Routes
 // =============================
 
 Route::get('/', function () {
-    return Inertia::render('welcome'); // pastikan case 'Welcome' sesuai dengan file
+    return Inertia::render('welcome');
 })->name('home');
 
 Route::get('/Login', [LoginController::class, 'index'])->name('loginform');
@@ -43,7 +43,7 @@ Route::post('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
-    return redirect('/Login');
+    return redirect()->route('loginform');
 })->name('logout');
 
 // =============================

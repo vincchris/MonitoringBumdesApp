@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\MiniSoc;
+namespace App\Http\Controllers\backend\Buper;
 
 use App\Http\Controllers\Controller;
 use App\Models\BalanceHistory;
@@ -10,19 +10,19 @@ use App\Models\InitialBalance;
 use App\Models\RentTransaction;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
-use Illuminate\Support\Facades\Log;
 use App\Exports\LaporanExport;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
-class KelolaLaporanMiniSocController extends Controller
+class KelolaLaporanBuperController extends Controller
 {
     public function exportPDF()
     {
         $laporan = $this->getLaporanData();
 
-        // Tambahkan perhitungan selisih (pendapatan = +, pengeluaran = -)
+        // Tambahkan perhitungan selisih dan saldo untuk PDF
         $saldo = 0;
         $laporanDenganSelisih = $laporan->map(function ($item) use (&$saldo) {
             $selisih = $item['jenis'] === 'Pendapatan'
@@ -40,13 +40,13 @@ class KelolaLaporanMiniSocController extends Controller
 
         $pdf = PDF::loadView('exports.laporan_pdf', ['laporan' => $laporanDenganSelisih]);
 
-        return $pdf->download('laporan_keuangan.pdf');
+        return $pdf->download('laporan_keuangan_buper.pdf');
     }
 
     public function exportExcel()
     {
         $laporan = $this->getLaporanData();
-        return Excel::download(new LaporanExport($laporan), 'laporan_keuangan.xlsx');
+        return Excel::download(new LaporanExport($laporan), 'laporan_keuangan_buper.xlsx');
     }
 
     // Refactor Data agar tidak duplikat
@@ -63,7 +63,7 @@ class KelolaLaporanMiniSocController extends Controller
             ->map(function ($item) {
                 return [
                     'tanggal' => optional($item->created_at)->format('Y-m-d'),
-                    'keterangan' => $item->rent->description ?? 'Pemasukan',
+                    'keterangan' => $item->rent->tenant_name ?? 'Pemasukan',
                     'jenis' => 'Pendapatan',
                     'nominal' => (int) $item->rent->total_bayar ?? 0,
                 ];
@@ -116,7 +116,6 @@ class KelolaLaporanMiniSocController extends Controller
                 $tanggalAwal = Carbon::parse($item->updated_at)->startOfDay();
                 $tanggalAkhir = Carbon::parse($item->updated_at)->endOfDay();
 
-                // Perbaikan untuk mendapatkan description
                 $description = '-';
 
                 if ($item->jenis === 'Pendapatan') {
@@ -125,14 +124,14 @@ class KelolaLaporanMiniSocController extends Controller
                         $q->where('id_units', $item->unit_id);
                     })
                         ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
-                        ->with(['rent' => function($query) {
-                            $query->select('id_rent', 'description', 'total_bayar');
+                        ->with(['rent' => function ($query) {
+                            $query->select('id_rent', 'tenant_name', 'total_bayar');
                         }])
                         ->orderBy('updated_at', 'desc')
                         ->first();
 
                     if ($income && $income->rent) {
-                        $description = $income->rent->description ?? 'Pemasukan dari sewa';
+                        $description = $income->rent->tenant_name ?? 'Pemasukan dari sewa';
                     } else {
                         // Fallback: cari rent transaction langsung
                         $rent = RentTransaction::whereHas('tarif.unit', function ($q) use ($item) {
@@ -144,14 +143,6 @@ class KelolaLaporanMiniSocController extends Controller
 
                         $description = $rent ? ($rent->description ?? 'Pemasukan dari sewa') : 'Pemasukan';
                     }
-
-                    Log::info('Income Description Debug:', [
-                        'unit_id' => $item->unit_id,
-                        'tanggal' => $item->updated_at->format('Y-m-d H:i:s'),
-                        'income_found' => $income ? 'Yes' : 'No',
-                        'rent_data' => $income ? $income->rent : null,
-                        'final_description' => $description,
-                    ]);
                 }
 
                 if ($item->jenis === 'Pengeluaran') {
@@ -161,13 +152,6 @@ class KelolaLaporanMiniSocController extends Controller
                         ->first();
 
                     $description = $expense ? ($expense->description ?? 'Pengeluaran operasional') : 'Pengeluaran';
-
-                    Log::info('Expense Description Debug:', [
-                        'unit_id' => $item->unit_id,
-                        'tanggal' => $item->updated_at->format('Y-m-d H:i:s'),
-                        'expense_found' => $expense ? 'Yes' : 'No',
-                        'final_description' => $description,
-                    ]);
                 }
 
                 return [
@@ -188,7 +172,7 @@ class KelolaLaporanMiniSocController extends Controller
         $paged = $histories->forPage($page, $perPage)->values();
         $totalItems = $histories->count();
 
-        return Inertia::render('MiniSoc/KelolaLaporanMiniSoc', [
+        return Inertia::render('Buper/KelolaLaporanBuper', [
             'auth' => [
                 'user' => $user->only(['name', 'role', 'image']),
             ],

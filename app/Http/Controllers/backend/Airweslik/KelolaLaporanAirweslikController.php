@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Buper;
+namespace App\Http\Controllers\backend\Airweslik;
 
 use App\Http\Controllers\Controller;
 use App\Models\BalanceHistory;
@@ -13,16 +13,15 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\LaporanExport;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
-class KelolaLaporanBuperController extends Controller
+class KelolaLaporanAirweslikController extends Controller
 {
     public function exportPDF()
     {
         $laporan = $this->getLaporanData();
 
-        // Tambahkan perhitungan selisih dan saldo untuk PDF
+        // Tambahkan perhitungan selisih (pendapatan = +, pengeluaran = -)
         $saldo = 0;
         $laporanDenganSelisih = $laporan->map(function ($item) use (&$saldo) {
             $selisih = $item['jenis'] === 'Pendapatan'
@@ -40,13 +39,13 @@ class KelolaLaporanBuperController extends Controller
 
         $pdf = PDF::loadView('exports.laporan_pdf', ['laporan' => $laporanDenganSelisih]);
 
-        return $pdf->download('laporan_keuangan_buper.pdf');
+        return $pdf->download('laporan_keuangan.pdf');
     }
 
     public function exportExcel()
     {
         $laporan = $this->getLaporanData();
-        return Excel::download(new LaporanExport($laporan), 'laporan_keuangan_buper.xlsx');
+        return Excel::download(new LaporanExport($laporan), 'laporan_keuangan.xlsx');
     }
 
     // Refactor Data agar tidak duplikat
@@ -63,7 +62,7 @@ class KelolaLaporanBuperController extends Controller
             ->map(function ($item) {
                 return [
                     'tanggal' => optional($item->created_at)->format('Y-m-d'),
-                    'keterangan' => $item->rent->tenant_name ?? 'Pemasukan',
+                    'keterangan' => $item->rent->description ?? 'Pemasukan',
                     'jenis' => 'Pendapatan',
                     'nominal' => (int) $item->rent->total_bayar ?? 0,
                 ];
@@ -133,7 +132,6 @@ class KelolaLaporanBuperController extends Controller
                     if ($income && $income->rent) {
                         $description = $income->rent->tenant_name ?? 'Pemasukan dari sewa';
                     } else {
-                        // Fallback: cari rent transaction langsung
                         $rent = RentTransaction::whereHas('tarif.unit', function ($q) use ($item) {
                             $q->where('id_units', $item->unit_id);
                         })
@@ -172,7 +170,7 @@ class KelolaLaporanBuperController extends Controller
         $paged = $histories->forPage($page, $perPage)->values();
         $totalItems = $histories->count();
 
-        return Inertia::render('MiniSoc/KelolaLaporanMiniSoc', [
+        return Inertia::render('Airweslik/KelolaLaporanAirweslik', [
             'auth' => [
                 'user' => $user->only(['name', 'role', 'image']),
             ],
