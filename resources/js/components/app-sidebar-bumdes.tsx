@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { LayoutGrid, ArrowDown, ArrowUp, BookOpenCheck, LogOut } from 'lucide-react';
+import { LayoutGrid, ArrowDown, ArrowUp, BookOpenCheck, LogOut,Volleyball } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -14,9 +14,14 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
+        title: 'User',
+        href: '/User',
+        icon: LayoutGrid,
+    },
+    {
         title: 'Unit Usaha Mini Soc',
         href: '/MiniSoccer',
-        icon: ArrowUp,
+        icon: Volleyball,
     },
     {
         title: 'Unit Usaha Bumi Perkemahan',

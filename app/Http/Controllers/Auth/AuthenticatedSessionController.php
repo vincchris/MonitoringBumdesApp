@@ -43,10 +43,20 @@ class AuthenticatedSessionController extends Controller
             }
 
             abort(403, 'Anda tidak memiliki unit yang bisa diakses.');
+        } elseif ($user->roles === 'kepala_desa') {
+
+            $unit = $user->units()->first();
+
+            if ($unit) {
+                return redirect()->route('unit.dashboard', ['unitId' => $unit->id_units]);
+            }
+
+            abort(403, 'Anda tidak memiliki unit yang bisa diakses.');
         }
 
         // Jika tidak ada unit default, redirect ke dashboard utama
         return redirect()->intended(route('dashboard', [], false));
+
     }
 
     /**

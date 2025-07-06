@@ -1,9 +1,13 @@
 import {
   LayoutDashboard,
-  ArrowUpRight,
   ArrowDownLeft,
-  FileText,
   LogOut,
+  Volleyball,
+  User,
+  Tent,
+  MapPinHouse,
+  Droplet,
+  Wifi,
 } from 'lucide-react';
 import { Link, usePage, router } from '@inertiajs/react';
 import clsx from 'clsx';
@@ -41,24 +45,25 @@ export default function NavMain() {
       <div className="space-y-2">
         <NavLink href={`/unit/${unitId}/dashboard`} icon={LayoutDashboard} label="Dashboard" />
       </div>
+      <div>
+        <div className="text-xs text-gray-500 uppercase px-4">User</div>
+        <div className="mt-2 space-y-2">
+          <NavLink href={`/unit/${unitId}/user`} icon={User} label="User" />
+        </div>
+      </div>
 
       <div>
         <div className="text-xs text-gray-500 uppercase px-4">Unit Usaha</div>
         <div className="mt-2 space-y-2">
-          <NavLink href={`/unit/${unitId}/minisoc`} icon={ArrowUpRight} label="Unit Usaha Mini Soccer" />
-          <NavLink href={`/unit/${unitId}/buper`} icon={ArrowDownLeft} label="Unit Usaha Buper" />
-          <NavLink href={`/unit/${unitId}/kios`} icon={ArrowDownLeft} label="Unit Usaha Kios" />
-          <NavLink href={`/unit/${unitId}/airweslik`} icon={ArrowDownLeft} label="Unit Usaha Air Weslik" />
-          <NavLink href={`/unit/${unitId}/internetdesa`} icon={ArrowDownLeft} label="Unit Usaha Internet Desa" />
+          <NavLink href={`/unit/${unitId}/minisoc`} icon={Volleyball} label="Mini Soccer" />
+          <NavLink href={`/unit/${unitId}/buper`} icon={Tent} label="Buper" />
+          <NavLink href={`/unit/${unitId}/kios`} icon={MapPinHouse} label="Kios" />
+          <NavLink href={`/unit/${unitId}/airweslik`} icon={Droplet} label="Air Weslik" />
+          <NavLink href={`/unit/${unitId}/internetdesa`} icon={Wifi} label="Internet Desa" />
         </div>
       </div>
 
-      <div>
-        <div className="text-xs text-gray-500 uppercase px-4">Laporan</div>
-        <div className="mt-2 space-y-2">
-          <NavLink href={`/unit/${unitId}/kelolalaporan-sewakios`} icon={FileText} label="Kelola laporan" />
-        </div>
-      </div>
+
 
       <div>
         <div className="text-xs text-gray-500 uppercase px-4">Keluar</div>

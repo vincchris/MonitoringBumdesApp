@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Bumdes\UserController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -29,6 +30,7 @@ use App\Http\Controllers\backend\Internetdesa\PengeluaranInterdesaController;
 use App\Http\Controllers\backend\Airweslik\PengeluaranAirweslikController;
 use App\Http\Controllers\backend\MiniSoc\PengeluaranMiniSocController;
 use App\Http\Controllers\backend\SewaKios\PengeluaranSewKiosController;
+use App\Http\Controllers\Bumdes\MiniSocContoller;
 
 // =============================
 // Public Routes
@@ -118,6 +120,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('pemasukan-sewakios', PemasukanSewKiosController::class);
         Route::resource('pemasukan-airweslik', PemasukanAirweslikController::class);
         Route::resource('pemasukan-interdesa', PemasukanInterdesaController::class);
+
+        // Route Bumdes
+        Route::resource('user', UserController::class);
+        Route::resource('minisoc', MiniSocContoller::class);
+
 
         // ========== Rute Pengeluaran ==========
         Route::resource('pengeluaran-minisoc', PengeluaranMiniSocController::class)->only(['index', 'store', 'update', 'destroy']);
