@@ -6,11 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-class MiniSocContoller extends Controller
+class MiniSocController extends Controller
 {
     public function index() {
-        return Inertia::render('Bumdes/MiniSoc', [
-            
-        ]);
+        return Inertia::render('Bumdes/MiniSoccer');
     }
 }

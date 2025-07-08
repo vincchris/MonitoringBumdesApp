@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Bumdes\UserController;
+use App\Http\Controllers\Bumdes\MiniSocController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -8,6 +8,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\frontend\HomeController;
 use App\Http\Controllers\frontend\UnitUsahaPageController;
+use App\Http\Controllers\Bumdes\UserController;
 
 // Kelola Laporan Controller
 use App\Http\Controllers\frontend\laporanTransparansiController;
@@ -76,10 +77,6 @@ Route::prefix('profil')->group(function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    Route::get('/dashboard', function () {
-        return Inertia::render('MiniSoc/DashboardMiniSoc');
-    })->name('dashboard');
-
     Route::prefix('unit/{unitId}')->name('unit.')->group(function () {
 
         // Dashboard unit tertentu
@@ -121,10 +118,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('pemasukan-airweslik', PemasukanAirweslikController::class);
         Route::resource('pemasukan-interdesa', PemasukanInterdesaController::class);
 
-        // Route Bumdes
-        Route::resource('user', UserController::class);
-        Route::resource('minisoc', MiniSocContoller::class);
-
 
         // ========== Rute Pengeluaran ==========
         Route::resource('pengeluaran-minisoc', PengeluaranMiniSocController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -152,9 +145,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
 
-    // Laporan & Pengeluaran
-    // Route::get('/KelolaLaporanMiniSoc', [KelolaLaporanMiniSocController::class, 'index'])->name('laporan.kelola');
-    // // Route::get('/PengeluaranMiniSoc', [PengeluaranMiniSocController::class, 'index'])->name('pengeluaranminisoc'); // jika ingin dipakai kembali
+    // =============================
+    // Route Kepala desa / bumdes
+    // =============================
+    
+    Route::get('/dashboard-KepalaBumdes', function () {
+        return Inertia::render('Bumdes/DashboardBumdes');
+    })->name('dashboard.bumdes');
+    Route::get('user', [UserController::class, 'index']);
+    Route::resource('MiniSoccer', MiniSocController::class);
 });
 
 // =============================

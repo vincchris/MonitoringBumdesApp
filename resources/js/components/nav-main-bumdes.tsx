@@ -43,23 +43,23 @@ export default function NavMain() {
   return (
     <nav className="p-4 space-y-6">
       <div className="space-y-2">
-        <NavLink href={`/unit/${unitId}/dashboard`} icon={LayoutDashboard} label="Dashboard" />
+        <NavLink href={`/dashboard-KepalaBumdes`} icon={LayoutDashboard} label="Dashboard" />
       </div>
       <div>
         <div className="text-xs text-gray-500 uppercase px-4">User</div>
         <div className="mt-2 space-y-2">
-          <NavLink href={`/unit/${unitId}/user`} icon={User} label="User" />
+          <NavLink href={`/user`} icon={User} label="User" />
         </div>
       </div>
 
       <div>
         <div className="text-xs text-gray-500 uppercase px-4">Unit Usaha</div>
         <div className="mt-2 space-y-2">
-          <NavLink href={`/unit/${unitId}/minisoc`} icon={Volleyball} label="Mini Soccer" />
-          <NavLink href={`/unit/${unitId}/buper`} icon={Tent} label="Buper" />
-          <NavLink href={`/unit/${unitId}/kios`} icon={MapPinHouse} label="Kios" />
-          <NavLink href={`/unit/${unitId}/airweslik`} icon={Droplet} label="Air Weslik" />
-          <NavLink href={`/unit/${unitId}/internetdesa`} icon={Wifi} label="Internet Desa" />
+          <NavLink href={`/MiniSoccer`} icon={Volleyball} label="Mini Soccer" />
+          <NavLink href={`/buper`} icon={Tent} label="Buper" />
+          <NavLink href={`/kios`} icon={MapPinHouse} label="Kios" />
+          <NavLink href={`/airweslik`} icon={Droplet} label="Air Weslik" />
+          <NavLink href={`/internetdesa`} icon={Wifi} label="Internet Desa" />
         </div>
       </div>
 

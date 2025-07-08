@@ -37,18 +37,6 @@ export default function Dashboard({ auth, unit_id }: DashboardProps) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
 
-            {/* Header atas */}
-            <div className="flex items-center justify-between px-6 pt-6 text-black">
-                <h1 className="text-lg font-semibold">Selamat datang, Pengelola Sewa Kios</h1>
-                <div className="flex items-center gap-3">
-                    <img src={user.image || '/assets/images/avatar.png'} alt="User Avatar" className="h-9 w-9 rounded-full object-cover" />
-                    <div className="text-right">
-                        <p className="text-sm font-semibold">{user.name}</p>
-                        <p className="mr-3 text-xs">{user.roles}</p>
-                    </div>
-                </div>
-            </div>
-
             <div className="space-y-6 p-6">
                 {/* Cards */}
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

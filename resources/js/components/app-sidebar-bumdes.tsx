@@ -10,12 +10,12 @@ import AppLogo from './app-logo';
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: '/dashboard',
+        href: '/dashboard-KepalaBumdes',
         icon: LayoutGrid,
     },
     {
         title: 'User',
-        href: '/User',
+        href: '/user',
         icon: LayoutGrid,
     },
     {

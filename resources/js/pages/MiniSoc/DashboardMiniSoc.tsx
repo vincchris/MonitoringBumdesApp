@@ -38,29 +38,9 @@ type DashboardProps = {
 };
 
 export default function Dashboard({ auth }: DashboardProps) {
-  const user = auth.user;
-
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Dashboard" />
-
-      {/* Header atas: Selamat datang dan data user */}
-      <div className="flex items-center justify-between px-6 pt-6 text-black">
-        <h1 className="text-lg font-semibold text-black">
-          Selamat datang, Pengelola Mini soccer
-        </h1>
-        <div className="flex items-center gap-3">
-          <img
-            src={user.image || '/assets/images/avatar.png'}
-            alt="User Avatar"
-            className="w-9 h-9 rounded-full object-cover"
-          />
-          <div className="text-right">
-            <p className="text-sm font-semibold text-black">{user.name}</p>
-            <p className="text-xs text-black mr-3">{user.roles}</p>
-          </div>
-        </div>
-      </div>
 
       <div className="p-6 space-y-6">
         {/* Cards */}

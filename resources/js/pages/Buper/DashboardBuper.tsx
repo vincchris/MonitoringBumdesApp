@@ -23,32 +23,18 @@ type DashboardProps = {
     unit_id: number; // Tambahkan prop unit_id
 };
 
-export default function Dashboard({ auth, unit_id }: DashboardProps) {
-    const user = auth.user;
+export default function Dashboard({ unit_id }: DashboardProps) {
 
-    // Dynamic breadcrumbs berdasarkan unit_id
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Selamat datang, Pengelola Bumi Perkemahan',
-            href: `/unit/${unit_id}/dashboard`, // Gunakan dynamic route
+            href: `/unit/${unit_id}/dashboard`,
         },
     ];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-
-            {/* Header atas: Selamat datang dan data user */}
-            <div className="flex items-center justify-between px-6 pt-6 text-black">
-                <h1 className="text-lg font-semibold text-black">Selamat datang, Pengelola Bumi Perkemahan</h1>
-                <div className="flex items-center gap-3">
-                    <img src={user.image || '/assets/images/avatar.png'} alt="User Avatar" className="h-9 w-9 rounded-full object-cover" />
-                    <div className="text-right">
-                        <p className="text-sm font-semibold text-black">{user.name}</p>
-                        <p className="mr-3 text-xs text-black">{user.roles}</p>
-                    </div>
-                </div>
-            </div>
 
             <div className="space-y-6 p-6">
                 {/* Cards */}
