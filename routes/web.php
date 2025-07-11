@@ -148,11 +148,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // =============================
     // Route Kepala desa / bumdes
     // =============================
-    
+
     Route::get('/dashboard-KepalaBumdes', function () {
         return Inertia::render('Bumdes/DashboardBumdes');
     })->name('dashboard.bumdes');
     Route::get('user', [UserController::class, 'index']);
+    Route::resource('/admin/users', UserController::class)->except(['create', 'edit']);
     Route::resource('MiniSoccer', MiniSocController::class);
 });
 
