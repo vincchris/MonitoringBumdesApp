@@ -42,7 +42,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/Login', [LoginController::class, 'index'])->name('loginform');
-Route::get('/logout', function () {
+Route::post('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
