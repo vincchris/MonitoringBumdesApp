@@ -12,7 +12,7 @@ interface LaporanKeuangan {
     bulan: string;
 }
 
-export default function MiniSoc() {
+export default function Kios() {
     const { laporanKeuangan = [] } = usePage().props as unknown as {
         laporanKeuangan: LaporanKeuangan[];
     };
@@ -27,13 +27,13 @@ export default function MiniSoc() {
 
     return (
         <AppLayout>
-            <Head title="Unit Usaha - Mini Soccer" />
+            <Head title="Unit Usaha - Buper" />
 
             <div className="min-h-screen bg-gray-50 px-4 py-6 sm:px-6 lg:px-8">
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Unit Usaha - Mini Soccer</h1>
-                    <p className="mt-2 text-sm text-gray-600">Kelola keuangan dan operasional lapangan mini soccer Anda</p>
+                    <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Unit Usaha - Sewa Kios</h1>
+                    <p className="mt-2 text-sm text-gray-600">Kelola keuangan Sewa Kios Anda</p>
                 </div>
 
                 {/* Stats Cards */}
@@ -178,7 +178,7 @@ export default function MiniSoc() {
                                                         <Button
                                                             size="sm"
                                                             className="bg-blue-600 text-white hover:bg-blue-700"
-                                                            onClick={() => router.visit(`/MiniSoccer/${item.bulan}`)}
+                                                            onClick={() => router.visit(`/Kios/${item.bulan}`)}
                                                         >
                                                             Detail
                                                         </Button>
@@ -218,7 +218,7 @@ export default function MiniSoc() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10 p-4 backdrop-blur-md">
                     <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
                         <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900">Atur Saldo Awal Mini Soccer</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">Atur Saldo Awal Buper</h3>
                             <button onClick={() => setShowModalSaldo(false)} className="rounded-full p-1 text-gray-400 hover:text-gray-600">
                                 <X className="h-5 w-5" />
                             </button>
@@ -261,7 +261,7 @@ export default function MiniSoc() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10 p-4 backdrop-blur-md">
                     <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
                         <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900">Atur Tarif Sewa Mini Soccer</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">Atur Tarif Buper</h3>
                             <button onClick={() => setShowModalTarif(false)} className="rounded-full p-1 text-gray-400 hover:text-gray-600">
                                 <X className="h-5 w-5" />
                             </button>

@@ -9,6 +9,7 @@ use App\Models\Expense;
 use App\Models\InitialBalance;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class DashboardMiniSocController extends Controller
@@ -32,8 +33,37 @@ class DashboardMiniSocController extends Controller
         ]);
     }
 
+    // API endpoint untuk real-time data
+    public function getDashboardDataApi($unitId)
+    {
+        $user = Auth::user()->load('units');
+
+        if (!$user->units->contains('id_units', $unitId)) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $dashboardData = $this->getDashboardData($unitId);
+
+        return response()->json([
+            'success' => true,
+            'data' => $dashboardData
+        ]);
+    }
+
     private function getDashboardData($unitId)
     {
+        // Cache key untuk dashboard data
+        $cacheKey = "dashboard_data_unit_{$unitId}";
+
+        // Check if data is cached and still fresh (cache for 30 seconds)
+        if (Cache::has($cacheKey)) {
+            $cachedData = Cache::get($cacheKey);
+            // Return cached data if it's less than 30 seconds old
+            if (Carbon::parse($cachedData['last_updated'])->diffInSeconds(now()) < 30) {
+                return $cachedData;
+            }
+        }
+
         $today = Carbon::today();
 
         $pendapatanHariIni = Income::whereHas('rent.tarif.unit', function ($query) use ($unitId) {
@@ -48,7 +78,7 @@ class DashboardMiniSocController extends Controller
             ->whereDate('created_at', $today)
             ->sum('nominal');
 
-        return [
+        $dashboardData = [
             'pendapatan_hari_ini' => $pendapatanHariIni ?? 0,
             'pengeluaran_hari_ini' => $pengeluaranHariIni ?? 0,
             'saldo_kas' => $this->getCurrentBalance($unitId),
@@ -57,6 +87,18 @@ class DashboardMiniSocController extends Controller
             'statistics' => $this->getStatistics($unitId),
             'last_updated' => now()->format('Y-m-d H:i:s')
         ];
+
+        // Cache the data for 30 seconds
+        Cache::put($cacheKey, $dashboardData, 30);
+
+        return $dashboardData;
+    }
+
+    // Method untuk clear cache ketika ada update
+    public static function clearDashboardCache($unitId)
+    {
+        $cacheKey = "dashboard_data_unit_{$unitId}";
+        Cache::forget($cacheKey);
     }
 
     private function getCurrentBalance($unitId)

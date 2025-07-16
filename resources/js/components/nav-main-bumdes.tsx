@@ -56,10 +56,10 @@ export default function NavMain() {
         <div className="text-xs text-gray-500 uppercase px-4">Unit Usaha</div>
         <div className="mt-2 space-y-2">
           <NavLink href={`/MiniSoccer`} icon={Volleyball} label="Mini Soccer" />
-          <NavLink href={`/buper`} icon={Tent} label="Buper" />
-          <NavLink href={`/kios`} icon={MapPinHouse} label="Kios" />
-          <NavLink href={`/airweslik`} icon={Droplet} label="Air Weslik" />
-          <NavLink href={`/internetdesa`} icon={Wifi} label="Internet Desa" />
+          <NavLink href={`/Buper`} icon={Tent} label="Buper" />
+          <NavLink href={`/Kios`} icon={MapPinHouse} label="Kios" />
+          <NavLink href={`/Airweslik`} icon={Droplet} label="Air Weslik" />
+          <NavLink href={`/InterDesa`} icon={Wifi} label="Internet Desa" />
         </div>
       </div>
 

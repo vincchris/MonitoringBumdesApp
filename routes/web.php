@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Controllers\Bumdes\AirWeslikController;
+use App\Http\Controllers\Bumdes\BuperController;
+use App\Http\Controllers\Bumdes\InternetDesaController;
+use App\Http\Controllers\Bumdes\KiosController;
 use App\Http\Controllers\Bumdes\MiniSocController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -155,6 +159,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('user', [UserController::class, 'index']);
     Route::resource('/admin/users', UserController::class)->except(['create', 'edit']);
     Route::resource('MiniSoccer', MiniSocController::class);
+    Route::resource('Buper', BuperController::class);
+    Route::resource('Kios', KiosController::class);
+    Route::resource('Airweslik', AirWeslikController::class);
+    Route::resource('InterDesa', InternetDesaController::class);
+
 });
 
 // =============================
