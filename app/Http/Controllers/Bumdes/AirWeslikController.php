@@ -69,7 +69,7 @@ class AirWeslikController extends Controller
                 'id' => $unit->id_units,
                 'name' => $unit->unit_name,
             ],
-            'detailLaporan' => $histories->sortBy('updated_at')->values(),
+            'detailLaporan' => $histories->sortByDesc('updated_at')->values(),
             'summary' => $summary,
         ]);
     }

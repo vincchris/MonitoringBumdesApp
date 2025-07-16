@@ -154,7 +154,7 @@ export default function Airweslik() {
                                             <tr key={index} className="hover:bg-gray-50">
                                                 <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">{index + 1}</td>
                                                 <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">{item.tanggal}</td>
-                                                <td className="px-6 py-4 text-sm text-gray-900">{item.keterangan}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-900">{item.keterangan || "-"}</td>
                                                 <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
                                                     <span
                                                         className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${

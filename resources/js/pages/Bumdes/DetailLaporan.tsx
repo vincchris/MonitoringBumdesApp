@@ -71,7 +71,7 @@ export default function DetailLaporanMiniSoccer() {
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <Button
-                                    onClick={() => router.visit("/MiniSoccer")}
+                                    onClick={() => window.history.back()}
                                     variant="outline"
                                     className="flex items-center gap-2 hover:bg-gray-100"
                                 >
@@ -185,7 +185,7 @@ export default function DetailLaporanMiniSoccer() {
                                                     <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-900">{item.tanggal}</td>
                                                     <td className="max-w-xs px-6 py-4 text-sm text-gray-900">
                                                         <div className="truncate" title={item.keterangan}>
-                                                            {item.keterangan}
+                                                            {item.keterangan || "-"}
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">{getJenisBadge(item.jenis)}</td>

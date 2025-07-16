@@ -33,6 +33,7 @@ use App\Http\Controllers\backend\Internetdesa\PemasukanInterdesaController;
 use App\Http\Controllers\backend\Buper\PengeluaranBuperController;
 use App\Http\Controllers\backend\Internetdesa\PengeluaranInterdesaController;
 use App\Http\Controllers\backend\Airweslik\PengeluaranAirweslikController;
+use App\Http\Controllers\backend\MiniSoc\DashboardMiniSocController;
 use App\Http\Controllers\backend\MiniSoc\PengeluaranMiniSocController;
 use App\Http\Controllers\backend\SewaKios\PengeluaranSewKiosController;
 use App\Http\Controllers\Bumdes\MiniSocContoller;
@@ -46,7 +47,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/Login', [LoginController::class, 'index'])->name('loginform');
-Route::post('/logout', function () {
+Route::get('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
@@ -92,28 +93,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 abort(403, 'Anda tidak memiliki akses ke unit ini.');
             }
 
-            $page = match ($unit->id_units) {
-                1 => 'MiniSoc/DashboardMiniSoc',
-                2 => 'Buper/DashboardBuper',
-                3 => 'Sewakios/DashboardSewakios',
-                4 => 'Airweslik/DashboardAirweslik',
-                5 => 'Internetdesa/DashboardInterdesa',
-                6 => 'Bumdes/DashboardBumdes',
-                default => 'Dashboard',
-            };
-
-            try {
-                return Inertia::render($page, [
+            $response = match ($unit->id_units) {
+                1 => app(DashboardMiniSocController::class)->index($unitId),
+                
+                // render langsung dengan komponen jika tidak ada controller
+                2, 3, 4, 5, 6 => Inertia::render(match ($unit->id_units) {
+                    2 => 'Buper/DashboardBuper',
+                    3 => 'Sewakios/DashboardSewakios',
+                    4 => 'Airweslik/DashboardAirweslik',
+                    5 => 'Internetdesa/DashboardInterdesa',
+                    6 => 'Bumdes/DashboardBumdes',
+                }, [
                     'unit_id' => $unit->id_units,
                     'auth' => [
                         'user' => $user
                     ]
-                ]);
-            } catch (\Exception $e) {
-                // Tampilkan error yang sebenarnya (misalnya file tidak ditemukan)
-                dd("Gagal me-render halaman '$page': " . $e->getMessage());
-            }
-        })->middleware(['auth', 'verified'])->name('dashboard');
+                ]),
+
+                default => abort(404, 'Dashboard unit tidak ditemukan.'),
+            };
+
+            return $response;
+        })->name('dashboard');
 
         // ========== Rute Pemasukan ==========
         Route::resource('pemasukan-minisoc', PemasukanMiniSocController::class);
@@ -163,7 +164,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('Kios', KiosController::class);
     Route::resource('Airweslik', AirWeslikController::class);
     Route::resource('InterDesa', InternetDesaController::class);
-
 });
 
 // =============================

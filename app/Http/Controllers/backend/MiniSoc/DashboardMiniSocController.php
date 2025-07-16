@@ -66,13 +66,12 @@ class DashboardMiniSocController extends Controller
 
         $today = Carbon::today();
 
-        $pendapatanHariIni = Income::whereHas('rent.tarif.unit', function ($query) use ($unitId) {
-            $query->where('id_units', $unitId);
-        })
-            ->whereDate('created_at', $today)
+        $pendapatanHariIni = Income::whereDate('updated_at', $today)
+            ->whereHas('rent.tarif.unit', fn($query) => $query->where('id_units', $unitId))
             ->with('rent')
             ->get()
-            ->sum(fn($income) => $income->rent->total_bayar ?? 0);
+        ->sum(fn($income) => $income->rent->total_bayar ?? 0);
+
 
         $pengeluaranHariIni = Expense::where('unit_id', $unitId)
             ->whereDate('created_at', $today)
