@@ -34,6 +34,11 @@ use App\Http\Controllers\backend\Buper\PengeluaranBuperController;
 use App\Http\Controllers\backend\Internetdesa\PengeluaranInterdesaController;
 use App\Http\Controllers\backend\Airweslik\PengeluaranAirweslikController;
 use App\Http\Controllers\backend\MiniSoc\DashboardMiniSocController;
+use App\Http\Controllers\backend\Buper\DashboardBuperController;
+use App\Http\Controllers\backend\SewaKios\DashboardSewKiosController;
+use App\Http\Controllers\backend\Airweslik\DashboardAirweslikController;
+use App\Http\Controllers\backend\Internetdesa\DashboardInterDesaController;
+
 use App\Http\Controllers\backend\MiniSoc\PengeluaranMiniSocController;
 use App\Http\Controllers\backend\SewaKios\PengeluaranSewKiosController;
 use App\Http\Controllers\Bumdes\MiniSocContoller;
@@ -95,9 +100,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             $response = match ($unit->id_units) {
                 1 => app(DashboardMiniSocController::class)->index($unitId),
-                
+                2 => app(DashboardBuperController::class)->index($unitId),
+                3 => app(DashboardSewKiosController::class)->index($unitId),
+                4 => app(DashboardBuperController::class)->index($unitId),
+                5 => app(DashboardBuperController::class)->index($unitId),
+
+
+
                 // render langsung dengan komponen jika tidak ada controller
-                2, 3, 4, 5, 6 => Inertia::render(match ($unit->id_units) {
+                6 => Inertia::render(match ($unit->id_units) {
                     2 => 'Buper/DashboardBuper',
                     3 => 'Sewakios/DashboardSewakios',
                     4 => 'Airweslik/DashboardAirweslik',

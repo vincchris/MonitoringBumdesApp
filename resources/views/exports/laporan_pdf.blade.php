@@ -11,7 +11,7 @@
     </style>
 </head>
 <body>
-    <h2>Laporan Keuangan Mini Soccer</h2>
+    <h2>Laporan Keuangan {{ $unitName }}</h2>
 
     <table>
         <thead>

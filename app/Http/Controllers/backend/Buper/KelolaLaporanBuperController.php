@@ -8,6 +8,7 @@ use App\Models\Income;
 use App\Models\Expense;
 use App\Models\InitialBalance;
 use App\Models\RentTransaction;
+use App\Models\Unit;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\LaporanExport;
@@ -18,8 +19,9 @@ use Inertia\Inertia;
 
 class KelolaLaporanBuperController extends Controller
 {
-    public function exportPDF()
+    public function exportPDF($unitId)
     {
+        $unit = Unit::findOrFail($unitId);
         $laporan = $this->getLaporanData();
 
         // Tambahkan perhitungan selisih dan saldo untuk PDF
@@ -38,7 +40,11 @@ class KelolaLaporanBuperController extends Controller
             ];
         });
 
-        $pdf = PDF::loadView('exports.laporan_pdf', ['laporan' => $laporanDenganSelisih]);
+        $pdf = PDF::loadView('exports.laporan_pdf',
+        [
+            'laporan' => $laporanDenganSelisih,
+            'unitName' => $unit->unit_name,
+        ]);
 
         return $pdf->download('laporan_keuangan_buper.pdf');
     }

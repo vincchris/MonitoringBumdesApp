@@ -8,6 +8,7 @@ use App\Models\Income;
 use App\Models\Expense;
 use App\Models\InitialBalance;
 use App\Models\RentTransaction;
+use App\Models\Unit;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Log;
@@ -19,8 +20,9 @@ use Inertia\Inertia;
 
 class KelolaLaporanSewKiosController extends Controller
 {
-    public function exportPDF()
+    public function exportPDF($unitId)
     {
+        $unit = Unit::findOrFail($unitId);
         $laporan = $this->getLaporanData();
 
         // Tambahkan perhitungan selisih (pendapatan = +, pengeluaran = -)
@@ -39,7 +41,11 @@ class KelolaLaporanSewKiosController extends Controller
             ];
         });
 
-        $pdf = PDF::loadView('exports.laporan_pdf', ['laporan' => $laporanDenganSelisih]);
+        $pdf = PDF::loadView('exports.laporan_pdf',
+        [
+            'laporan' => $laporanDenganSelisih,
+            'unitName' => $unit->unit_name,
+        ]);
 
         return $pdf->download('laporan_keuangan.pdf');
     }

@@ -60,11 +60,11 @@ export default function KelolaLaporan({ auth, unit_id, laporanKeuangan, paginati
                 </div>
 
                 <div className="mb-4 flex justify-end gap-2 px-6">
-                    <a href={`/unit/${unit_id}/kelolalaporan/export-pdf`} className="rounded-md bg-red-500 px-4 py-2 text-white hover:bg-red-600">
+                    <a href={`/unit/${unit_id}/kelolalaporan-minisoc/export-pdf`} className="rounded-md bg-red-500 px-4 py-2 text-white hover:bg-red-600">
                         Download PDF
                     </a>
                     <a
-                        href={`/unit/${unit_id}/kelolalaporan/export-excel`}
+                        href={`/unit/${unit_id}/kelolalaporan-minisoc/export-excel`}
                         className="rounded-md bg-green-500 px-4 py-2 text-white hover:bg-green-600"
                     >
                         Download Excel

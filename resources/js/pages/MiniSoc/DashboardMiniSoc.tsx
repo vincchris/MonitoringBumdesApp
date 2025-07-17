@@ -86,7 +86,7 @@ export default function DashboardMiniSoc({ dashboard_data }: DashboardProps) {
 
             <div className="space-y-6 p-6">
                 {/* Cards */}
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3 text-black">
                     <div className="flex items-center gap-4 rounded-xl bg-white p-4 shadow">
                         <div className="rounded-full bg-blue-100 p-3 text-blue-600">
                             <Banknote className="h-6 w-6" />
