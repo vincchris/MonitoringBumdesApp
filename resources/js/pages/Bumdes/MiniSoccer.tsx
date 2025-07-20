@@ -1,9 +1,22 @@
 import { Button } from '@/components/ui/button';
-import { type BreadcrumbItem } from '@/types';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { ArrowDown, ArrowUp, Calendar, DollarSign, FileDown, FileSpreadsheet, Settings, TrendingUp, X } from 'lucide-react';
-import { useState } from 'react';
+import {
+    ArrowDown,
+    ArrowUp,
+    Calendar,
+    CheckCircle,
+    DollarSign,
+    FileDown,
+    FileSpreadsheet,
+    RefreshCw,
+    Settings,
+    Trash2,
+    TrendingUp,
+    X,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { route } from 'ziggy-js';
 
 interface LaporanKeuangan {
     tanggal: string;
@@ -13,6 +26,57 @@ interface LaporanKeuangan {
 }
 
 export default function MiniSoc() {
+    const { flash } = usePage().props as unknown as {
+        flash: { info?: { message?: string; method?: string } };
+    };
+
+    const [flashMethod, setFlashMethod] = useState<string>('');
+    const [flashColor, setFlashColor] = useState<string>('');
+    const [flashMessage, setFlashMessage] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!flash?.info?.message) return;
+
+        const { message, method } = flash.info;
+
+        setFlashMessage(message || '');
+        setFlashMethod(method || '');
+
+        switch (method) {
+            case 'delete':
+                setFlashColor('bg-red-600');
+                break;
+            case 'update':
+                setFlashColor('bg-blue-600');
+                break;
+            case 'create':
+            default:
+                setFlashColor('bg-green-600');
+                break;
+        }
+
+        const timeout = setTimeout(() => {
+            setFlashMessage(null);
+            setFlashMethod('');
+        }, 3000);
+
+        return () => clearTimeout(timeout);
+    }, [flash]);
+
+    // Function to render the appropriate icon based on flash method
+    const renderFlashIcon = () => {
+        switch (flashMethod) {
+            case 'create':
+                return <CheckCircle className="h-5 w-5 text-white" />;
+            case 'update':
+                return <RefreshCw className="h-5 w-5 text-white" />;
+            case 'delete':
+                return <Trash2 className="h-5 w-5 text-white" />;
+            default:
+                return <CheckCircle className="h-5 w-5 text-white" />;
+        }
+    };
+
     const { laporanKeuangan = [] } = usePage().props as unknown as {
         laporanKeuangan: LaporanKeuangan[];
     };
@@ -20,14 +84,63 @@ export default function MiniSoc() {
     const [showModalSaldo, setShowModalSaldo] = useState(false);
     const [showModalTarif, setShowModalTarif] = useState(false);
 
+    const { initial_balance = 0 } = usePage().props as any;
+    const {tanggal_diubah} = usePage().props as any;
+    const [tarifAwal] = useState(0);
+
     const [tanggal, setTanggal] = useState('');
     const [penyewa, setPenyewa] = useState('Reguler');
-    const [saldoAwal, setSaldoAwal] = useState('120000');
-    const [tarifAwal, setTarifAwal] = useState('250000');
+    const [unitID] = useState<number>(1); // Add unit ID state with default value
 
+    const [nominalBaru, setNominalBaru] = useState<string>('');
+
+    // Handler ubah input
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const raw = e.target.value.replace(/\D/g, '');
+        const number = parseInt(raw || '0', 10);
+
+        // Cegah nilai 0 ditampilkan sebagai "0"
+        setNominalBaru(number > 0 ? number.toLocaleString('id-ID') : '');
+    };
+
+    // Saat blur, paksa minimal 1
+    const handleBlur = () => {
+        const cleaned = parseInt(nominalBaru.replace(/\D/g, ''), 10);
+        if (!isNaN(cleaned) && cleaned < 1) {
+            setNominalBaru('1');
+        }
+    };
+
+    const simpanSaldoAwal = () => {
+        router.post(
+            route('storeInitialBalance', unitID), // unitID harus sesuai
+            {
+                tanggal: tanggal,
+                nominal: parseInt(nominalBaru.replace(/\./g, '')), // Hapus titik dari format Rupiah
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setShowModalSaldo(false);
+                },
+                onError: (errors) => {
+                    console.log(errors);
+                },
+            },
+        );
+    };
     return (
         <AppLayout>
             <Head title="Unit Usaha - Mini Soccer" />
+
+            {flashMessage && (
+                <div
+                    className={`fixed top-6 left-1/2 z-50 flex -translate-x-1/2 transform items-center gap-2 rounded-md px-4 py-3 text-sm font-medium text-white shadow-lg transition-all duration-300 ${flashColor}`}
+                >
+                    {renderFlashIcon()}
+                    <span>{flashMessage}</span>
+                </div>
+            )}
 
             <div className="min-h-screen bg-gray-50 px-4 py-6 sm:px-6 lg:px-8">
                 {/* Header */}
@@ -46,8 +159,8 @@ export default function MiniSoc() {
                                     <DollarSign className="h-4 w-4" />
                                     Saldo Saat Ini
                                 </div>
-                                <p className="mt-2 text-2xl font-bold text-gray-900">Rp. 120,000</p>
-                                <p className="mt-1 text-xs text-gray-500">Terakhir diubah: 05-06-2025</p>
+                                <p className="mt-2 text-2xl font-bold text-gray-900">Rp. {Number(initial_balance).toLocaleString('id-ID')}</p>
+                                <p className="mt-1 text-xs text-gray-500">Terakhir diubah: {tanggal_diubah}</p>
                             </div>
                             <div className="rounded-full bg-blue-100 p-2">
                                 <DollarSign className="h-5 w-5 text-blue-600" />
@@ -239,18 +352,21 @@ export default function MiniSoc() {
                                 <label className="mb-1 block text-sm font-medium text-gray-700">Nominal Saldo Awal</label>
                                 <input
                                     type="text"
-                                    value={`Rp. ${Number(saldoAwal).toLocaleString('id-ID')}`}
-                                    readOnly
-                                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+                                    value={nominalBaru}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    placeholder="Contoh: 150.000"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                                    inputMode="numeric"
+                                    required
                                 />
                             </div>
                         </div>
 
                         <div className="mt-6 flex justify-end gap-3">
-                            <Button variant="outline" onClick={() => setShowModalSaldo(false)}>
-                                Batal
+                            <Button onClick={simpanSaldoAwal} className="bg-blue-600 hover:bg-blue-700">
+                                Simpan
                             </Button>
-                            <Button className="bg-blue-600 hover:bg-blue-700">Simpan</Button>
                         </div>
                     </div>
                 </div>
