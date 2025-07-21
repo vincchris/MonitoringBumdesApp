@@ -36,6 +36,7 @@ use App\Http\Controllers\backend\Airweslik\PengeluaranAirweslikController;
 use App\Http\Controllers\backend\MiniSoc\DashboardMiniSocController;
 use App\Http\Controllers\backend\Buper\DashboardBuperController;
 use App\Http\Controllers\backend\SewaKios\DashboardSewKiosController;
+use App\Http\Controllers\Bumdes\DashboardBumdesController;
 use App\Http\Controllers\backend\Airweslik\DashboardAirweslikController;
 use App\Http\Controllers\backend\Internetdesa\DashboardInterDesaController;
 
@@ -165,9 +166,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Route Kepala desa / bumdes
     // =============================
 
-    Route::get('/dashboard-KepalaBumdes', function () {
-        return Inertia::render('Bumdes/DashboardBumdes');
-    })->name('dashboard.bumdes');
+    Route::get('/dashboard-KepalaBumdes', [DashboardBumdesController::class, 'index'])->name('dashboard.bumdes');
     Route::get('user', [UserController::class, 'index']);
     Route::resource('/admin/users', UserController::class)->except(['create', 'edit']);
     Route::resource('MiniSoccer', MiniSocController::class);

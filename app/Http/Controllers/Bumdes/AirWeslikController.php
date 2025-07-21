@@ -25,12 +25,13 @@ class AirWeslikController extends Controller
         $perPage = self::DEFAULT_PER_PAGE;
         $paged = $histories->forPage($page, $perPage)->values();
 
-        return Inertia::render('Bumdes/Airweslik', [
+        return Inertia::render('Bumdes/MiniSoccer', [
             'auth' => [
                 'user' => Auth::user()->only(['name', 'role', 'image']),
             ],
             'laporanKeuangan' => $paged,
             'initial_balance' => $this->getInitialBalance($unitId),
+            'tanggal_diubah' => $this->getInitialBalanceTanggal($unitId),
             'unit' => [
                 'id' => $unit->id,
                 'name' => $unit->name,
@@ -44,6 +45,32 @@ class AirWeslikController extends Controller
             ]
         ]);
     }
+
+    public function storeInitialBalance(Request $request, $unitID)
+    {
+        $validated = $request->validate([
+            'tanggal' => 'required|date',
+            'nominal' => 'required|numeric|min:1',
+        ]);
+
+        // dd($validated);
+
+        DB::transaction(function () use ($validated, $unitID) {
+            InitialBalance::updateOrCreate(
+                ['unit_id' => $unitID],
+                ['nominal' => $validated['nominal']]
+            );
+
+            // Hapus cache agar data terbaru bisa dimuat
+            Cache::forget("initial_balance_{$unitID}");
+        });
+
+        return back()->with('info', [
+            'message' => 'Saldo awal berhasil diubah',
+            'method' => 'create'
+        ]);
+    }
+
 
     public function show($bulan)
     {
@@ -79,6 +106,13 @@ class AirWeslikController extends Controller
         return Cache::remember("initial_balance_{$unitId}", self::CACHE_TTL, function () use ($unitId) {
             return InitialBalance::where('unit_id', $unitId)->value('nominal') ?? 0;
         });
+    }
+
+    private function getInitialBalanceTanggal(int $unitId): ?string
+    {
+        return optional(
+            InitialBalance::where('unit_id', $unitId)->value('updated_at')
+        )?->format('Y-m-d H:i');
     }
 
     private function getDetailLaporan(int $unitId, string $year, string $month)
