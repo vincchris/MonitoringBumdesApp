@@ -53,7 +53,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/Login', [LoginController::class, 'index'])->name('loginform');
-Route::get('/logout', function () {
+Route::post('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
@@ -106,22 +106,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 4 => app(DashboardBuperController::class)->index($unitId),
                 5 => app(DashboardBuperController::class)->index($unitId),
 
-
-
-                // render langsung dengan komponen jika tidak ada controller
-                6 => Inertia::render(match ($unit->id_units) {
-                    2 => 'Buper/DashboardBuper',
-                    3 => 'Sewakios/DashboardSewakios',
-                    4 => 'Airweslik/DashboardAirweslik',
-                    5 => 'Internetdesa/DashboardInterdesa',
-                    6 => 'Bumdes/DashboardBumdes',
-                }, [
-                    'unit_id' => $unit->id_units,
-                    'auth' => [
-                        'user' => $user
-                    ]
-                ]),
-
                 default => abort(404, 'Dashboard unit tidak ditemukan.'),
             };
 
@@ -167,6 +151,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // =============================
 
     Route::get('/dashboard-KepalaBumdes', [DashboardBumdesController::class, 'index'])->name('dashboard.bumdes');
+    // Route::get('/dashboard-KepalaBumdes', function () {
+    //     return Inertia::render('Bumdes/DashboardBumdes');
+    // })->name('dashboard.bumdes');
     Route::get('user', [UserController::class, 'index']);
     Route::resource('/admin/users', UserController::class)->except(['create', 'edit']);
     Route::resource('MiniSoccer', MiniSocController::class);

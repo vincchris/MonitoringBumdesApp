@@ -32,23 +32,21 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
         $request->session()->regenerate();
         $user = $request->user();
+        $role = $user->getAttribute('roles');
 
-        if ($user->roles === 'pengelola') {
-
-            // Ambil unit pertama dari relasi unit_user
-            $unit = $user->units()->first(); // relasi ke tabel unit_user
+        if ($role === 'kepala_desa') {
+            return redirect()->route('dashboard.bumdes');
+        } elseif ($role === 'pengelola') {
+            $unit = $user->units()->first();
 
             if ($unit) {
                 return redirect()->route('unit.dashboard', ['unitId' => $unit->id_units]);
             }
 
-            abort(403, 'Anda tidak memiliki unit yang bisa diakses.');
-        } elseif ($user->roles === 'kepala_desa') {
-
-            return redirect()->route('dashboard.bumdes');
+            abort(403, 'Anda tidak memiliki akses ke unit manapun.');
+        } else {
+            abort(404, 'Role tidak dikenali.');
         }
-
-        abort(404, 'Pages not found.');
     }
 
     /**

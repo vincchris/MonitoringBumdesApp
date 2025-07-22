@@ -17,13 +17,13 @@ class DashboardBumdesController extends Controller
 {
     public function index()
     {
-        $user = Auth::user()->load('units');
+        $user = Auth::user();
 
-        // Get all units that user has access to
-        $unitId = $user->units->pluck('id_units')->toArray();
+        // Ambil semua unit dari tabel unit (untuk kepala desa)
+        $unitId = Unit::pluck('id_units')->toArray();
 
         if (empty($unitId)) {
-            abort(403, 'Anda tidak memiliki akses ke unit manapun');
+            abort(404, 'Tidak ada unit usaha yang terdaftar.');
         }
 
         $dashboardData = $this->getDashboardData($unitId);
@@ -36,6 +36,7 @@ class DashboardBumdesController extends Controller
             'dashboard_data' => $dashboardData
         ]);
     }
+
 
     // API endpoint untuk real-time data
     public function getDashboardDataApi($unitId)
