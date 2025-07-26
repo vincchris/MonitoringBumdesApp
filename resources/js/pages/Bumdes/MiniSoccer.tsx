@@ -38,11 +38,19 @@ interface FlashInfo {
     method?: string;
 }
 
+interface Tarif {
+    id_tarif: number;
+    jenis_penyewa: string;
+    harga_per_unit: number;
+    updated_at: string;
+}
+
 interface PageProps {
     flash: { info?: FlashInfo };
     laporanKeuangan: LaporanKeuangan[];
     initial_balance: number;
     tanggal_diubah: string;
+    tarif?: Tarif;
 }
 
 // Constants
@@ -157,12 +165,19 @@ const SaldoCard: React.FC<{
     </StatsCard>
 );
 
-const TarifCard: React.FC<{ onSettingsClick: () => void }> = ({ onSettingsClick }) => (
+const TarifCard: React.FC<{
+    onSettingsClick: () => void;
+    tarif?: Tarif;
+}> = ({ onSettingsClick, tarif }) => (
     <StatsCard title="Tarif Sewa" icon={Calendar} gradient="bg-gradient-to-br from-purple-50 to-purple-100" iconColor="text-purple-600">
-        <p className="mt-2 text-lg font-semibold text-gray-900">Per Kegiatan</p>
-        <p className="mt-1 text-xs text-gray-500">Terakhir diubah: 05-06-2025</p>
+        <p className="mt-2 text-lg font-semibold text-gray-900">
+            {tarif ? `Rp ${tarif.harga_per_unit.toLocaleString('id-ID')}/jam` : 'Per Kegiatan'}
+        </p>
+        <p className="mt-1 text-xs text-gray-500">
+            Terakhir diubah: {tarif ? dayjs(tarif.updated_at).format('DD-MM-YYYY') : '05-06-2025'}
+        </p>
         <div className="mt-4 flex gap-2">
-            <Button variant="outline" size="sm" className="flex-1 border-purple-200 text-purple-600 hover:bg-purple-50">
+            <Button variant="outline" size="sm" className="flex-1 border-purple-200 text-purple-600">
                 Lihat Tarif
             </Button>
             <Button onClick={onSettingsClick} size="sm" className="flex-1 bg-purple-600 text-white hover:bg-purple-700">
@@ -303,7 +318,7 @@ const parseCurrency = (value: string): number => {
 
 // Main component
 export default function MiniSoc() {
-    const { flash, laporanKeuangan = [], initial_balance = 0, tanggal_diubah } = usePage().props as unknown as PageProps;
+    const { flash, laporanKeuangan = [], initial_balance = 0, tanggal_diubah, tarif } = usePage().props as unknown as PageProps;
 
     // Flash message handling
     const { message: flashMessage, method: flashMethod, color: flashColor } = useFlashMessage(flash?.info);
@@ -317,14 +332,28 @@ export default function MiniSoc() {
         tanggal: '',
         penyewa: 'Reguler',
         nominalBaru: '',
+        tarifPerJam: '',
     });
 
-    const [tarifAwal] = useState(0);
+    // Set initial tarif value when component mounts or tarif changes
+    useEffect(() => {
+        if (tarif) {
+            setFormData(prev => ({
+                ...prev,
+                tarifPerJam: tarif.harga_per_unit.toLocaleString('id-ID')
+            }));
+        }
+    }, [tarif]);
 
     // Handlers
     const handleNominalChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const formatted = formatCurrency(e.target.value);
         setFormData((prev) => ({ ...prev, nominalBaru: formatted }));
+    }, []);
+
+    const handleTarifChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const formatted = formatCurrency(e.target.value);
+        setFormData((prev) => ({ ...prev, tarifPerJam: formatted }));
     }, []);
 
     const handleNominalBlur = useCallback(() => {
@@ -333,6 +362,13 @@ export default function MiniSoc() {
             setFormData((prev) => ({ ...prev, nominalBaru: MIN_NOMINAL.toString() }));
         }
     }, [formData.nominalBaru]);
+
+    const handleTarifBlur = useCallback(() => {
+        const parsed = parseCurrency(formData.tarifPerJam);
+        if (parsed < MIN_NOMINAL) {
+            setFormData((prev) => ({ ...prev, tarifPerJam: MIN_NOMINAL.toString() }));
+        }
+    }, [formData.tarifPerJam]);
 
     const handleInputChange = useCallback(
         (field: keyof typeof formData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -363,6 +399,35 @@ export default function MiniSoc() {
         );
     }, [formData.tanggal, formData.nominalBaru]);
 
+    const handleSimpanTarif = useCallback(() => {
+        const hargaPerUnit = parseCurrency(formData.tarifPerJam);
+
+        const payload = {
+            tanggal: formData.tanggal,
+            jenis_penyewa: formData.penyewa,
+            harga_per_unit: hargaPerUnit,
+        };
+
+        // Jika ada tarif existing, update. Jika tidak, create baru
+        const routeName = tarif ? 'updateTarif' : 'storeTarif';
+        const routeParams = tarif ? [DEFAULT_UNIT_ID, tarif.id_tarif] : [DEFAULT_UNIT_ID];
+
+        router.post(
+            route(routeName, routeParams),
+            payload,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setShowModalTarif(false);
+                    setFormData((prev) => ({ ...prev, tanggal: '', tarifPerJam: '' }));
+                },
+                onError: (errors) => {
+                    console.error('Error saving tarif:', errors);
+                },
+            },
+        );
+    }, [formData.tanggal, formData.penyewa, formData.tarifPerJam, tarif]);
+
     const closeModal = useCallback((modalType: 'saldo' | 'tarif') => {
         if (modalType === 'saldo') {
             setShowModalSaldo(false);
@@ -387,7 +452,7 @@ export default function MiniSoc() {
                 {/* Stats Cards */}
                 <section className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3" aria-label="Statistics">
                     <SaldoCard initialBalance={initial_balance} tanggalDiubah={tanggal_diubah} onSettingsClick={() => setShowModalSaldo(true)} />
-                    <TarifCard onSettingsClick={() => setShowModalTarif(true)} />
+                    <TarifCard onSettingsClick={() => setShowModalTarif(true)} tarif={tarif} />
                     <SummaryCard />
                 </section>
 
@@ -452,7 +517,7 @@ export default function MiniSoc() {
                             type="date"
                             value={formData.tanggal}
                             onChange={handleInputChange('tanggal')}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-black"
                         />
                     </div>
 
@@ -461,11 +526,10 @@ export default function MiniSoc() {
                         <select
                             value={formData.penyewa}
                             onChange={handleInputChange('penyewa')}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-black"
                         >
-                            <option value="Reguler">Reguler</option>
+                            <option value="Reguler">Umum</option>
                             <option value="Member">Member</option>
-                            <option value="Komunitas">Komunitas</option>
                         </select>
                     </div>
 
@@ -473,10 +537,15 @@ export default function MiniSoc() {
                         <label className="mb-1 block text-sm font-medium text-gray-700">Tarif per Jam</label>
                         <input
                             type="text"
-                            value={`Rp. ${tarifAwal.toLocaleString('id-ID')}`}
-                            readOnly
-                            className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+                            value={formData.tarifPerJam}
+                            onChange={handleTarifChange}
+                            onBlur={handleTarifBlur}
+                            placeholder="Contoh: 50.000"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-black"
+                            inputMode="numeric"
+                            required
                         />
+                        <p className="mt-1 text-xs text-gray-500">Masukkan tarif dalam rupiah per jam</p>
                     </div>
                 </div>
 
@@ -484,7 +553,9 @@ export default function MiniSoc() {
                     <Button variant="outline" onClick={() => closeModal('tarif')}>
                         Batal
                     </Button>
-                    <Button className="bg-blue-600 hover:bg-blue-700">Simpan</Button>
+                    <Button onClick={handleSimpanTarif} className="bg-blue-600 hover:bg-blue-700">
+                        Simpan
+                    </Button>
                 </div>
             </Modal>
         </AppLayout>

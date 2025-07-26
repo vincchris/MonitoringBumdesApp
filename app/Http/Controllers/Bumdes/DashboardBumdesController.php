@@ -9,6 +9,7 @@ use App\Models\Expense;
 use App\Models\InitialBalance;
 use App\Models\Unit;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
@@ -176,6 +177,23 @@ class DashboardBumdesController extends Controller
         }
 
         return $data;
+    }
+
+    public function updateSaldoAwal(Request $request)
+    {
+        $validated = $request->validate([
+            'id_unit' => 'required|exists:units,id',
+            'nominal' => 'required|numeric|min:0',
+        ]);
+
+        InitialBalance::updateOrCreate(
+            ['unit_id' => $validated['unit_id']],
+            ['nominal' => $validated['nominal']],
+        );
+
+        self::clearDashboardCache([$validated['unit_id']]);
+
+        return back();
     }
 
     private function getMonthlyPengeluaran($unitId)

@@ -154,6 +154,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Route::get('/dashboard-KepalaBumdes', function () {
     //     return Inertia::render('Bumdes/DashboardBumdes');
     // })->name('dashboard.bumdes');
+    Route::post('/update-saldo-awal', [DashboardBumdesController::class, 'updateSaldoAwal'])->name('saldo-awal.update');
     Route::get('user', [UserController::class, 'index']);
     Route::resource('/admin/users', UserController::class)->except(['create', 'edit']);
     Route::resource('MiniSoccer', MiniSocController::class);

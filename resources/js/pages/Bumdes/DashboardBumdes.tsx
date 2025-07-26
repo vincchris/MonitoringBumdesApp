@@ -20,6 +20,7 @@ type ChartItem = {
 };
 
 type UnitBalance = {
+    unit_id: number;
     unit_name: string;
     balance: number;
 };
@@ -83,6 +84,28 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
         },
         last_updated: dashboard_data?.last_updated ?? '-',
     }));
+
+    const [selectedUnit, setSelectedUnit] = useState<UnitBalance | null>(null);
+    const [newSaldo, setNewSaldo] = useState<number>(0);
+    const [showModal, setShowModal] = useState(false);
+
+    const handleUpdateSaldo = () => {
+        if (!selectedUnit) return;
+
+        router.post('/dashboard-bumdes/update-saldo-awal', {
+            id_unit: selectedUnit.unit_id,
+            nominal: newSaldo,
+        }, {
+            onSuccess: () => {
+                setShowModal(false);
+                router.reload({ only: ['dashboard_data'] });
+            },
+            onError: (e) => {
+                console.error("Gagal update saldo:", e);
+            }
+        });
+    };
+
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -190,39 +213,71 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
                                     Rp. {unit.balance?.toLocaleString?.() ?? '0'}
                                 </p>
                             </div>
-                            <button className="mt-2 rounded bg-orange-400 px-3 py-1 text-xs text-white hover:bg-orange-500">
+                            <button
+                                onClick={() => {
+                                    setSelectedUnit(unit)
+                                    setNewSaldo(unit.balance)
+                                    setShowModal(true)
+                                }}
+                                className="mt-2 rounded bg-orange-400 px-3 py-1 text-xs text-white hover:bg-orange-500"
+                            >
                                 Atur Saldo Awal
                             </button>
                         </div>
                     ))}
                 </div>
 
+                {/* Modal Input Saldo Awal */}
+                {showModal && selectedUnit && (
+                    <div className='fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-[4px]'>
+                        <div className='bg-white rounded-lg p-6 w-full max-w-md'>
+                            <h2 className='text-lg font-bold mb-4 text-black'>Atur Saldo Awal - {selectedUnit.unit_name}</h2>
+                            <input
+                                type='number'
+                                value={newSaldo}
+                                onChange={(e) => setNewSaldo(Number(e.target.value))}
+                                className='w-full p-2 border rounded mb-4 text-black'
+                            />
+                            <div className='flex justify-end gap-2'>
+                                <button
+                                    className='bg-gray-300 px-4 py-2 rounded hover:bg-gray-400'
+                                    onClick={() => setShowModal(false)}
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    className='bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700'
+                                    onClick={handleUpdateSaldo}
+                                >
+                                    Simpan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+
                 {/* Profit Indicator */}
                 <div className="flex justify-start">
-                    <div className={`flex items-center gap-2 rounded-lg border px-4 py-2 ${
-                        data.statistics.net_profit_bulan_ini >= 0
+                    <div className={`flex items-center gap-2 rounded-lg border px-4 py-2 ${data.statistics.net_profit_bulan_ini >= 0
                             ? 'border-green-200 bg-green-100'
                             : 'border-red-200 bg-red-100'
-                    }`}>
-                        <TrendingUp className={`h-4 w-4 ${
-                            data.statistics.net_profit_bulan_ini >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`} />
-                        <span className={`text-sm ${
-                            data.statistics.net_profit_bulan_ini >= 0 ? 'text-green-600' : 'text-red-600'
                         }`}>
+                        <TrendingUp className={`h-4 w-4 ${data.statistics.net_profit_bulan_ini >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`} />
+                        <span className={`text-sm ${data.statistics.net_profit_bulan_ini >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
                             Selisih pendapatan - pengeluaran
                         </span>
-                        <span className={`text-sm font-bold ${
-                            data.statistics.net_profit_bulan_ini >= 0 ? 'text-green-800' : 'text-red-800'
-                        }`}>
+                        <span className={`text-sm font-bold ${data.statistics.net_profit_bulan_ini >= 0 ? 'text-green-800' : 'text-red-800'
+                            }`}>
                             {data.statistics.net_profit_bulan_ini >= 0 ? '+' : ''}
                             Rp. {data.statistics.net_profit_bulan_ini?.toLocaleString?.() ?? '0'}
                         </span>
-                        <span className={`rounded px-2 py-1 text-xs ${
-                            data.statistics.persentase_selisih >= 0
+                        <span className={`rounded px-2 py-1 text-xs ${data.statistics.persentase_selisih >= 0
                                 ? 'bg-green-200 text-green-600'
                                 : 'bg-red-200 text-red-600'
-                        }`}>
+                            }`}>
                             {data.statistics.persentase_selisih >= 0 ? '+' : ''}
                             {data.statistics.persentase_selisih.toFixed(1)}%
                         </span>
