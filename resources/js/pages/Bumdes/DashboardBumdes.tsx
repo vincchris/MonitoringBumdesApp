@@ -324,36 +324,52 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
                 </div>
 
                 {/* Cards Row 2 - Unit Balances */}
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                     {data.unit_balances.map((unit, index) => (
-                        <div key={`unit-${unit.unit_id}-${index}`} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                            <div className="mb-2 w-fit rounded-lg bg-gray-100 p-2">
-                                {index === 0 && <Banknote className="h-4 w-4 text-gray-600" />}
-                                {index === 1 && <Wallet className="h-4 w-4 text-gray-600" />}
-                                {index === 2 && <PiggyBank className="h-4 w-4 text-gray-600" />}
-                                {index === 3 && <Calendar className="h-4 w-4 text-gray-600" />}
-                                {index === 4 && <TrendingUp className="h-4 w-4 text-gray-600" />}
-                            </div>
-                            <div className="space-y-2">
-                                <p className="text-xs font-medium text-gray-700">{unit.unit_name}</p>
+                        // Kartu dengan efek mengambang saat di-hover dan gradien halus
+                        <div
+                            key={`unit-${unit.unit_id}-${index}`}
+                            className="group flex flex-col justify-between rounded-xl border border-gray-200/80 bg-white p-4 shadow-md shadow-gray-500/5 transition-all duration-300 ease-in-out hover:-translate-y-1 hover:shadow-lg hover:shadow-gray-500/10"
+                        >
+                            {/* Konten Atas */}
+                            <div>
+                                {/* Header: Nama Unit dan Ikon */}
+                                <div className="mb-5 flex items-center justify-between">
+                                    {/* Nama Unit */}
+                                    <p className="text-sm font-semibold text-gray-800">{unit.unit_name}</p>
 
-                                {/* Saldo Awal */}
-                                <div className="rounded-md bg-blue-50 px-2 py-1">
-                                    <p className="text-xs text-blue-600">Saldo Awal</p>
-                                    <p className="text-sm font-semibold text-blue-800">{formatRupiah(unit.initial_balance ?? 0)}</p>
+                                    {/* Ikon */}
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 text-orange-600 transition-colors group-hover:bg-orange-500 group-hover:text-white">
+                                        {index === 0 && <Banknote className="h-5 w-5" />}
+                                        {index === 1 && <Wallet className="h-5 w-5" />}
+                                        {index === 2 && <PiggyBank className="h-5 w-5" />}
+                                        {index === 3 && <Calendar className="h-5 w-5" />}
+                                        {index === 4 && <TrendingUp className="h-5 w-5" />}
+                                    </div>
                                 </div>
 
-                                {/* Saldo Saat Ini */}
-                                <div className="rounded-md bg-green-50 px-2 py-1">
-                                    <p className="text-xs text-green-600">Saldo Saat Ini</p>
-                                    <p className="text-lg font-bold text-green-800">{formatRupiah(unit.balance)}</p>
+                                {/* Saldo Saat Ini (Fokus Utama) */}
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500">Saldo Saat Ini</p>
+                                    <div className="mt-1 flex items-center gap-x-2">
+                                        <p className="text-2xl font-bold text-green-600">{formatRupiah(unit.balance)}</p>
+                                    </div>
                                 </div>
 
-                                <p className="text-xs text-gray-500">ID Unit: {unit.unit_id.toLocaleString()}</p>
+                                {/* Pemisah Visual */}
+                                <hr className="my-3 border-gray-100" />
+
+                                {/* Saldo Awal (Informasi Sekunder) */}
+                                <div>
+                                    <p className="text-xs text-gray-500">Saldo Awal</p>
+                                    <p className="text-sm font-medium text-gray-600">{formatRupiah(unit.initial_balance ?? 0)}</p>
+                                </div>
                             </div>
+
+                            {/* Tombol Aksi dengan gaya modern */}
                             <button
                                 onClick={() => handleOpenModal(unit)}
-                                className="mt-3 w-full rounded bg-orange-400 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-orange-500 disabled:opacity-50"
+                                className="mt-5 w-full rounded-lg bg-orange-400 px-3 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-orange-500 focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-400"
                                 disabled={isLoading}
                             >
                                 {isLoading && selectedUnit?.unit_id === unit.unit_id ? 'Memproses...' : 'Atur Saldo Awal'}
@@ -367,8 +383,6 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
                     <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-[4px]">
                         <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
                             <h2 className="mb-4 text-lg font-bold text-black">Atur Saldo Awal - {selectedUnit.unit_name}</h2>
-                            <div className="mb-2 text-sm text-gray-600">ID Unit: {selectedUnit.unit_id.toLocaleString()}</div>
-                            <div className="mb-2 text-sm text-gray-600">Saldo Awal Saat Ini: {formatRupiah(selectedUnit.initial_balance ?? 0)}</div>
                             <div className="mb-4">
                                 <label className="mb-2 block text-sm font-medium text-gray-700">Nominal Saldo Awal:</label>
                                 <input
