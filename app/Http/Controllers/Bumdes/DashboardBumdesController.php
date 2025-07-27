@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class DashboardBumdesController extends Controller
@@ -133,19 +134,25 @@ class DashboardBumdesController extends Controller
         return $totalBalance;
     }
 
-    private function getUnitBalances($unitId)
+    private function getUnitBalances($unitIds)
     {
-        $units = Unit::whereIn('id_units', $unitId)->get();
+        $histories = BalanceHistory::with(['unit.initialBalance'])
+            ->whereIn('unit_id', $unitIds)
+            ->latest()
+            ->get()
+            ->unique('unit_id'); // ambil hanya saldo terbaru per unit
+
         $balances = [];
 
-        foreach ($units as $unit) {
-            $balance = BalanceHistory::where('unit_id', $unit->id_units)->latest()->value('saldo_sekarang')
-                ?? InitialBalance::where('unit_id', $unit->id_units)->value('nominal')
-                ?? 0;
+        foreach ($histories as $history) {
+            $unit = $history->unit;
 
             $balances[] = [
-                'unit_name' => $unit->nama_unit ?? 'Unit ' . $unit->id_units,
-                'balance' => $balance
+                'unit_id'         => $unit->id_units,
+                'unit_name'       => $unit->unit_name ?? 'Unit ' . $unit->id_units,
+                'initial_balance' => $unit->initialBalance->nominal ?? 0,
+                'latest_balance'  => $history->saldo_sekarang ?? 0,
+                'balance'         => $history->saldo_sekarang ?? 0, // bisa diganti jadi $initial kalau perlu
             ];
         }
 
@@ -182,19 +189,39 @@ class DashboardBumdesController extends Controller
     public function updateSaldoAwal(Request $request)
     {
         $validated = $request->validate([
-            'id_unit' => 'required|exists:units,id',
+            'id_unit' => 'required|exists:units,id_units',
             'nominal' => 'required|numeric|min:0',
         ]);
 
-        InitialBalance::updateOrCreate(
-            ['unit_id' => $validated['unit_id']],
-            ['nominal' => $validated['nominal']],
-        );
+        try {
+            DB::beginTransaction();
 
-        self::clearDashboardCache([$validated['unit_id']]);
+            // Cek apakah initial balance sudah ada
+            $initialBalance = InitialBalance::where('unit_id', $validated['id_unit'])->first();
 
-        return back();
+            if ($initialBalance) {
+                $initialBalance->update([
+                    'nominal' => $validated['nominal'],
+                ]);
+            } else {
+                InitialBalance::create([
+                    'unit_id' => $validated['id_unit'],
+                    'nominal' => $validated['nominal'],
+                ]);
+            }
+
+            DB::commit();
+
+            return back()->with('info', [
+                'message' => 'Saldo awal berhasil diperbarui.',
+                'method' => $initialBalance ? 'update' : 'create',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Gagal menambahkan data: ' . $e->getMessage()]);
+        }
     }
+
 
     private function getMonthlyPengeluaran($unitId)
     {

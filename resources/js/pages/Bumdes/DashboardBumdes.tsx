@@ -1,9 +1,17 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/react';
-import { Banknote, Calendar, PiggyBank, TrendingUp, Wallet } from 'lucide-react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { Banknote, Calendar, CheckCircle, PiggyBank, RefreshCw, Trash2, TrendingUp, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+
+function formatRupiah(value: number): string {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+    }).format(value);
+}
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -23,6 +31,7 @@ type UnitBalance = {
     unit_id: number;
     unit_name: string;
     balance: number;
+    initial_balance?: number;
 };
 
 type Statistics = {
@@ -61,7 +70,63 @@ type DashboardProps = {
     dashboard_data?: DashboardData;
 };
 
+interface FlashInfo {
+    message?: string;
+    method?: 'create' | 'update' | 'delete';
+}
+
 export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
+    const { flash } = usePage().props as unknown as {
+        flash: { info?: { message?: string; method?: string } };
+    };
+
+    const [flashMethod, setFlashMethod] = useState<string>('');
+    const [flashColor, setFlashColor] = useState<string>('');
+    const [flashMessage, setFlashMessage] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!flash?.info?.message) return;
+
+        const { message, method } = flash.info;
+
+        setFlashMessage(message || '');
+        setFlashMethod(method || '');
+
+        switch (method) {
+            case 'delete':
+                setFlashColor('bg-red-600');
+                break;
+            case 'update':
+                setFlashColor('bg-blue-600');
+                break;
+            case 'create':
+            default:
+                setFlashColor('bg-green-600');
+                break;
+        }
+
+        const timeout = setTimeout(() => {
+            setFlashMessage(null);
+            setFlashMethod('');
+        }, 3000);
+
+        return () => clearTimeout(timeout);
+    }, [flash]);
+
+    // Function to render the appropriate icon based on flash method
+    const renderFlashIcon = () => {
+        switch (flashMethod) {
+            case 'create':
+                return <CheckCircle className="h-5 w-5 text-white" />;
+            case 'update':
+                return <RefreshCw className="h-5 w-5 text-white" />;
+            case 'delete':
+                return <Trash2 className="h-5 w-5 text-white" />;
+            default:
+                return <CheckCircle className="h-5 w-5 text-white" />;
+        }
+    };
+
     const [data, setData] = useState<DashboardData>(() => ({
         pendapatan_bulan_ini: dashboard_data?.pendapatan_bulan_ini ?? 0,
         pengeluaran_bulan_ini: dashboard_data?.pengeluaran_bulan_ini ?? 0,
@@ -88,35 +153,98 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
     const [selectedUnit, setSelectedUnit] = useState<UnitBalance | null>(null);
     const [newSaldo, setNewSaldo] = useState<number>(0);
     const [showModal, setShowModal] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleUpdateSaldo = () => {
-        if (!selectedUnit) return;
+        // Validasi nilai input yang lebih ketat
+        if (!selectedUnit || !selectedUnit.unit_id) {
+            alert('Unit tidak valid. Silakan pilih unit yang benar.');
+            return;
+        }
 
-        router.post('/dashboard-bumdes/update-saldo-awal', {
+        if (newSaldo < 0) {
+            alert('Nominal tidak boleh negatif.');
+            return;
+        }
+
+        const payload = {
             id_unit: selectedUnit.unit_id,
             nominal: newSaldo,
-        }, {
-            onSuccess: () => {
-                setShowModal(false);
-                router.reload({ only: ['dashboard_data'] });
+        };
+
+        console.log('Payload yang dikirim:', payload);
+        console.log('Selected Unit:', selectedUnit);
+
+        setIsLoading(true);
+
+        router.post(route('saldo-awal.update'), payload, {
+            preserveScroll: true,
+            preserveState: false,
+            onStart: () => {
+                setIsLoading(true);
             },
-            onError: (e) => {
-                console.error("Gagal update saldo:", e);
-            }
+            onSuccess: (page) => {
+                console.log('Update berhasil');
+                setShowModal(false);
+                setSelectedUnit(null);
+                setNewSaldo(0);
+                setIsLoading(false);
+
+                // Reload dashboard data
+                router.reload({
+                    only: ['dashboard_data'],
+                    onSuccess: (page) => {
+                        const newData = (page.props as any).dashboard_data as DashboardData | undefined;
+                        if (newData) {
+                            setData(newData);
+                        }
+                    },
+                });
+            },
+            onError: (errors) => {
+                console.error('Error saat update saldo:', errors);
+                setIsLoading(false);
+
+                // Tampilkan pesan error yang lebih spesifik
+                if (typeof errors === 'object' && errors !== null) {
+                    const errorMessages = Object.values(errors).flat().join(', ');
+                    alert(`Gagal mengupdate saldo: ${errorMessages}`);
+                } else {
+                    alert('Gagal mengupdate saldo. Silakan coba lagi.');
+                }
+            },
+            onFinish: () => {
+                setIsLoading(false);
+            },
         });
     };
 
+    const handleOpenModal = (unit: UnitBalance) => {
+        console.log('Opening modal for unit:', unit);
+        setSelectedUnit(unit);
+        setNewSaldo(unit.initial_balance ?? 0);
+        setShowModal(true);
+    };
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+        setSelectedUnit(null);
+        setNewSaldo(0);
+    };
 
     useEffect(() => {
         const interval = setInterval(() => {
             router.reload({
                 only: ['dashboard_data'],
+                preserveUrl: true,
                 onSuccess: (page) => {
                     const newData = (page.props as any).dashboard_data as DashboardData | undefined;
-
                     if (newData) {
                         setData(newData);
                     }
+                },
+                onError: (errors) => {
+                    console.error('Error saat reload data:', errors);
                 },
             });
         }, 30000); // Update setiap 30 detik
@@ -137,6 +265,15 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard BUMDes" />
 
+            {flashMessage && (
+                <div
+                    className={`fixed top-6 left-1/2 z-50 flex -translate-x-1/2 transform items-center gap-2 rounded-md px-4 py-3 text-sm font-medium text-white shadow-lg transition-all duration-300 ${flashColor}`}
+                >
+                    {renderFlashIcon()}
+                    <span>{flashMessage}</span>
+                </div>
+            )}
+
             <div className="space-y-6 p-6">
                 {/* Cards Row 1 - Summary */}
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -149,10 +286,8 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-blue-600">Pemasukan Keseluruhan (bulan ini)</p>
-                            <p className="text-2xl font-bold text-blue-800">
-                                Rp. {data.pendapatan_bulan_ini?.toLocaleString?.() ?? '0'}
-                            </p>
-                            <p className="text-xs text-blue-500 mt-1">
+                            <p className="text-2xl font-bold text-blue-800">{formatRupiah(data.pendapatan_bulan_ini ?? 0)}</p>
+                            <p className="mt-1 text-xs text-blue-500">
                                 Pertumbuhan: {data.statistics.pertumbuhan_pendapatan >= 0 ? '+' : ''}
                                 {data.statistics.pertumbuhan_pendapatan.toFixed(1)}%
                             </p>
@@ -168,12 +303,8 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-red-600">Pengeluaran Keseluruhan (bulan ini)</p>
-                            <p className="text-2xl font-bold text-red-800">
-                                Rp. {data.pengeluaran_bulan_ini?.toLocaleString?.() ?? '0'}
-                            </p>
-                            <p className="text-xs text-red-500 mt-1">
-                                Bulan lalu: Rp. {data.statistics.pengeluaran_bulan_lalu?.toLocaleString?.() ?? '0'}
-                            </p>
+                            <p className="text-2xl font-bold text-red-800">{formatRupiah(data.statistics.pengeluaran_bulan_ini ?? 0)}</p>
+                            <p className="mt-1 text-xs text-red-500">Bulan lalu: {formatRupiah(data.statistics.pengeluaran_bulan_lalu ?? 0)}</p>
                         </div>
                     </div>
 
@@ -186,12 +317,8 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-yellow-600">Total Saldo Unit Usaha</p>
-                            <p className="text-2xl font-bold text-yellow-800">
-                                Rp. {data.total_saldo_unit_usaha?.toLocaleString?.() ?? '0'}
-                            </p>
-                            <p className="text-xs text-yellow-500 mt-1">
-                                {data.unit_balances.length} Unit Usaha
-                            </p>
+                            <p className="text-2xl font-bold text-yellow-800">{formatRupiah(data.total_saldo_unit_usaha ?? 0)}</p>
+                            <p className="mt-1 text-xs text-yellow-500">{data.unit_balances.length.toLocaleString()} Unit Usaha</p>
                         </div>
                     </div>
                 </div>
@@ -199,7 +326,7 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
                 {/* Cards Row 2 - Unit Balances */}
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                     {data.unit_balances.map((unit, index) => (
-                        <div key={index} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                        <div key={`unit-${unit.unit_id}-${index}`} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                             <div className="mb-2 w-fit rounded-lg bg-gray-100 p-2">
                                 {index === 0 && <Banknote className="h-4 w-4 text-gray-600" />}
                                 {index === 1 && <Wallet className="h-4 w-4 text-gray-600" />}
@@ -207,21 +334,29 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
                                 {index === 3 && <Calendar className="h-4 w-4 text-gray-600" />}
                                 {index === 4 && <TrendingUp className="h-4 w-4 text-gray-600" />}
                             </div>
-                            <div>
-                                <p className="text-xs text-gray-600">Total Saldo {unit.unit_name}</p>
-                                <p className="text-lg font-bold text-gray-800">
-                                    Rp. {unit.balance?.toLocaleString?.() ?? '0'}
-                                </p>
+                            <div className="space-y-2">
+                                <p className="text-xs font-medium text-gray-700">{unit.unit_name}</p>
+
+                                {/* Saldo Awal */}
+                                <div className="rounded-md bg-blue-50 px-2 py-1">
+                                    <p className="text-xs text-blue-600">Saldo Awal</p>
+                                    <p className="text-sm font-semibold text-blue-800">{formatRupiah(unit.initial_balance ?? 0)}</p>
+                                </div>
+
+                                {/* Saldo Saat Ini */}
+                                <div className="rounded-md bg-green-50 px-2 py-1">
+                                    <p className="text-xs text-green-600">Saldo Saat Ini</p>
+                                    <p className="text-lg font-bold text-green-800">{formatRupiah(unit.balance)}</p>
+                                </div>
+
+                                <p className="text-xs text-gray-500">ID Unit: {unit.unit_id.toLocaleString()}</p>
                             </div>
                             <button
-                                onClick={() => {
-                                    setSelectedUnit(unit)
-                                    setNewSaldo(unit.balance)
-                                    setShowModal(true)
-                                }}
-                                className="mt-2 rounded bg-orange-400 px-3 py-1 text-xs text-white hover:bg-orange-500"
+                                onClick={() => handleOpenModal(unit)}
+                                className="mt-3 w-full rounded bg-orange-400 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-orange-500 disabled:opacity-50"
+                                disabled={isLoading}
                             >
-                                Atur Saldo Awal
+                                {isLoading && selectedUnit?.unit_id === unit.unit_id ? 'Memproses...' : 'Atur Saldo Awal'}
                             </button>
                         </div>
                     ))}
@@ -229,55 +364,65 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
 
                 {/* Modal Input Saldo Awal */}
                 {showModal && selectedUnit && (
-                    <div className='fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-[4px]'>
-                        <div className='bg-white rounded-lg p-6 w-full max-w-md'>
-                            <h2 className='text-lg font-bold mb-4 text-black'>Atur Saldo Awal - {selectedUnit.unit_name}</h2>
-                            <input
-                                type='number'
-                                value={newSaldo}
-                                onChange={(e) => setNewSaldo(Number(e.target.value))}
-                                className='w-full p-2 border rounded mb-4 text-black'
-                            />
-                            <div className='flex justify-end gap-2'>
+                    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-[4px]">
+                        <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+                            <h2 className="mb-4 text-lg font-bold text-black">Atur Saldo Awal - {selectedUnit.unit_name}</h2>
+                            <div className="mb-2 text-sm text-gray-600">ID Unit: {selectedUnit.unit_id.toLocaleString()}</div>
+                            <div className="mb-2 text-sm text-gray-600">Saldo Awal Saat Ini: {formatRupiah(selectedUnit.initial_balance ?? 0)}</div>
+                            <div className="mb-4">
+                                <label className="mb-2 block text-sm font-medium text-gray-700">Nominal Saldo Awal:</label>
+                                <input
+                                    type="text"
+                                    value={formatRupiah(newSaldo)}
+                                    onChange={(e) => {
+                                        const raw = e.target.value.replace(/[^0-9]/g, ''); // ambil angka saja
+                                        setNewSaldo(Number(raw));
+                                    }}
+                                    className="w-full rounded border border-gray-300 p-2 text-black focus:border-blue-500 focus:outline-none"
+                                    placeholder="Masukkan nominal saldo awal"
+                                    disabled={isLoading}
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2">
                                 <button
-                                    className='bg-gray-300 px-4 py-2 rounded hover:bg-gray-400'
-                                    onClick={() => setShowModal(false)}
+                                    className="rounded bg-gray-300 px-4 py-2 hover:bg-gray-400 disabled:opacity-50"
+                                    onClick={handleCloseModal}
+                                    disabled={isLoading}
                                 >
                                     Batal
                                 </button>
                                 <button
-                                    className='bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700'
+                                    className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
                                     onClick={handleUpdateSaldo}
+                                    disabled={isLoading}
                                 >
-                                    Simpan
+                                    {isLoading ? 'Menyimpan...' : 'Simpan'}
                                 </button>
                             </div>
                         </div>
                     </div>
                 )}
 
-
                 {/* Profit Indicator */}
                 <div className="flex justify-start">
-                    <div className={`flex items-center gap-2 rounded-lg border px-4 py-2 ${data.statistics.net_profit_bulan_ini >= 0
-                            ? 'border-green-200 bg-green-100'
-                            : 'border-red-200 bg-red-100'
-                        }`}>
-                        <TrendingUp className={`h-4 w-4 ${data.statistics.net_profit_bulan_ini >= 0 ? 'text-green-600' : 'text-red-600'
-                            }`} />
-                        <span className={`text-sm ${data.statistics.net_profit_bulan_ini >= 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
+                    <div
+                        className={`flex items-center gap-2 rounded-lg border px-4 py-2 ${
+                            data.statistics.net_profit_bulan_ini >= 0 ? 'border-green-200 bg-green-100' : 'border-red-200 bg-red-100'
+                        }`}
+                    >
+                        <TrendingUp className={`h-4 w-4 ${data.statistics.net_profit_bulan_ini >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                        <span className={`text-sm ${data.statistics.net_profit_bulan_ini >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             Selisih pendapatan - pengeluaran
                         </span>
-                        <span className={`text-sm font-bold ${data.statistics.net_profit_bulan_ini >= 0 ? 'text-green-800' : 'text-red-800'
-                            }`}>
+                        <span className={`text-sm font-bold ${data.statistics.net_profit_bulan_ini >= 0 ? 'text-green-800' : 'text-red-800'}`}>
                             {data.statistics.net_profit_bulan_ini >= 0 ? '+' : ''}
-                            Rp. {data.statistics.net_profit_bulan_ini?.toLocaleString?.() ?? '0'}
+                            {formatRupiah(data.statistics.net_profit_bulan_ini ?? 0)}
                         </span>
-                        <span className={`rounded px-2 py-1 text-xs ${data.statistics.persentase_selisih >= 0
-                                ? 'bg-green-200 text-green-600'
-                                : 'bg-red-200 text-red-600'
-                            }`}>
+                        <span
+                            className={`rounded px-2 py-1 text-xs ${
+                                data.statistics.persentase_selisih >= 0 ? 'bg-green-200 text-green-600' : 'bg-red-200 text-red-600'
+                            }`}
+                        >
                             {data.statistics.persentase_selisih >= 0 ? '+' : ''}
                             {data.statistics.persentase_selisih.toFixed(1)}%
                         </span>
@@ -303,15 +448,9 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
                                         border: '1px solid #e5e7eb',
                                         borderRadius: '8px',
                                     }}
-                                    formatter={(value: any) => [`Rp. ${Number(value).toLocaleString()}`, 'Pendapatan']}
+                                    formatter={(value: any) => [formatRupiah(Number(value)), 'Pendapatan']}
                                 />
-                                <Line
-                                    type="monotone"
-                                    dataKey="pendapatan"
-                                    stroke="#3b82f6"
-                                    strokeWidth={3}
-                                    dot={{ fill: '#3b82f6', r: 4 }}
-                                />
+                                <Line type="monotone" dataKey="pendapatan" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 4 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -330,15 +469,9 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
                                         border: '1px solid #e5e7eb',
                                         borderRadius: '8px',
                                     }}
-                                    formatter={(value: any) => [`Rp. ${Number(value).toLocaleString()}`, 'Pengeluaran']}
+                                    formatter={(value: any) => [formatRupiah(Number(value)), 'Pengeluaran']}
                                 />
-                                <Line
-                                    type="monotone"
-                                    dataKey="pengeluaran"
-                                    stroke="#ef4444"
-                                    strokeWidth={3}
-                                    dot={{ fill: '#ef4444', r: 4 }}
-                                />
+                                <Line type="monotone" dataKey="pengeluaran" stroke="#ef4444" strokeWidth={3} dot={{ fill: '#ef4444', r: 4 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -347,8 +480,8 @@ export default function DashboardBumdes({ dashboard_data }: DashboardProps) {
                 {/* Footer Info */}
                 <div className="flex justify-between text-sm text-gray-500">
                     <div>
-                        Total Transaksi Bulan Ini: {data.statistics.total_transaksi} |
-                        Rata-rata Pendapatan Harian: Rp. {data.statistics.rata_rata_pendapatan_harian?.toLocaleString?.() ?? '0'}
+                        Total Transaksi Bulan Ini: {data.statistics.total_transaksi.toLocaleString()} | Rata-rata Pendapatan Harian:{' '}
+                        {formatRupiah(data.statistics.rata_rata_pendapatan_harian ?? 0)}
                     </div>
                     <div>Terakhir diperbarui: {data.last_updated ?? '-'}</div>
                 </div>
