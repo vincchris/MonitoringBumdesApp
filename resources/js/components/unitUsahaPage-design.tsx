@@ -161,7 +161,7 @@ const UnitUsaha: React.FC = () => {
     };
 
     const handleSubmit = () => {
-        const toastId = null;
+        const toastId = undefined;
         if (!selectedPackage || !selectedDate || !namaPenyewa) {
             toast.error('Mohon lengkapi semua data booking', { id: toastId });
             return;
@@ -411,49 +411,64 @@ const UnitUsaha: React.FC = () => {
 
                             {/* Booking Form */}
                             {selectedPackage && (
-                                <div className="space-y-4 border-t pt-6">
-                                    <div>
-                                        <label className="mb-2 block text-sm font-medium text-gray-700">Nama Penyewa *</label>
-                                        <input
-                                            type="text"
-                                            className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                                            value={namaPenyewa}
-                                            onChange={(e) => setNamaPenyewa(e.target.value)}
-                                            placeholder="Masukkan nama lengkap"
-                                        />
-                                    </div>
-
-                                    {(selectedUnit.calculationType === 'duration' || selectedUnit.calculationType === 'participants') && (
-                                        <div>
-                                            <label className="mb-2 block text-sm font-medium text-gray-700">{getQuantityLabel(selectedUnit)} *</label>
+                                <div className="space-y-6 border-t pt-6">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        {/* Nama Penyewa */}
+                                        <div className="col-span-1 sm:col-span-2">
+                                            <label className="mb-2 block text-sm font-medium text-gray-700">Nama Penyewa *</label>
                                             <input
-                                                type="number"
-                                                min="1"
+                                                type="text"
                                                 className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                                                value={quantity}
-                                                onChange={(e) => setQuantity(e.target.value)}
-                                                placeholder={`Masukkan jumlah ${selectedUnit.unit}`}
+                                                value={namaPenyewa}
+                                                onChange={(e) => setNamaPenyewa(e.target.value)}
+                                                placeholder="Masukkan nama lengkap"
                                             />
                                         </div>
-                                    )}
 
-                                    <div>
-                                        <label className="mb-2 block text-sm font-medium text-gray-700">Tanggal *</label>
-                                        <DatePicker
-                                            selected={selectedDate}
-                                            onChange={(date) => setSelectedDate(date)}
-                                            dateFormat="dd/MM/yyyy"
-                                            placeholderText="Pilih tanggal booking"
-                                            className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                                            minDate={new Date()}
-                                        />
+                                        {/* Quantity (Jika diperlukan) */}
+                                        {(selectedUnit.calculationType === 'duration' || selectedUnit.calculationType === 'participants') && (
+                                            <div className="col-span-1">
+                                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                                    {getQuantityLabel(selectedUnit)} *
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                                                    value={quantity}
+                                                    onChange={(e) => setQuantity(e.target.value)}
+                                                    placeholder={`Masukkan jumlah ${selectedUnit.unit}`}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* Tanggal & Waktu */}
+                                        <div className="col-span-1">
+                                            <label className="mb-2 block text-sm font-medium text-gray-700">Tanggal & Waktu *</label>
+                                            <DatePicker
+                                                selected={selectedDate}
+                                                onChange={(date) => setSelectedDate(date)}
+                                                showTimeSelect
+                                                dateFormat="dd/MM/yyyy HH:mm"
+                                                timeFormat="HH:mm"
+                                                timeIntervals={30}
+                                                placeholderText="Pilih tanggal dan waktu booking"
+                                                className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                                                minDate={new Date()}
+                                                minTime={new Date()}
+                                                maxTime={new Date(new Date().setHours(22, 0, 0, 0))}
+                                                popperPlacement="bottom-start"
+                                            />
+                                        </div>
                                     </div>
 
                                     {/* Total Harga */}
                                     <div className="rounded-lg bg-blue-50 p-4">
-                                        <div className="flex items-center justify-between">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                                             <span className="font-medium text-gray-700">Total Harga:</span>
-                                            <span className="text-xl font-bold text-blue-700">Rp{totalPrice.toLocaleString('id-ID')}</span>
+                                            <span className="mt-1 text-xl font-bold text-blue-700 sm:mt-0">
+                                                Rp{totalPrice.toLocaleString('id-ID')}
+                                            </span>
                                         </div>
                                         {(selectedUnit.calculationType === 'duration' || selectedUnit.calculationType === 'participants') && (
                                             <div className="mt-1 text-sm text-gray-600">
@@ -463,17 +478,17 @@ const UnitUsaha: React.FC = () => {
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="flex gap-3 pt-4">
+                                    <div className="flex flex-col gap-3 pt-4 sm:flex-row">
                                         <button
                                             type="button"
-                                            className="flex-1 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700 focus:ring-4 focus:ring-blue-200"
+                                            className="w-full flex-1 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 sm:w-auto"
                                             onClick={handleSubmit}
                                         >
                                             Konfirmasi Booking
                                         </button>
                                         <button
                                             type="button"
-                                            className="rounded-lg bg-gray-300 px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-400"
+                                            className="w-full rounded-lg bg-gray-300 px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-400 sm:w-auto"
                                             onClick={() => {
                                                 setSelectedUnit(null);
                                                 setSelectedPackage(null);
