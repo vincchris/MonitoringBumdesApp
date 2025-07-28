@@ -155,9 +155,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('user', [UserController::class, 'index']);
     Route::resource('/admin/users', UserController::class)->except(['create', 'edit']);
     Route::resource('MiniSoccer', MiniSocController::class);
-    Route::post('/store/{UNIT_ID}/initialBalance', [MiniSocController::class, 'storeInitialBalance'])->name('storeInitialBalance');
+    Route::post('/store/{UNIT_ID}/initialBalance', action: [MiniSocController::class, 'storeInitialBalance'])->name('storeInitialBalance');
+    Route::put('/unit/{unitId}/tarif/{tarifId}', [MiniSocController::class, 'updateTarif'])->name('updateTarif');
+
     Route::resource('Buper', BuperController::class);
-    Route::resource('Kios', KiosController::class);
+    Route::resource('Kios', KiosController::class); 
     Route::resource('Airweslik', AirWeslikController::class);
     Route::resource('InterDesa', InternetDesaController::class);
 });

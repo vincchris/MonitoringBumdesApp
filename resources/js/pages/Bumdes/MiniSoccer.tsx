@@ -39,9 +39,21 @@ interface FlashInfo {
 }
 
 interface Tarif {
+    category_name: string;
+    tanggal: string;
     id_tarif: number;
     jenis_penyewa: string;
     harga_per_unit: number;
+    updated_at: string;
+}
+
+interface TarifDetail {
+    id_tarif: number;
+    unit_id: number;
+    satuan: string;
+    category_name: string;
+    harga_per_unit: number;
+    created_at: string;
     updated_at: string;
 }
 
@@ -51,6 +63,7 @@ interface PageProps {
     initial_balance: number;
     tanggal_diubah: string;
     tarif?: Tarif;
+    allTarifs: TarifDetail[];
 }
 
 // Constants
@@ -153,7 +166,7 @@ const SaldoCard: React.FC<{
     onSettingsClick: () => void;
 }> = ({ initialBalance, tanggalDiubah, onSettingsClick }) => (
     <StatsCard title="Saldo Saat Ini" icon={DollarSign} gradient="bg-gradient-to-br from-blue-50 to-blue-100" iconColor="text-blue-600">
-        <p className="mt-2 text-2xl font-bold text-gray-900">Rp. {initialBalance.toLocaleString('id-ID')}</p>
+        <p className="mt-2 text-2xl font-bold text-gray-900">{formatRupiah(initialBalance)}</p>
         <p className="mt-1 text-xs text-gray-500">Terakhir diubah: {dayjs(tanggalDiubah).fromNow()}</p>
         <Button
             onClick={onSettingsClick}
@@ -167,17 +180,14 @@ const SaldoCard: React.FC<{
 
 const TarifCard: React.FC<{
     onSettingsClick: () => void;
+    onViewTarifClick: () => void;
     tarif?: Tarif;
-}> = ({ onSettingsClick, tarif }) => (
+}> = ({ onSettingsClick, onViewTarifClick, tarif }) => (
     <StatsCard title="Tarif Sewa" icon={Calendar} gradient="bg-gradient-to-br from-purple-50 to-purple-100" iconColor="text-purple-600">
-        <p className="mt-2 text-lg font-semibold text-gray-900">
-            {tarif ? `Rp ${tarif.harga_per_unit.toLocaleString('id-ID')}/jam` : 'Per Kegiatan'}
-        </p>
-        <p className="mt-1 text-xs text-gray-500">
-            Terakhir diubah: {tarif ? dayjs(tarif.updated_at).format('DD-MM-YYYY') : '05-06-2025'}
-        </p>
+        <p className="mt-2 text-lg font-semibold text-gray-900">{tarif ? `${formatRupiah(tarif.harga_per_unit)}/jam` : 'Per Kegiatan'}</p>
+        <p className="mt-1 text-xs text-gray-500">Terakhir diubah: {tarif ? dayjs(tarif.updated_at).format('DD-MM-YYYY') : '05-06-2025'}</p>
         <div className="mt-4 flex gap-2">
-            <Button variant="outline" size="sm" className="flex-1 border-purple-200 text-purple-600">
+            <Button variant="outline" size="sm" className="flex-1 border-purple-200 text-purple-600 hover:bg-purple-50" onClick={onViewTarifClick}>
                 Lihat Tarif
             </Button>
             <Button onClick={onSettingsClick} size="sm" className="flex-1 bg-purple-600 text-white hover:bg-purple-700">
@@ -193,16 +203,16 @@ const SummaryCard: React.FC = () => (
         <div className="mt-3 space-y-2">
             <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Pendapatan:</span>
-                <span className="font-semibold text-gray-900">Rp 3.250.000</span>
+                <span className="font-semibold text-gray-900">{formatRupiah(3250000)}</span>
             </div>
             <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Pengeluaran:</span>
-                <span className="font-semibold text-gray-900">Rp 850.000</span>
+                <span className="font-semibold text-gray-900">{formatRupiah(850000)}</span>
             </div>
             <div className="border-t border-green-200 pt-2">
                 <div className="flex justify-between">
                     <span className="text-sm font-medium text-gray-600">Selisih:</span>
-                    <span className="font-bold text-green-600">+Rp 2.400.000</span>
+                    <span className="font-bold text-green-600">+{formatRupiah(2400000)}</span>
                 </div>
             </div>
         </div>
@@ -305,6 +315,150 @@ const Modal: React.FC<{
     );
 };
 
+// Modal Lihat Tarif
+const ModalLihatTarif: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onEditClick: () => void;
+    data: TarifDetail[];
+}> = ({ isOpen, onClose, onEditClick, data }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10 p-4 backdrop-blur-md">
+            <div className="max-h-[80vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+                <div className="mb-6 flex items-center justify-between">
+                    <div>
+                        <h3 className="text-xl font-semibold text-gray-900">Daftar Tarif Mini Soccer</h3>
+                        <p className="mt-1 text-sm text-gray-500">Semua tarif yang berlaku saat ini</p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="rounded-full p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                        aria-label="Close modal"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                {/* Tabel Tarif */}
+                <div className="overflow-hidden rounded-xl border border-gray-200">
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">No</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                                        Kategori Penyewa
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Satuan</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Harga per Unit</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Dibuat</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                                        Terakhir Diubah
+                                    </th>
+                                    <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200 bg-white">
+                                {data.length > 0 ? (
+                                    data.map((item, index) => (
+                                        <tr key={item.id_tarif} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">{index + 1}</td>
+                                            <td className="px-6 py-4 text-sm whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <span
+                                                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                                            item.category_name === 'Member'
+                                                                ? 'bg-purple-100 text-purple-800'
+                                                                : 'bg-blue-100 text-blue-800'
+                                                        }`}
+                                                    >
+                                                        {item.category_name}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-900">Per {item.satuan}</td>
+                                            <td className="px-6 py-4 text-sm whitespace-nowrap">
+                                                <div className="font-medium text-gray-900">{formatRupiah(item.harga_per_unit)}</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
+                                                {dayjs(item.created_at).format('DD/MM/YYYY HH:mm')}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
+                                                {dayjs(item.updated_at).format('DD/MM/YYYY HH:mm')}
+                                            </td>
+                                            <td className="px-6 py-4 text-center text-sm whitespace-nowrap">
+                                                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                                    <CheckCircle className="mr-1 h-3 w-3" />
+                                                    Aktif
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-12 text-center">
+                                            <div className="flex flex-col items-center">
+                                                <DollarSign className="h-12 w-12 text-gray-300" />
+                                                <p className="mt-2 text-sm text-gray-500">Belum ada data tarif</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Summary */}
+                {data.length > 0 && (
+                    <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="rounded-lg bg-blue-50 p-4">
+                            <div className="flex items-center">
+                                <DollarSign className="h-5 w-5 text-blue-600" />
+                                <span className="ml-2 text-sm font-medium text-blue-900">Total Kategori</span>
+                            </div>
+                            <p className="mt-1 text-xl font-semibold text-blue-900">{data.length}</p>
+                        </div>
+
+                        <div className="rounded-lg bg-green-50 p-4">
+                            <div className="flex items-center">
+                                <TrendingUp className="h-5 w-5 text-green-600" />
+                                <span className="ml-2 text-sm font-medium text-green-900">Tarif Tertinggi</span>
+                            </div>
+                            <p className="mt-1 text-xl font-semibold text-green-900">
+                                {formatRupiah(Math.max(...data.map((item) => item.harga_per_unit)))}
+                            </p>
+                        </div>
+
+                        <div className="rounded-lg bg-purple-50 p-4">
+                            <div className="flex items-center">
+                                <Calendar className="h-5 w-5 text-purple-600" />
+                                <span className="ml-2 text-sm font-medium text-purple-900">Terakhir Update</span>
+                            </div>
+                            <p className="mt-1 text-sm font-semibold text-purple-900">
+                                {dayjs(Math.max(...data.map((item) => new Date(item.updated_at).getTime()))).format('DD/MM/YYYY')}
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Actions */}
+                <div className="mt-6 flex justify-end gap-3">
+                    <Button variant="outline" onClick={onClose} className="border-gray-300 text-gray-700 hover:bg-gray-50">
+                        Tutup
+                    </Button>
+                    <Button onClick={onEditClick} className="bg-blue-600 text-white hover:bg-blue-700">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Edit Tarif
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // Utility functions
 const formatCurrency = (value: string): string => {
     const raw = value.replace(/\D/g, '');
@@ -316,9 +470,17 @@ const parseCurrency = (value: string): number => {
     return parseInt(value.replace(/\D/g, ''), 10) || 0;
 };
 
+function formatRupiah(value: number): string {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+    }).format(value);
+}
+
 // Main component
 export default function MiniSoc() {
-    const { flash, laporanKeuangan = [], initial_balance = 0, tanggal_diubah, tarif } = usePage().props as unknown as PageProps;
+    const { flash, laporanKeuangan = [], initial_balance = 0, tanggal_diubah, tarif, allTarifs = [] } = usePage().props as unknown as PageProps;
 
     // Flash message handling
     const { message: flashMessage, method: flashMethod, color: flashColor } = useFlashMessage(flash?.info);
@@ -326,22 +488,34 @@ export default function MiniSoc() {
     // Modal states
     const [showModalSaldo, setShowModalSaldo] = useState(false);
     const [showModalTarif, setShowModalTarif] = useState(false);
+    const [showModalLihatTarif, setShowModalLihatTarif] = useState(false);
 
-    // Form states
     const [formData, setFormData] = useState({
         tanggal: '',
-        penyewa: 'Reguler',
+        category_name: '', // ganti dari 'penyewa'
         nominalBaru: '',
-        tarifPerJam: '',
+        hargaPerUnit: '',
     });
 
-    // Set initial tarif value when component mounts or tarif changes
+    // Set initial value saat edit atau tambah baru
     useEffect(() => {
-        if (tarif) {
-            setFormData(prev => ({
-                ...prev,
-                tarifPerJam: tarif.harga_per_unit.toLocaleString('id-ID')
-            }));
+        if (tarif && typeof tarif === 'object') {
+            const category = tarif.category_name === 'Member' ? 'Member' : 'Umum';
+
+            setFormData({
+                tanggal: tarif.tanggal ?? '',
+                category_name: category, // ganti dari 'penyewa'
+                nominalBaru: '',
+                hargaPerUnit: tarif.harga_per_unit ? formatCurrency(tarif.harga_per_unit.toString()) : '',
+            });
+        } else {
+            // Reset form saat tambah baru
+            setFormData({
+                tanggal: '',
+                category_name: 'Umum', // ganti dari 'penyewa'
+                nominalBaru: '',
+                hargaPerUnit: '',
+            });
         }
     }, [tarif]);
 
@@ -353,7 +527,7 @@ export default function MiniSoc() {
 
     const handleTarifChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const formatted = formatCurrency(e.target.value);
-        setFormData((prev) => ({ ...prev, tarifPerJam: formatted }));
+        setFormData((prev) => ({ ...prev, hargaPerUnit: formatted }));
     }, []);
 
     const handleNominalBlur = useCallback(() => {
@@ -364,11 +538,11 @@ export default function MiniSoc() {
     }, [formData.nominalBaru]);
 
     const handleTarifBlur = useCallback(() => {
-        const parsed = parseCurrency(formData.tarifPerJam);
+        const parsed = parseCurrency(formData.hargaPerUnit);
         if (parsed < MIN_NOMINAL) {
-            setFormData((prev) => ({ ...prev, tarifPerJam: MIN_NOMINAL.toString() }));
+            setFormData((prev) => ({ ...prev, hargaPerUnit: MIN_NOMINAL.toString() }));
         }
-    }, [formData.tarifPerJam]);
+    }, [formData.hargaPerUnit]);
 
     const handleInputChange = useCallback(
         (field: keyof typeof formData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -400,11 +574,11 @@ export default function MiniSoc() {
     }, [formData.tanggal, formData.nominalBaru]);
 
     const handleSimpanTarif = useCallback(() => {
-        const hargaPerUnit = parseCurrency(formData.tarifPerJam);
+        const hargaPerUnit = parseCurrency(formData.hargaPerUnit);
 
         const payload = {
             tanggal: formData.tanggal,
-            jenis_penyewa: formData.penyewa,
+            category_name: formData.category_name,
             harga_per_unit: hargaPerUnit,
         };
 
@@ -412,21 +586,19 @@ export default function MiniSoc() {
         const routeName = tarif ? 'updateTarif' : 'storeTarif';
         const routeParams = tarif ? [DEFAULT_UNIT_ID, tarif.id_tarif] : [DEFAULT_UNIT_ID];
 
-        router.post(
-            route(routeName, routeParams),
-            payload,
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setShowModalTarif(false);
-                    setFormData((prev) => ({ ...prev, tanggal: '', tarifPerJam: '' }));
-                },
-                onError: (errors) => {
-                    console.error('Error saving tarif:', errors);
-                },
+        const method = tarif ? 'put' : 'post';
+
+        router[method](route(routeName, routeParams), payload, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowModalTarif(false);
+                setFormData((prev) => ({ ...prev, tanggal: '', hargaPerUnit: '' }));
             },
-        );
-    }, [formData.tanggal, formData.penyewa, formData.tarifPerJam, tarif]);
+            onError: (errors) => {
+                console.error('Error saving tarif:', errors);
+            },
+        });
+    }, [formData.tanggal, formData.category_name, formData.hargaPerUnit, tarif]);
 
     const closeModal = useCallback((modalType: 'saldo' | 'tarif') => {
         if (modalType === 'saldo') {
@@ -434,6 +606,11 @@ export default function MiniSoc() {
         } else {
             setShowModalTarif(false);
         }
+    }, []);
+
+    const handleEditTarifFromView = useCallback(() => {
+        setShowModalLihatTarif(false);
+        setShowModalTarif(true);
     }, []);
 
     return (
@@ -452,7 +629,7 @@ export default function MiniSoc() {
                 {/* Stats Cards */}
                 <section className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3" aria-label="Statistics">
                     <SaldoCard initialBalance={initial_balance} tanggalDiubah={tanggal_diubah} onSettingsClick={() => setShowModalSaldo(true)} />
-                    <TarifCard onSettingsClick={() => setShowModalTarif(true)} tarif={tarif} />
+                    <TarifCard onSettingsClick={() => setShowModalTarif(true)} onViewTarifClick={() => setShowModalLihatTarif(true)} tarif={tarif} />
                     <SummaryCard />
                 </section>
 
@@ -517,18 +694,18 @@ export default function MiniSoc() {
                             type="date"
                             value={formData.tanggal}
                             onChange={handleInputChange('tanggal')}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-black"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                         />
                     </div>
 
                     <div>
                         <label className="mb-1 block text-sm font-medium text-gray-700">Jenis Penyewa</label>
                         <select
-                            value={formData.penyewa}
-                            onChange={handleInputChange('penyewa')}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-black"
+                            value={formData.category_name}
+                            onChange={handleInputChange('category_name')}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                         >
-                            <option value="Reguler">Umum</option>
+                            <option value="Umum">Umum</option>
                             <option value="Member">Member</option>
                         </select>
                     </div>
@@ -537,11 +714,11 @@ export default function MiniSoc() {
                         <label className="mb-1 block text-sm font-medium text-gray-700">Tarif per Jam</label>
                         <input
                             type="text"
-                            value={formData.tarifPerJam}
+                            value={formData.hargaPerUnit}
                             onChange={handleTarifChange}
                             onBlur={handleTarifBlur}
                             placeholder="Contoh: 50.000"
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-black"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                             inputMode="numeric"
                             required
                         />
@@ -558,6 +735,14 @@ export default function MiniSoc() {
                     </Button>
                 </div>
             </Modal>
+
+            {/* Modal: Lihat Tarif */}
+            <ModalLihatTarif
+                isOpen={showModalLihatTarif}
+                onClose={() => setShowModalLihatTarif(false)}
+                onEditClick={handleEditTarifFromView}
+                data={allTarifs}
+            />
         </AppLayout>
     );
 }

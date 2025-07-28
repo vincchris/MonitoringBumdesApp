@@ -24,6 +24,7 @@ class MiniSocController extends Controller
         $unit = Unit::findOrFail($unitId);
         $histories = $this->getRingkasanLaporanBulanan($unitId);
         $tarif = $this->getCurrentTarif($unitId);
+        $allTarifs = $this->getAllTarifs($unitId); // Tambahan untuk semua data tarif
 
         $page = (int) $request->get('page', 1);
         $perPage = self::DEFAULT_PER_PAGE;
@@ -37,6 +38,7 @@ class MiniSocController extends Controller
             'initial_balance' => $this->getInitialBalance($unitId),
             'tanggal_diubah' => $this->getInitialBalanceTanggal($unitId),
             'tarif' => $tarif,
+            'allTarifs' => $allTarifs, // Data semua tarif untuk modal
             'unit' => [
                 'id' => $unit->id,
                 'name' => $unit->name,
@@ -74,7 +76,7 @@ class MiniSocController extends Controller
         ]);
     }
 
-     public function show($bulan)
+    public function show($bulan)
     {
         $unitId = self::UNIT_ID;
         [$year, $month] = explode('-', $bulan);
@@ -204,7 +206,8 @@ class MiniSocController extends Controller
         DB::transaction(function () use ($validated, $unitID) {
             Tarif::create([
                 'unit_id' => $unitID,
-                'jenis_penyewa' => $validated['jenis_penyewa'],
+                'satuan' => 'jam', // Default satuan untuk mini soccer
+                'category_name' => $validated['jenis_penyewa'],
                 'harga_per_unit' => $validated['harga_per_unit'],
                 'berlaku_dari' => $validated['tanggal'],
                 'created_at' => now(),
@@ -213,6 +216,7 @@ class MiniSocController extends Controller
 
             // Hapus cache agar data terbaru bisa dimuat
             Cache::forget("current_tarif_{$unitID}");
+            Cache::forget("all_tarifs_{$unitID}");
         });
 
         return back()->with('info', [
@@ -225,17 +229,18 @@ class MiniSocController extends Controller
     {
         $validated = $request->validate([
             'tanggal' => 'required|date',
-            'jenis_penyewa' => 'required|string|max:255',
+            'category_name' => 'required|string|in:Umum,Member',
             'harga_per_unit' => 'required|numeric|min:1',
         ]);
 
         DB::transaction(function () use ($validated, $unitID, $tarifID) {
-            $tarif = Tarif::where('id_tarif', $tarifID)
-                ->where('unit_id', $unitID)
+            $tarif = Tarif::where('unit_id', $unitID)
+                ->where('category_name', $validated['category_name'])
                 ->firstOrFail();
 
+
             $tarif->update([
-                'jenis_penyewa' => $validated['jenis_penyewa'],
+                'category_name' => $validated['category_name'],
                 'harga_per_unit' => $validated['harga_per_unit'],
                 'berlaku_dari' => $validated['tanggal'],
                 'updated_at' => now(),
@@ -243,6 +248,7 @@ class MiniSocController extends Controller
 
             // Hapus cache agar data terbaru bisa dimuat
             Cache::forget("current_tarif_{$unitID}");
+            Cache::forget("all_tarifs_{$unitID}");
         });
 
         return back()->with('info', [
@@ -264,10 +270,34 @@ class MiniSocController extends Controller
 
             return [
                 'id_tarif' => $tarif->id_tarif,
-                'jenis_penyewa' => $tarif->jenis_penyewa,
+                'jenis_penyewa' => $tarif->category_name ?? $tarif->jenis_penyewa, // Fallback untuk kompabilitas
                 'harga_per_unit' => $tarif->harga_per_unit,
                 'updated_at' => $tarif->updated_at->format('Y-m-d H:i:s'),
             ];
+        });
+    }
+
+    /**
+     * Method baru untuk mengambil semua data tarif unit
+     */
+    private function getAllTarifs(int $unitId): array
+    {
+        return Cache::remember("all_tarifs_{$unitId}", self::CACHE_TTL, function () use ($unitId) {
+            $tarifs = Tarif::where('unit_id', $unitId)
+                ->orderByDesc('updated_at')
+                ->get();
+
+            return $tarifs->map(function ($tarif) {
+                return [
+                    'id_tarif' => $tarif->id_tarif,
+                    'unit_id' => $tarif->unit_id,
+                    'satuan' => $tarif->satuan ?? 'jam', // Default ke 'jam' jika null
+                    'category_name' => $tarif->category_name ?? $tarif->jenis_penyewa, // Fallback untuk kompabilitas
+                    'harga_per_unit' => $tarif->harga_per_unit,
+                    'created_at' => $tarif->created_at->format('Y-m-d H:i:s'),
+                    'updated_at' => $tarif->updated_at->format('Y-m-d H:i:s'),
+                ];
+            })->toArray();
         });
     }
 
@@ -275,9 +305,28 @@ class MiniSocController extends Controller
     {
         $this->authorize('member'); // hanya role member
 
-        $tarifs = Tarif::where('unit_id', self::UNIT_ID)->get();
+        $tarifs = $this->getAllTarifs(self::UNIT_ID);
 
         return response()->json($tarifs);
+    }
+
+    /**
+     * API endpoint untuk mengambil semua tarif (jika diperlukan untuk AJAX)
+     */
+    public function getAllTarifsAPI(Request $request)
+    {
+        $this->authorize('member');
+
+        $unitId = $request->get('unit_id', self::UNIT_ID);
+        $tarifs = $this->getAllTarifs($unitId);
+
+        return response()->json([
+            'data' => $tarifs,
+            'meta' => [
+                'total' => count($tarifs),
+                'unit_id' => $unitId,
+            ]
+        ]);
     }
 
     // Update tarif tertentu (method yang sudah ada, bisa tetap digunakan untuk API)
@@ -288,16 +337,60 @@ class MiniSocController extends Controller
         $validated = $request->validate([
             'id_tarif' => 'required|exists:tarifs,id_tarif',
             'harga_per_unit' => 'required|numeric|min:0',
+            'category_name' => 'required|string|in:Umum,Member',
         ]);
 
         $tarif = Tarif::where('id_tarif', $validated['id_tarif'])
             ->where('unit_id', self::UNIT_ID)
+            ->where('category_name', $validated['category_name'])
             ->firstOrFail();
 
-        $tarif->update([
+        $updateData = [
             'harga_per_unit' => $validated['harga_per_unit'],
-        ]);
+        ];
 
-        return response()->json(['message' => 'Tarif berhasil diperbarui']);
+        $tarif->update($updateData);
+
+        // Clear cache
+        Cache::forget("current_tarif_" . self::UNIT_ID);
+        Cache::forget("all_tarifs_" . self::UNIT_ID);
+
+        return response()->json([
+            'message' => 'Tarif berhasil diperbarui',
+            'data' => [
+                'id_tarif' => $tarif->id_tarif,
+                'unit_id' => $tarif->unit_id,
+                'satuan' => $tarif->satuan,
+                'category_name' => $tarif->category_name,
+                'harga_per_unit' => $tarif->harga_per_unit,
+                'updated_at' => $tarif->updated_at->format('Y-m-d H:i:s'),
+            ]
+        ]);
+    }
+
+
+    /**
+     * Method untuk menghapus tarif (jika diperlukan)
+     */
+    public function deleteTarif(Request $request, $unitID, $tarifID)
+    {
+        $this->authorize('member');
+
+        DB::transaction(function () use ($unitID, $tarifID) {
+            $tarif = Tarif::where('id_tarif', $tarifID)
+                ->where('unit_id', $unitID)
+                ->firstOrFail();
+
+            $tarif->delete();
+
+            // Hapus cache
+            Cache::forget("current_tarif_{$unitID}");
+            Cache::forget("all_tarifs_{$unitID}");
+        });
+
+        return back()->with('info', [
+            'message' => 'Tarif berhasil dihapus',
+            'method' => 'delete'
+        ]);
     }
 }
