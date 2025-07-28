@@ -173,7 +173,17 @@ const UnitUsaha: React.FC = () => {
         }
 
         const detailHarga = `\nTotal Harga: Rp${totalPrice.toLocaleString('id-ID')}`;
-        const pesan = `Halo, saya ingin booking:\n\nNama: ${namaPenyewa}\nUnit: ${selectedUnit?.title}\nPaket: ${selectedPackage.label}${detailQuantity}\nTanggal: ${selectedDate?.toLocaleDateString()}${detailHarga}`;
+
+        const formattedDate = selectedDate?.toLocaleString('id-ID', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        });
+
+        const pesan = `Halo, saya ingin booking:\n\nNama: ${namaPenyewa}\nUnit: ${selectedUnit?.title}\nPaket: ${selectedPackage.label}${detailQuantity}\nTanggal: ${formattedDate}${detailHarga}`;
 
         const nomorAdmin = '6287737709694';
         const encodedPesan = encodeURIComponent(pesan);
