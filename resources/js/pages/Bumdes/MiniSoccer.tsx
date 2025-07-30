@@ -38,6 +38,13 @@ interface FlashInfo {
     method?: string;
 }
 
+interface CurrentMonthSummary {
+    pendapatan: number;
+    pengeluaran: number;
+    selisih: number;
+    last_updated?: string;
+}
+
 interface Tarif {
     category_name: string;
     tanggal: string;
@@ -64,6 +71,7 @@ interface PageProps {
     tanggal_diubah: string;
     tarif?: Tarif;
     allTarifs: TarifDetail[];
+    currentMonthSummary: CurrentMonthSummary;
 }
 
 // Constants
@@ -108,7 +116,10 @@ const useFlashMessage = (flash: FlashInfo | undefined) => {
     }, [flash]);
 
     return flashState;
+
 };
+
+
 
 // Components
 const FlashMessage: React.FC<{ message: string; method: string; color: string }> = ({ message, method, color }) => {
@@ -198,23 +209,30 @@ const TarifCard: React.FC<{
     </StatsCard>
 );
 
-const SummaryCard: React.FC = () => (
+const SummaryCard: React.FC<{ summary : CurrentMonthSummary }>  = ({summary}) => (
     <StatsCard title="Bulan Ini" icon={TrendingUp} gradient="bg-gradient-to-br from-green-50 to-green-100" iconColor="text-green-600">
         <div className="mt-3 space-y-2">
             <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Pendapatan:</span>
-                <span className="font-semibold text-gray-900">{formatRupiah(3250000)}</span>
+                <span className="font-semibold text-gray-900">{formatRupiah(summary.pendapatan)}</span>
             </div>
             <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Pengeluaran:</span>
-                <span className="font-semibold text-gray-900">{formatRupiah(850000)}</span>
+                <span className="font-semibold text-gray-900">{formatRupiah(summary.pengeluaran)}</span>
             </div>
             <div className="border-t border-green-200 pt-2">
                 <div className="flex justify-between">
                     <span className="text-sm font-medium text-gray-600">Selisih:</span>
-                    <span className="font-bold text-green-600">+{formatRupiah(2400000)}</span>
+                    <span className={`font-bold ${summary.selisih >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {summary.selisih >= 0 ? '+' : ''}{formatRupiah(summary.selisih)}
+                    </span>
                 </div>
             </div>
+            {summary.last_updated && (
+                <p className='mt-2 text-xs text-gray-400'>
+                    Update: {dayjs(summary.last_updated).fromNow()}
+                </p>
+            )}
         </div>
     </StatsCard>
 );
@@ -480,7 +498,7 @@ function formatRupiah(value: number): string {
 
 // Main component
 export default function MiniSoc() {
-    const { flash, laporanKeuangan = [], initial_balance = 0, tanggal_diubah, tarif, allTarifs = [] } = usePage().props as unknown as PageProps;
+    const { flash, laporanKeuangan = [], initial_balance = 0, tanggal_diubah, tarif, allTarifs = [], currentMonthSummary } = usePage().props as unknown as PageProps;
 
     // Flash message handling
     const { message: flashMessage, method: flashMethod, color: flashColor } = useFlashMessage(flash?.info);
@@ -630,7 +648,7 @@ export default function MiniSoc() {
                 <section className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3" aria-label="Statistics">
                     <SaldoCard initialBalance={initial_balance} tanggalDiubah={tanggal_diubah} onSettingsClick={() => setShowModalSaldo(true)} />
                     <TarifCard onSettingsClick={() => setShowModalTarif(true)} onViewTarifClick={() => setShowModalLihatTarif(true)} tarif={tarif} />
-                    <SummaryCard />
+                    <SummaryCard summary={currentMonthSummary}/>
                 </section>
 
                 {/* Transaction Report */}

@@ -25,6 +25,7 @@ class MiniSocController extends Controller
         $histories = $this->getRingkasanLaporanBulanan($unitId);
         $tarif = $this->getCurrentTarif($unitId);
         $allTarifs = $this->getAllTarifs($unitId); // Tambahan untuk semua data tarif
+        $currentMonthSummary = $this->getCurrentMonthSummary($unitId);
 
         $page = (int) $request->get('page', 1);
         $perPage = self::DEFAULT_PER_PAGE;
@@ -37,6 +38,7 @@ class MiniSocController extends Controller
             'laporanKeuangan' => $paged,
             'initial_balance' => $this->getInitialBalance($unitId),
             'tanggal_diubah' => $this->getInitialBalanceTanggal($unitId),
+            'currentMonthSummary' => $currentMonthSummary,
             'tarif' => $tarif,
             'allTarifs' => $allTarifs, // Data semua tarif untuk modal
             'unit' => [
@@ -141,25 +143,50 @@ class MiniSocController extends Controller
 
     private function getRingkasanLaporanBulanan(int $unitId)
     {
-        return Cache::remember("ringkasan_laporan_{$unitId}", self::CACHE_TTL, function () use ($unitId) {
-            $histories = BalanceHistory::where('unit_id', $unitId)
-                ->orderByDesc('updated_at')
-                ->get();
+        $currentMonth = now()->format('Y-m');
 
-            return $histories->groupBy(fn($item) => $item->updated_at->format('Y-m'))
-                ->map(function ($items) use ($unitId) {
-                    $item = $items->sortByDesc('updated_at')->first();
-                    return [
-                        'tanggal' => $item->updated_at->translatedFormat('d F Y'),
-                        'keterangan' => $this->getTransactionDescription($item, $unitId),
-                        'jenis' => $item->jenis,
-                        'selisih' => $this->calculateSelisih($item),
-                        'saldo' => number_format($item->saldo_sekarang, 0, '', ','),
-                        'updated_at' => $item->updated_at,
-                        'bulan' => $item->updated_at->format('Y-m'),
-                    ];
-                })->values();
+        return BalanceHistory::where('unit_id', $unitId)
+            ->orderByDesc('updated_at')
+            ->get()
+            ->groupBy(fn($item) => $item->updated_at->format('Y-m'))
+            ->map(function ($items, $month) use ($unitId, $currentMonth) {
+                $item = $items->sortByDesc('updated_at')->first();
+                return [
+                    'tanggal' => $item->updated_at->translatedFormat('d F Y'),
+                    'keterangan' => $this->getTransactionDescription($item, $unitId),
+                    'jenis' => $item->jenis,
+                    'selisih' => $this->calculateSelisih($item),
+                    'saldo' => number_format($item->saldo_sekarang, 0, '', ','),
+                    'updated_at' => $item->updated_at,
+                    'bulan' => $month,
+                    'is_current_month' => $month === $currentMonth
+                ];
+            })->values();
+    }
+
+    private function getCurrentMonthSummary(int $unitId)
+    {
+        $startOfMonth = now()->startOfMonth();
+        $endOfMonth = now()->endOfMonth();
+
+        $histories = BalanceHistory::where('unit_id', $unitId)
+            ->whereBetween('updated_at', [$startOfMonth, $endOfMonth])
+            ->get();
+
+        $pendapatan = $histories->where('jenis', 'Pendapatan')->sum(function($item) {
+            return $this->calculateSelisih($item);
         });
+
+        $pengeluaran = $histories->where('jenis', 'Pengeluaran')->sum(function($item) {
+            return $this->calculateSelisih($item);
+        });
+
+        return [
+            'pendapatan' => $pendapatan,
+            'pengeluaran' => $pengeluaran,
+            'selisih' => $pendapatan - $pengeluaran,
+            'last_updated' => $histories->max('updated_at')?->format('Y-m-d H:i:s')
+        ];
     }
 
     private function getTransactionDescription($item, int $unitId): string
