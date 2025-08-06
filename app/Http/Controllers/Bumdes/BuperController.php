@@ -24,7 +24,7 @@ class BuperController extends Controller
         $unit = Unit::findOrFail($unitId);
         $histories = $this->getRingkasanLaporanBulanan($unitId);
         $tarif = $this->getCurrentTarif($unitId);
-        $allTarifs = $this->getAllTarifs($unitId); // Tambahan untuk semua data tarif
+        $allTarifs = $this->getAllTarifs($unitId);
         $currentMonthSummary = $this->getCurrentMonthSummary($unitId);
 
         $page = (int) $request->get('page', 1);
@@ -132,6 +132,7 @@ class BuperController extends Controller
         return $histories->map(function ($item) use ($unitId) {
             return [
                 'tanggal' => $item->updated_at->translatedFormat('d F Y'),
+                'tanggal_raw' => $item->updated_at->format('Y-m-d'),
                 'keterangan' => $this->getTransactionDescription($item, $unitId),
                 'jenis' => $item->jenis,
                 'selisih' => $this->calculateSelisih($item),
@@ -143,25 +144,36 @@ class BuperController extends Controller
 
     private function getRingkasanLaporanBulanan(int $unitId)
     {
-        return Cache::remember("ringkasan_laporan_{$unitId}", self::CACHE_TTL, function () use ($unitId) {
-            $histories = BalanceHistory::where('unit_id', $unitId)
-                ->orderByDesc('updated_at')
-                ->get();
+        $currentMonth = now()->format('Y-m');
 
-            return $histories->groupBy(fn($item) => $item->updated_at->format('Y-m'))
-                ->map(function ($items) use ($unitId) {
-                    $item = $items->sortByDesc('updated_at')->first();
-                    return [
-                        'tanggal' => $item->updated_at->translatedFormat('d F Y'),
-                        'keterangan' => $this->getTransactionDescription($item, $unitId),
-                        'jenis' => $item->jenis,
-                        'selisih' => $this->calculateSelisih($item),
-                        'saldo' => number_format($item->saldo_sekarang, 0, '', ','),
-                        'updated_at' => $item->updated_at,
-                        'bulan' => $item->updated_at->format('Y-m'),
-                    ];
-                })->values();
-        });
+        return BalanceHistory::where('unit_id', $unitId)
+            ->orderByDesc('updated_at')
+            ->get()
+            ->groupBy(fn($item) => $item->updated_at->format('Y-m'))
+            ->map(function ($items, $month) use ($unitId, $currentMonth) {
+                $totalPendapatan = $items->where('jenis', 'Pendapatan')->sum(fn($item) => $this->calculateSelisih($item));
+                $totalPengeluaran = $items->where('jenis', 'Pengeluaran')->sum(fn($item) => $this->calculateSelisih($item));
+                $jumlahTransaksi = $items->count();
+
+                // Ambil transaksi terakhir untuk referensi tanggal
+                $lastTransaction = $items->sortByDesc('updated_at')->first();
+
+                return [
+                    'tanggal' => $lastTransaction->updated_at->translatedFormat('F Y'),
+                    'keterangan' => "Ringkasan {$jumlahTransaksi} transaksi",
+                    'jenis' => 'Ringkasan',
+                    'selisih' => $totalPendapatan - $totalPengeluaran,
+                    'saldo' => number_format($lastTransaction->saldo_sekarang, 0, '', ','),
+                    'updated_at' => $lastTransaction->updated_at,
+                    'bulan' => $month,
+                    'is_current_month' => $month === $currentMonth,
+                    'summary' => [
+                        'totalPendapatan' => $totalPendapatan,
+                        'totalPengeluaran' => $totalPengeluaran,
+                        'jumlahTransaksi' => $jumlahTransaksi,
+                    ]
+                ];
+            })->values();
     }
 
     private function getCurrentMonthSummary(int $unitId)
@@ -173,11 +185,11 @@ class BuperController extends Controller
             ->whereBetween('updated_at', [$startOfMonth, $endOfMonth])
             ->get();
 
-        $pendapatan = $histories->where('jenis', 'Pendapatan')->sum(function($item) {
+        $pendapatan = $histories->where('jenis', 'Pendapatan')->sum(function ($item) {
             return $this->calculateSelisih($item);
         });
 
-        $pengeluaran = $histories->where('jenis', 'Pengeluaran')->sum(function($item) {
+        $pengeluaran = $histories->where('jenis', 'Pengeluaran')->sum(function ($item) {
             return $this->calculateSelisih($item);
         });
 
@@ -192,25 +204,64 @@ class BuperController extends Controller
 
     private function getTransactionDescription($item, int $unitId): string
     {
-        $tanggalAwal = $item->updated_at->copy()->startOfDay();
-        $tanggalAkhir = $item->updated_at->copy()->endOfDay();
+        $tanggal = $item->updated_at->toDateString();
+        $selisih = $this->calculateSelisih($item);
 
         if ($item->jenis === 'Pendapatan') {
-            $income = Income::with(['rent.tarif.unit'])
-                ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
-                ->get()
-                ->filter(fn($i) => optional($i->rent?->tarif?->unit)->id_units == $unitId)
-                ->sortByDesc('updated_at')
-                ->first();
+            $tanggal = $item->updated_at->toDateString();
+            $selisih = $this->calculateSelisih($item);
 
-            return $income->rent->description ?? 'Pemasukan dari sewa';
+            $matchingRents = RentTransaction::with('tarif.unit')
+                ->whereDate('updated_at', $tanggal)
+                ->get()
+                ->filter(function ($r) use ($unitId, $selisih) {
+                    return optional($r->tarif?->unit)->id_units == $unitId &&
+                        (int) $r->total_bayar === (int) $selisih;
+                })
+                ->sortBy('updated_at')
+                ->values();
+
+            $matchingHistories = BalanceHistory::where('unit_id', $unitId)
+                ->where('jenis', 'Pendapatan')
+                ->whereDate('updated_at', $tanggal)
+                ->get()
+                ->filter(fn($h) => $this->calculateSelisih($h) == $selisih)
+                ->sortBy('updated_at')
+                ->values();
+
+            $index = $matchingHistories->search(fn($h) => $h->id == $item->id);
+
+            if ($index !== false && isset($matchingRents[$index])) {
+                // dd($matchingRents->pluck('description'));
+                return $matchingRents[$index]->description ?? 'Pemasukan dari sewa';
+            }
+
+            return 'Pemasukan dari sewa';
         }
 
         if ($item->jenis === 'Pengeluaran') {
-            return Expense::where('unit_id', $unitId)
-                ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
-                ->orderByDesc('updated_at')
-                ->value('description') ?? 'Pengeluaran operasional';
+            $expenses = Expense::where('unit_id', $unitId)
+                ->whereDate('updated_at', $tanggal)
+                ->where('nominal', (int) $selisih)
+                ->orderBy('updated_at')
+                ->get()
+                ->values();
+
+            $matchingHistories = BalanceHistory::where('unit_id', $unitId)
+                ->where('jenis', 'Pengeluaran')
+                ->whereDate('updated_at', $tanggal)
+                ->get()
+                ->filter(fn($h) => $this->calculateSelisih($h) == $selisih)
+                ->sortBy('updated_at')
+                ->values();
+
+            $index = $matchingHistories->search(fn($h) => $h->id == $item->id);
+
+            if ($index !== false && isset($expenses[$index])) {
+                return $expenses[$index]->description ?? 'Pengeluaran operasional';
+            }
+
+            return 'Pengeluaran operasional';
         }
 
         return '-';
@@ -223,23 +274,30 @@ class BuperController extends Controller
             : $item->saldo_sebelum - $item->saldo_sekarang;
     }
 
+    // Function dibawahnya belum disesuaikan dengan unit usaha
+
     public function storeTarif(Request $request, $unitID)
     {
         $validated = $request->validate([
             'tanggal' => 'required|date',
-            'jenis_penyewa' => 'required|string|max:255',
             'harga_per_unit' => 'required|numeric|min:1',
+            'jumlah_min' => 'required|integer|min:1',
+            'jumlah_max' => 'required|integer|min:1',
         ]);
 
-        DB::transaction(function () use ($validated, $unitID) {
+        // Determine category_name based on jumlah_max
+        $category_name = $validated['jumlah_max'] > 300 ? '>300' : '<=300';
+
+        $satuan = 'kegiatan';
+
+        DB::transaction(function () use ($validated, $unitID, $satuan, $category_name) {
             Tarif::create([
                 'unit_id' => $unitID,
-                'satuan' => 'jam', // Default satuan untuk mini soccer
-                'category_name' => $validated['jenis_penyewa'],
+                'satuan' => $satuan,
+                'category_name' => $category_name,
                 'harga_per_unit' => $validated['harga_per_unit'],
-                'berlaku_dari' => $validated['tanggal'],
-                'created_at' => now(),
-                'updated_at' => now(),
+                'created_at' => $validated['tanggal'],
+                'updated_at' => $validated['tanggal'],
             ]);
 
             // Hapus cache agar data terbaru bisa dimuat
@@ -257,21 +315,25 @@ class BuperController extends Controller
     {
         $validated = $request->validate([
             'tanggal' => 'required|date',
-            'category_name' => 'required|string|in:Umum,Member',
             'harga_per_unit' => 'required|numeric|min:1',
+            'jumlah_min' => 'required|integer|min:1',
+            'jumlah_max' => 'required|integer|min:1',
         ]);
 
-        DB::transaction(function () use ($validated, $unitID, $tarifID) {
-            $tarif = Tarif::where('unit_id', $unitID)
-                ->where('category_name', $validated['category_name'])
+        // Determine category_name based on jumlah_max
+        $category_name = $validated['jumlah_max'] > 300 ? '>300' : '<=300';
+
+        DB::transaction(function () use ($validated, $unitID, $tarifID, $category_name) {
+            // Find the current tarif by id_tarif
+            $currentTarif = Tarif::where('id_tarif', $tarifID)
+                ->where('unit_id', $unitID) // Added unit_id check for security
                 ->firstOrFail();
 
-
-            $tarif->update([
-                'category_name' => $validated['category_name'],
+            // Update the current record
+            $currentTarif->update([
+                'category_name' => $category_name,
                 'harga_per_unit' => $validated['harga_per_unit'],
-                'berlaku_dari' => $validated['tanggal'],
-                'updated_at' => now(),
+                'updated_at' => $validated['tanggal'], // Use tanggal from form
             ]);
 
             // Hapus cache agar data terbaru bisa dimuat
@@ -298,8 +360,9 @@ class BuperController extends Controller
 
             return [
                 'id_tarif' => $tarif->id_tarif,
-                'jenis_penyewa' => $tarif->category_name ?? $tarif->jenis_penyewa, // Fallback untuk kompabilitas
+                'category_name' => $tarif->category_name,
                 'harga_per_unit' => $tarif->harga_per_unit,
+                'tanggal' => $tarif->updated_at->format('Y-m-d'), // Return as tanggal for frontend
                 'updated_at' => $tarif->updated_at->format('Y-m-d H:i:s'),
             ];
         });
@@ -319,8 +382,8 @@ class BuperController extends Controller
                 return [
                     'id_tarif' => $tarif->id_tarif,
                     'unit_id' => $tarif->unit_id,
-                    'satuan' => $tarif->satuan ?? 'jam', // Default ke 'jam' jika null
-                    'category_name' => $tarif->category_name ?? $tarif->jenis_penyewa, // Fallback untuk kompabilitas
+                    'satuan' => $tarif->satuan ?? 'kegiatan',
+                    'category_name' => $tarif->category_name,
                     'harga_per_unit' => $tarif->harga_per_unit,
                     'created_at' => $tarif->created_at->format('Y-m-d H:i:s'),
                     'updated_at' => $tarif->updated_at->format('Y-m-d H:i:s'),
@@ -364,17 +427,23 @@ class BuperController extends Controller
 
         $validated = $request->validate([
             'id_tarif' => 'required|exists:tarifs,id_tarif',
+            'tanggal' => 'required|date',
             'harga_per_unit' => 'required|numeric|min:0',
-            'category_name' => 'required|string|in:Umum,Member',
+            'jumlah_min' => 'required|integer|min:1',
+            'jumlah_max' => 'required|integer|min:1',
         ]);
+
+        // Determine category_name based on jumlah_max
+        $category_name = $validated['jumlah_max'] > 300 ? '>300' : '<=300';
 
         $tarif = Tarif::where('id_tarif', $validated['id_tarif'])
             ->where('unit_id', self::UNIT_ID)
-            ->where('category_name', $validated['category_name'])
             ->firstOrFail();
 
         $updateData = [
             'harga_per_unit' => $validated['harga_per_unit'],
+            'category_name' => $category_name,
+            'updated_at' => $validated['tanggal'], // Use tanggal from form
         ];
 
         $tarif->update($updateData);
@@ -396,29 +465,32 @@ class BuperController extends Controller
         ]);
     }
 
-
     /**
      * Method untuk menghapus tarif (jika diperlukan)
      */
     public function deleteTarif(Request $request, $unitID, $tarifID)
     {
-        $this->authorize('member');
+        try {
+            DB::transaction(function () use ($unitID, $tarifID) {
+                $tarif = Tarif::where('id_tarif', $tarifID)
+                    ->where('unit_id', $unitID)
+                    ->firstOrFail();
 
-        DB::transaction(function () use ($unitID, $tarifID) {
-            $tarif = Tarif::where('id_tarif', $tarifID)
-                ->where('unit_id', $unitID)
-                ->firstOrFail();
+                $tarif->delete();
 
-            $tarif->delete();
+                // Clear cache
+                Cache::forget("current_tarif_{$unitID}");
+                Cache::forget("all_tarifs_{$unitID}");
+            });
 
-            // Hapus cache
-            Cache::forget("current_tarif_{$unitID}");
-            Cache::forget("all_tarifs_{$unitID}");
-        });
-
-        return back()->with('info', [
-            'message' => 'Tarif berhasil dihapus',
-            'method' => 'delete'
-        ]);
+            return back()->with('info', [
+                'message' => 'Tarif berhasil dihapus',
+                'method' => 'delete'
+            ]);
+        } catch (\Exception $e) {
+            return back()->withErrors([
+                'error' => 'Gagal menghapus tarif: ' . $e->getMessage()
+            ]);
+        }
     }
 }

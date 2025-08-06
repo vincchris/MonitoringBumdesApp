@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { CheckCircle, Pencil, RefreshCw, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Pencil, RefreshCw, Trash2 } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react';
 
 interface PemasukanItem {
@@ -13,6 +13,11 @@ interface PemasukanItem {
     tarif_per_jam: number;
     total_bayar: number;
     keterangan: string;
+}
+
+interface TarifOption {
+    tipe: string;
+    tarif: number;
 }
 
 interface Props {
@@ -29,8 +34,9 @@ interface Props {
         per_page: number;
         current_page: number;
         last_page: number;
-    }
+    };
     pemasukan: PemasukanItem[];
+    tarifs: TarifOption[]; // Data tarif langsung dari database
 }
 
 interface FlashInfo {
@@ -38,7 +44,7 @@ interface FlashInfo {
     method?: 'create' | 'update' | 'delete';
 }
 
-export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination }: Props) {
+export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination, tarifs }: Props) {
     const { flash } = usePage().props as unknown as {
         flash: { info?: { message?: string; method?: string } };
     };
@@ -46,7 +52,6 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination 
     const [flashMethod, setFlashMethod] = useState<string>('');
     const [flashColor, setFlashColor] = useState<string>('');
     const [flashMessage, setFlashMessage] = useState<string | null>(null);
-
 
     useEffect(() => {
         if (!flash?.info?.message) return;
@@ -104,9 +109,9 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination 
     } = useForm({
         tanggal: '',
         penyewa: '',
-        tipe: 'Member',
+        tipe: '',
         durasi: 1,
-        tarif: 200000,
+        tarif: 0,
         total: 0,
         keterangan: '',
     });
@@ -125,8 +130,8 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination 
                 setEditing(null);
             },
             onError: (err) => {
-                console.log("Validation Errors : ", err)
-            }
+                console.log('Validation Errors : ', err);
+            },
         });
     };
 
@@ -152,6 +157,23 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination 
         console.log('Unit ID:', unit_id);
     };
 
+    // Menggunakan data tarifs yang dikirim dari backend
+    const tipeOptions = tarifs || [];
+
+    // Update tarif ketika tipe berubah
+    useEffect(() => {
+        const selected = tipeOptions.find((opt) => opt.tipe === formData.tipe);
+        if (selected) {
+            setData('tarif', selected.tarif);
+        }
+    }, [formData.tipe]);
+
+    // Update total bayar ketika durasi atau tarif berubah
+    useEffect(() => {
+        const total = formData.durasi * formData.tarif;
+        setData('total', total);
+    }, [formData.durasi, formData.tarif]);
+
     return (
         <AppLayout>
             <Head title="Pemasukan Mini Soccer" />
@@ -166,114 +188,191 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination 
                 </div>
             )}
 
-            <div className="flex items-center justify-between px-6 pt-6 pb-8 text-black">
-                <h1 className="text-lg font-semibold text-black">Selamat datang, Pengelola Mini Soccer</h1>
-                <div className="flex items-center gap-3">
-                    <img src={user.image || '/assets/images/avatar.png'} alt="User Avatar" className="h-9 w-9 rounded-full object-cover" />
-                    <div className="text-right">
-                        <p className="text-sm font-semibold text-black">{user.name}</p>
-                        <p className="mr-3 text-xs text-black">{user.roles}</p>
-                    </div>
-                </div>
-            </div>
-
-            <div className='bg-white px-2 py-4 rounded-2xl'>
+            <div className="rounded-2xl bg-white px-2 py-4">
                 <div className="mt-3 mb-4 flex items-center justify-between px-6">
                     <h2 className="text-xl font-semibold text-gray-800">Pemasukan - Mini Soccer</h2>
-                    <Button onClick={() => setShowModal(true)} className="bg-blue-700 text-white hover:bg-blue-500">
+                    <Button
+                        onClick={() => {
+                            // Cari tipe Member, jika tidak ada ambil yang pertama
+                            const memberTarif = tipeOptions.find((opt) => opt.tipe === 'Member') || tipeOptions[0];
+                            const today = new Date().toISOString().split('T')[0];
+
+                            if (memberTarif) {
+                                setData({
+                                    tanggal: today,
+                                    penyewa: '',
+                                    tipe: memberTarif.tipe,
+                                    durasi: 1,
+                                    tarif: memberTarif.tarif,
+                                    total: memberTarif.tarif * 1, // durasi default 1
+                                    keterangan: '',
+                                });
+                            } else {
+                                // Fallback jika tidak ada tarif sama sekali
+                                setData({
+                                    tanggal: today,
+                                    penyewa: '',
+                                    tipe: '',
+                                    durasi: 1,
+                                    tarif: 0,
+                                    total: 0,
+                                    keterangan: '',
+                                });
+                            }
+
+                            setShowModal(true);
+                            setEditing(null);
+                        }}
+                        className="bg-blue-700 text-white hover:bg-blue-500"
+                    >
                         Tambah pendapatan harian +
                     </Button>
                 </div>
 
-
                 {showModal && (
-                    <div className="bg-opacity-30 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-[4px]">
-                        <div className="relative w-full max-w-md rounded-xl bg-white p-6 text-black shadow-lg">
+                    <div className="bg-opacity-30 fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-[4px]">
+                        <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 text-black shadow-lg">
                             <button
                                 onClick={() => {
                                     setShowModal(false);
                                     setEditing(null);
                                 }}
-                                className="absolute top-4 right-4 text-gray-500 hover:text-black"
+                                className="absolute top-4 right-4 z-10 text-gray-500 hover:text-black"
                             >
                                 ✕
                             </button>
-                            <h2 className="mb-4 text-lg font-semibold">{editing ? 'Edit Pendapatan' : 'Tambah Pendapatan'} Mini Soccer</h2>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">Tanggal</label>
-                                    <input
-                                        type="date"
-                                        className="w-full rounded border bg-gray-100 px-4 py-2 outline-none"
-                                        value={formData.tanggal}
-                                        onChange={(e) => setData('tanggal', e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">Nama Penyewa</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Nama penyewa"
-                                        className="w-full rounded border bg-gray-100 px-4 py-2 outline-none"
-                                        value={formData.penyewa}
-                                        onChange={(e) => setData('penyewa', e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">Durasi sewa (jam)</label>
-                                    <input
-                                        type="number"
-                                        className="w-full rounded border bg-gray-100 px-4 py-2 outline-none"
-                                        value={formData.durasi}
-                                        onChange={(e) => setData('durasi', Number(e.target.value))}
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">Tipe Penyewa</label>
-                                    <select
-                                        className="w-full rounded border bg-gray-100 px-4 py-2 outline-none"
-                                        value={formData.tipe}
-                                        onChange={(e) => {
-                                            const tipe = e.target.value;
-                                            const tarif = tipe === 'Member' ? 200000 : 250000;
-                                            setData('tipe', tipe);
-                                            setData('tarif', tarif);
-                                        }}
-                                    >
-                                        <option value="Member">Member</option>
-                                        <option value="Umum">Umum</option>
-                                    </select>
+                            <h2 className="mb-6 text-lg font-semibold">{editing ? 'Edit Pendapatan' : 'Tambah Pendapatan'} Mini Soccer</h2>
+                            <form onSubmit={handleSubmit}>
+                                {/* Grid Layout 2 kolom */}
+                                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    {/* Kolom Kiri */}
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="mb-1 block text-sm font-medium text-gray-700">Tanggal</label>
+                                            <input
+                                                type="date"
+                                                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 transition-colors outline-none focus:border-blue-500 focus:bg-white"
+                                                value={formData.tanggal}
+                                                onChange={(e) => setData('tanggal', e.target.value)}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-1 block text-sm font-medium text-gray-700">Nama Penyewa</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Masukkan nama penyewa"
+                                                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 transition-colors outline-none focus:border-blue-500 focus:bg-white"
+                                                value={formData.penyewa}
+                                                onChange={(e) => setData('penyewa', e.target.value)}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-1 block text-sm font-medium text-gray-700">Durasi sewa (jam)</label>
+                                            <input
+                                                type="number"
+                                                min="0.1"
+                                                step="0.1"
+                                                placeholder="0"
+                                                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 transition-colors outline-none focus:border-blue-500 focus:bg-white"
+                                                value={formData.durasi}
+                                                onChange={(e) => setData('durasi', Number(e.target.value))}
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Kolom Kanan */}
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="mb-1 block text-sm font-medium text-gray-700">Tipe Penyewa</label>
+                                            <select
+                                                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 transition-colors outline-none focus:border-blue-500 focus:bg-white"
+                                                value={formData.tipe}
+                                                onChange={(e) => setData('tipe', e.target.value)}
+                                                required
+                                            >
+                                                <option value="">Pilih Tipe Penyewa</option>
+                                                {tipeOptions.map((opt) => (
+                                                    <option key={opt.tipe} value={opt.tipe}>
+                                                        {opt.tipe} - Rp. {opt.tarif.toLocaleString('id-ID')}/jam
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-1 block text-sm font-medium text-gray-700">Tarif per jam</label>
+                                            <input
+                                                type="text"
+                                                className="w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-200 px-4 py-2.5 text-gray-600 outline-none"
+                                                value={`Rp. ${formData.tarif.toLocaleString('id-ID')}`}
+                                                readOnly
+                                                disabled
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-1 block text-sm font-medium text-gray-700">Keterangan</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Keterangan (opsional)"
+                                                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 transition-colors outline-none focus:border-blue-500 focus:bg-white"
+                                                value={formData.keterangan}
+                                                onChange={(e) => setData('keterangan', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">Keterangan</label>
-                                    <input
-                                        type="text"
-                                        className="w-full rounded border bg-gray-100 px-4 py-2 outline-none"
-                                        value={formData.keterangan}
-                                        onChange={(e) => setData('keterangan', e.target.value)}
-                                    />
+                                {/* Total Bayar - Full Width */}
+                                <div className="mb-6">
+                                    <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="mb-1 text-sm font-medium text-blue-700">Total Pembayaran</p>
+                                                <p className="text-2xl font-bold text-blue-800">Rp. {formData.total.toLocaleString('id-ID')}</p>
+                                            </div>
+                                            <div className="text-right text-sm text-blue-600">
+                                                <p>
+                                                    {formData.durasi} jam × Rp. {formData.tarif.toLocaleString('id-ID')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <p className="mt-2 text-sm">
-                                    Total bayar: <strong>Rp. {(formData.durasi * formData.tarif).toLocaleString('id-ID')}</strong>
-                                </p>
-                                <div className="flex justify-end gap-2 pt-2">
-                                    <Button type="submit" disabled={processing} className="bg-blue-700 text-white hover:bg-blue-500">
-                                        {editing ? 'Update' : 'Tambah'}
-                                    </Button>
+                                {/* Action Buttons */}
+                                <div className="flex justify-end gap-3 pt-2">
                                     <Button
                                         type="button"
-                                        className="bg-gray-300 text-black"
+                                        variant="outline"
+                                        className="px-6 py-2.5"
                                         onClick={() => {
                                             setShowModal(false);
                                             setEditing(null);
                                         }}
                                     >
                                         Batal
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={processing}
+                                        className="bg-blue-700 px-6 py-2.5 text-white hover:bg-blue-600 disabled:opacity-70"
+                                    >
+                                        {processing ? (
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                                                Menyimpan...
+                                            </div>
+                                        ) : editing ? (
+                                            'Update Data'
+                                        ) : (
+                                            'Tambah Data'
+                                        )}
                                     </Button>
                                 </div>
                             </form>
@@ -297,79 +396,111 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination 
                             </tr>
                         </thead>
                         <tbody>
-                            {pemasukan.map((item, i) => (
-                                <tr key={i} className="border-t">
-                                    <td className="px-4 py-3 text-center">{i + 1}</td>
-                                    <td className="px-4 py-3 text-center">{item.tanggal}</td>
-                                    <td className="px-4 py-3 text-center">{item.penyewa}</td>
-                                    <td className="px-4 py-3 text-center">{item.durasi}</td>
-                                    <td className="px-4 py-3 text-center">{item.tipe_penyewa}</td>
-                                    <td className="px-4 py-3 text-center">Rp. {item.tarif_per_jam.toLocaleString('id-ID')}</td>
-                                    <td className="px-4 py-3 text-center">Rp. {item.total_bayar.toLocaleString('id-ID')}</td>
-                                    <td className="px-4 py-3 text-center">{item.keterangan}</td>
-                                    <td className="px-4 py-3 text-center">
-                                        <div className="flex justify-center gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => handleEdit(item)}
-                                                className="rounded bg-yellow-500 px-2 py-1 text-white hover:bg-yellow-600"
-                                                title="Edit"
-                                            >
-                                                <Pencil size={16} />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleDelete(item.id)}
-                                                className="rounded bg-red-600 px-2 py-1 text-white hover:bg-red-700"
-                                                title="Hapus"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
+                            {pemasukan.length > 0 ? (
+                                pemasukan.map((item, i) => (
+                                    <tr key={item.id} className="border-t hover:bg-gray-50">
+                                        <td className="px-4 py-3 text-center">{(pagination.current_page - 1) * pagination.per_page + i + 1}</td>
+                                        <td className="px-4 py-3 text-center">{item.tanggal}</td>
+                                        <td className="px-4 py-3 text-center">{item.penyewa}</td>
+                                        <td className="px-4 py-3 text-center">{item.durasi}</td>
+                                        <td className="px-4 py-3 text-center">{item.tipe_penyewa}</td>
+                                        <td className="px-4 py-3 text-center">Rp. {item.tarif_per_jam.toLocaleString('id-ID')}</td>
+                                        <td className="px-4 py-3 text-center">Rp. {item.total_bayar.toLocaleString('id-ID')}</td>
+                                        <td className="px-4 py-3 text-center">{item.keterangan || '-'}</td>
+                                        <td className="px-4 py-3 text-center">
+                                            <div className="flex justify-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEdit(item)}
+                                                    className="rounded bg-yellow-500 px-2 py-1 text-white transition-colors hover:bg-yellow-600"
+                                                    title="Edit"
+                                                >
+                                                    <Pencil size={16} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDelete(item.id)}
+                                                    className="rounded bg-red-600 px-2 py-1 text-white transition-colors hover:bg-red-700"
+                                                    title="Hapus"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                                        Belum ada data pemasukan
                                     </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
-                    <div className="mt-4 flex justify-end gap-2 items-center">
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            disabled={pagination.current_page === 1}
-                            onClick={() => {
-                                if (pagination.current_page > 1) {
-                                    router.get(route().current()!, { page: pagination.current_page - 1 }, { preserveState: true });
-                                }
-                            }}
-                        >
-                            <ChevronLeft className="w-4 h-4" />
-                        </Button>
 
-                        {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => (
-                            <Button
-                                key={page}
-                                variant={page === pagination.current_page ? 'default' : 'outline'}
-                                onClick={() => {
-                                    router.get(route().current()!, { page }, { preserveState: true });
-                                }}
-                            >
-                                {page}
-                            </Button>
-                        ))}
+                    {/* Pagination */}
+                    {pagination.last_page > 1 && (
+                        <div className="mt-4 flex items-center justify-between border-t px-4 py-3">
+                            <div className="text-sm text-gray-700">
+                                Menampilkan {(pagination.current_page - 1) * pagination.per_page + 1} -{' '}
+                                {Math.min(pagination.current_page * pagination.per_page, pagination.total)} dari {pagination.total} data
+                            </div>
 
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            disabled={pagination.current_page === pagination.last_page}
-                            onClick={() => {
-                                if (pagination.current_page < pagination.last_page) {
-                                    router.get(route().current()!, { page: pagination.current_page + 1 }, { preserveState: true });
-                                }
-                            }}
-                        >
-                            <ChevronRight className="w-4 h-4" />
-                        </Button>
-                    </div>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    disabled={pagination.current_page === 1}
+                                    onClick={() => {
+                                        if (pagination.current_page > 1) {
+                                            router.get(route().current()!, { page: pagination.current_page - 1 }, { preserveState: true });
+                                        }
+                                    }}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+
+                                {Array.from({ length: Math.min(5, pagination.last_page) }, (_, i) => {
+                                    let page;
+                                    if (pagination.last_page <= 5) {
+                                        page = i + 1;
+                                    } else if (pagination.current_page <= 3) {
+                                        page = i + 1;
+                                    } else if (pagination.current_page >= pagination.last_page - 2) {
+                                        page = pagination.last_page - 4 + i;
+                                    } else {
+                                        page = pagination.current_page - 2 + i;
+                                    }
+
+                                    return (
+                                        <Button
+                                            key={page}
+                                            variant={page === pagination.current_page ? 'default' : 'outline'}
+                                            onClick={() => {
+                                                router.get(route().current()!, { page }, { preserveState: true });
+                                            }}
+                                        >
+                                            {page}
+                                        </Button>
+                                    );
+                                })}
+
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    disabled={pagination.current_page === pagination.last_page}
+                                    onClick={() => {
+                                        if (pagination.current_page < pagination.last_page) {
+                                            router.get(route().current()!, { page: pagination.current_page + 1 }, { preserveState: true });
+                                        }
+                                    }}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </AppLayout>

@@ -102,6 +102,7 @@ class PemasukanBuperController extends Controller
                 'jenis' => 'Pendapatan',
                 'saldo_sekarang' => $saldoSebelumnya + $validated['biaya_sewa'],
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
 

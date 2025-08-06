@@ -3,14 +3,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { ArrowLeft, Calendar, FileText, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import dayjs from 'dayjs';
+import 'dayjs/locale/id';
+import { ArrowLeft, Calendar, Download, FileSpreadsheet, FileText, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+
+// Initialize dayjs
+dayjs.locale('id');
 
 interface DetailItem {
+    id: number;
     tanggal: string;
+    tanggal_raw: string;
     keterangan: string;
     jenis: string;
     selisih: number;
     saldo: string;
+    updated_at: string;
 }
 
 interface Unit {
@@ -19,6 +27,13 @@ interface Unit {
 }
 
 interface PageProps {
+    auth: {
+        user: {
+            name: string;
+            role: string;
+            image?: string;
+        };
+    };
     detailLaporan: DetailItem[];
     bulan: string;
     unit: Unit;
@@ -31,7 +46,7 @@ interface PageProps {
 }
 
 export default function DetailLaporanMiniSoccer() {
-    const { detailLaporan, bulan, unit, summary } = usePage().props as unknown as PageProps;
+    const { detailLaporan, bulan, unit, summary, auth } = usePage().props as unknown as PageProps;
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', {
@@ -60,9 +75,23 @@ export default function DetailLaporanMiniSoccer() {
         }
     };
 
+    const handleBack = () => {
+        history.back();
+    };
+
+    const handleExportPDF = () => {
+        // Implementasi export PDF
+        console.log('Export PDF');
+    };
+
+    const handleExportExcel = () => {
+        // Implementasi export Excel
+        console.log('Export Excel');
+    };
+
     return (
         <AppLayout>
-            <Head title={`Detail Laporan ${unit?.name || 'Unit'} - ${bulan}`} />
+            <Head title={`Detail Laporan ${unit?.name || 'Mini Soccer'} - ${bulan}`} />
 
             <div className="min-h-screen bg-gray-50 px-4 py-6 sm:px-6 lg:px-8">
                 <div className="mx-auto max-w-7xl">
@@ -70,11 +99,7 @@ export default function DetailLaporanMiniSoccer() {
                     <div className="mb-8">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <Button
-                                    onClick={() => window.history.back()}
-                                    variant="outline"
-                                    className="flex items-center gap-2 hover:bg-gray-100"
-                                >
+                                <Button onClick={handleBack} variant="outline" className="flex items-center gap-2 hover:bg-gray-100">
                                     <ArrowLeft className="h-4 w-4" />
                                     Kembali
                                 </Button>
@@ -84,9 +109,26 @@ export default function DetailLaporanMiniSoccer() {
                                         <Calendar className="h-4 w-4 text-gray-500" />
                                         <span className="text-gray-600">{bulan}</span>
                                         <span className="text-gray-400">•</span>
-                                        <span className="text-gray-600">{unit?.name || 'Unit'}</span>
+                                        <span className="text-gray-600">{unit?.name || 'Mini Soccer'}</span>
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Export Actions */}
+                            <div className="flex items-center gap-2">
+                                <Button onClick={handleExportPDF} variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50">
+                                    <Download className="mr-1 h-3 w-3" />
+                                    PDF
+                                </Button>
+                                <Button
+                                    onClick={handleExportExcel}
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-green-200 text-green-600 hover:bg-green-50"
+                                >
+                                    <FileSpreadsheet className="mr-1 h-3 w-3" />
+                                    Excel
+                                </Button>
                             </div>
                         </div>
                     </div>
@@ -124,6 +166,7 @@ export default function DetailLaporanMiniSoccer() {
                                         <div>
                                             <p className="text-sm font-medium text-blue-600">Selisih</p>
                                             <p className={`text-2xl font-bold ${summary.selisih >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                                {summary.selisih >= 0 ? '+' : ''}
                                                 {formatCurrency(summary.selisih)}
                                             </p>
                                         </div>
@@ -151,8 +194,9 @@ export default function DetailLaporanMiniSoccer() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <FileText className="h-5 w-5" />
-                                Rincian Transaksi
+                                Rincian Transaksi Harian - {bulan}
                             </CardTitle>
+                            <p className="text-sm text-gray-500">Menampilkan semua transaksi yang terjadi pada bulan {bulan}</p>
                         </CardHeader>
                         <CardContent className="p-0">
                             {detailLaporan.length > 0 ? (
@@ -176,27 +220,38 @@ export default function DetailLaporanMiniSoccer() {
                                                 <th className="px-6 py-4 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">
                                                     Saldo Kas
                                                 </th>
+                                                <th className="px-6 py-4 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
+                                                    Waktu
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200 bg-white">
                                             {detailLaporan.map((item, index) => (
-                                                <tr key={index} className="transition-colors hover:bg-gray-50">
+                                                <tr key={`${item.id}-${index}`} className="transition-colors hover:bg-gray-50">
                                                     <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">{index + 1}</td>
-                                                    <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-900">{item.tanggal}</td>
+                                                    <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
+                                                        <div className="font-medium">{item.tanggal}</div>
+                                                        <div className="text-xs text-gray-500">{dayjs(item.tanggal_raw).format('dddd')}</div>
+                                                    </td>
                                                     <td className="max-w-xs px-6 py-4 text-sm text-gray-900">
-                                                        <div className="truncate" title={item.keterangan}>
-                                                            {item.keterangan || "-"}
+                                                        <div className="font-medium" title={item.keterangan}>
+                                                            {item.keterangan || 'Transaksi'}
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">{getJenisBadge(item.jenis)}</td>
                                                     <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
-                                                        <span className={`${item.jenis === 'Pendapatan' ? 'text-green-600' : 'text-red-600'}`}>
+                                                        <span
+                                                            className={`font-semibold ${item.jenis === 'Pendapatan' ? 'text-green-600' : 'text-red-600'}`}
+                                                        >
                                                             {item.jenis === 'Pendapatan' ? '+' : '-'}
                                                             {formatCurrency(Math.abs(item.selisih))}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap text-gray-900">
-                                                        {formatCurrency(parseInt(item.saldo.replace(/,/g, '')))}
+                                                        <div className="font-semibold">{formatCurrency(parseInt(item.saldo.replace(/,/g, '')))}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center text-xs whitespace-nowrap text-gray-500">
+                                                        {dayjs(item.updated_at).format('HH:mm')}
                                                     </td>
                                                 </tr>
                                             ))}
@@ -208,22 +263,100 @@ export default function DetailLaporanMiniSoccer() {
                                     <FileText className="mx-auto h-12 w-12 text-gray-400" />
                                     <h3 className="mt-2 text-sm font-medium text-gray-900">Tidak ada transaksi</h3>
                                     <p className="mt-1 text-sm text-gray-500">
-                                        Belum ada transaksi untuk bulan {bulan} di unit {unit?.name || 'ini'}.
+                                        Belum ada transaksi untuk bulan {bulan} di unit {unit?.name || 'Mini Soccer'}.
                                     </p>
+                                    <Button onClick={handleBack} variant="outline" className="mt-4">
+                                        <ArrowLeft className="mr-2 h-4 w-4" />
+                                        Kembali ke Ringkasan
+                                    </Button>
                                 </div>
                             )}
                         </CardContent>
                     </Card>
 
+                    {/* Additional Information */}
+                    {detailLaporan.length > 0 && (
+                        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                            {/* Summary Info */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">Informasi Laporan</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-gray-600">Periode:</span>
+                                        <span className="text-sm font-medium text-gray-900">{bulan}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-gray-600">Unit:</span>
+                                        <span className="text-sm font-medium text-gray-900">{unit?.name || 'Mini Soccer'}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-gray-600">Total Transaksi:</span>
+                                        <span className="text-sm font-medium text-gray-900">{summary.jumlahTransaksi} transaksi</span>
+                                    </div>
+                                    <div className="border-t pt-3">
+                                        <div className="flex justify-between">
+                                            <span className="text-sm text-gray-600">Rata-rata per Transaksi:</span>
+                                            <span className="text-sm font-medium text-gray-900">
+                                                {formatCurrency(
+                                                    summary.jumlahTransaksi > 0
+                                                        ? (summary.totalPendapatan + summary.totalPengeluaran) / summary.jumlahTransaksi
+                                                        : 0,
+                                                )}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Cash Flow Info */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">Aliran Kas</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-gray-600">Total Masuk:</span>
+                                        <span className="text-sm font-semibold text-green-600">+{formatCurrency(summary.totalPendapatan)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-gray-600">Total Keluar:</span>
+                                        <span className="text-sm font-semibold text-red-600">-{formatCurrency(summary.totalPengeluaran)}</span>
+                                    </div>
+                                    <div className="border-t pt-3">
+                                        <div className="flex justify-between">
+                                            <span className="text-sm font-medium text-gray-600">Net Cash Flow:</span>
+                                            <span className={`text-sm font-bold ${summary.selisih >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {summary.selisih >= 0 ? '+' : ''}
+                                                {formatCurrency(summary.selisih)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="mt-2">
+                                        <div className="flex justify-between text-xs text-gray-500">
+                                            <span>Status:</span>
+                                            <span className={`font-medium ${summary.selisih >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {summary.selisih >= 0 ? 'Surplus' : 'Defisit'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
+
                     {/* Footer Info */}
                     <div className="mt-8 text-center text-sm text-gray-500">
                         <p>Laporan ini dihasilkan secara otomatis dari sistem BUMDes</p>
                         <p className="mt-1">
-                            Unit: {unit?.name || 'Unit'} • Periode: {bulan}
+                            Unit: {unit?.name || 'Mini Soccer'} • Periode: {bulan} • User: {auth?.user?.name}
                         </p>
+                        <p className="mt-1 text-xs">Digenerate pada: {dayjs().format('dddd, DD MMMM YYYY HH:mm')} WIB</p>
                     </div>
                 </div>
             </div>
         </AppLayout>
     );
 }
+    

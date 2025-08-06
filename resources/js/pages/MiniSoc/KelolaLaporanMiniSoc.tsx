@@ -43,24 +43,16 @@ export default function KelolaLaporan({ auth, unit_id, laporanKeuangan, paginati
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Kelola Laporan" />
 
-            <div className="flex items-center justify-between px-6 pt-6 pb-8 text-black">
-                <h1 className="text-lg font-semibold text-black">Selamat datang, Pengelola Mini Soccer</h1>
-                <div className="flex items-center gap-3">
-                    <img src={user.image || '/assets/images/avatar.png'} alt="User Avatar" className="h-9 w-9 rounded-full object-cover" />
-                    <div className="text-right">
-                        <p className="text-sm font-semibold text-black">{user.name}</p>
-                        <p className="text-xs text-black">{user.roles}</p>
-                    </div>
-                </div>
-            </div>
-
             <div className="rounded-2xl bg-white px-2 py-4">
                 <div className="mb-4 px-6">
                     <h2 className="text-xl font-semibold text-gray-800">Kelola Laporan Keuangan - Mini Soccer</h2>
                 </div>
 
                 <div className="mb-4 flex justify-end gap-2 px-6">
-                    <a href={`/unit/${unit_id}/kelolalaporan-minisoc/export-pdf`} className="rounded-md bg-red-500 px-4 py-2 text-white hover:bg-red-600">
+                    <a
+                        href={`/unit/${unit_id}/kelolalaporan-minisoc/export-pdf`}
+                        className="rounded-md bg-red-500 px-4 py-2 text-white hover:bg-red-600"
+                    >
                         Download PDF
                     </a>
                     <a
@@ -88,7 +80,7 @@ export default function KelolaLaporan({ auth, unit_id, laporanKeuangan, paginati
                                 <tr key={i} className="border-t">
                                     <td className="px-4 py-3">{i + 1}</td>
                                     <td className="px-4 py-3">{item.tanggal}</td>
-                                    <td className="px-4 py-3">{item.keterangan || "-"}</td>
+                                    <td className="px-4 py-3">{item.keterangan || '-'}</td>
                                     <td className="px-4 py-3">{item.jenis}</td>
                                     <td className={`px-4 py-3 ${item.jenis === 'Pendapatan' ? 'text-green-600' : 'text-red-600'}`}>
                                         {item.jenis === 'Pendapatan' ? '+' : '-'} Rp. {Math.abs(item.selisih).toLocaleString('id-ID')}

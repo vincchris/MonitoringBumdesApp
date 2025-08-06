@@ -24,12 +24,21 @@ class PemasukanMiniSocController extends Controller
     {
         $user = Auth::user()->load('units');
 
-        $user->load('units');
-
         // Pastikan user punya akses ke unit ini via pivot
         if (!$user->units->contains('id_units', $unitId)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
         }
+
+        // Ambil semua tarif yang tersedia untuk unit ini
+        $tarifs = Tarif::where('unit_id', $unitId)
+            ->select('category_name', 'harga_per_unit')
+            ->get()
+            ->map(function ($tarif) {
+                return [
+                    'tipe' => $tarif->category_name,
+                    'tarif' => (int) $tarif->harga_per_unit
+                ];
+            });
 
         // Ambil pemasukan untuk unit tertentu
         $incomes = Income::whereHas('rent.tarif.unit', function ($query) use ($unitId) {
@@ -64,8 +73,9 @@ class PemasukanMiniSocController extends Controller
 
         return Inertia::render('MiniSoc/PemasukanMiniSoc', [
             'unit_id' => $unitId,
-            'user' => $user->only(['id_users', 'name', 'email']),
+            'user' => $user->only(['id_users', 'name', 'email', 'roles', 'image']),
             'pemasukan' => $formatted,
+            'tarifs' => $tarifs, // Kirim data tarif ke frontend
             'pagination' => [
                 'total' => $totalItems,
                 'per_page' => $perPage,
@@ -81,9 +91,6 @@ class PemasukanMiniSocController extends Controller
     public function store(Request $request, $unitId)
     {
         $user = Auth::user()->load('units');
-
-        $user->load('units');
-
 
         // Pastikan user punya akses ke unit ini
         if (!$user->units->contains('id_units', $unitId)) {
@@ -131,7 +138,6 @@ class PemasukanMiniSocController extends Controller
                 'updated_at' =>  $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
 
-
             $saldoSebelumnya = BalanceHistory::where('unit_id', $unitId)->latest()->value('saldo_sekarang');
 
             if (is_null($saldoSebelumnya)) {
@@ -149,9 +155,8 @@ class PemasukanMiniSocController extends Controller
                 'jenis' => 'Pendapatan',
                 'saldo_sekarang' => $saldoSebelumnya + $totalBayar,
                 'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
             ]);
-
-            // dd($request);
 
             DB::commit();
             return back()->with('info', [
@@ -171,12 +176,10 @@ class PemasukanMiniSocController extends Controller
     {
         $user = Auth::user()->load('units');
 
-        $user->load('units');
-
-
         if (!$user->units->contains('id_units', $unitId)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
         }
+
         $validated = $request->validate([
             'tanggal' => 'required|date',
             'penyewa' => 'required|string|max:255',
@@ -211,6 +214,7 @@ class PemasukanMiniSocController extends Controller
                     'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
                 ]);
             }
+
             $selisih = $totalBayarBaru - $totalBayarLama;
 
             $lastHistory = BalanceHistory::where('unit_id', $unitId)
@@ -236,6 +240,7 @@ class PemasukanMiniSocController extends Controller
                     ]);
                 }
             }
+
             DB::commit();
             return back()->with('info', [
                 'message' => 'Data pemasukan berhasil diubah',
@@ -261,7 +266,6 @@ class PemasukanMiniSocController extends Controller
         if (!in_array((int) $unitId, $unitIds)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
         }
-
 
         try {
             DB::beginTransaction();

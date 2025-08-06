@@ -5,13 +5,17 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
+    AlertTriangle,
     ArrowDown,
     ArrowUp,
     Calendar,
     CheckCircle,
     DollarSign,
+    Edit,
+    Eye,
     FileDown,
     FileSpreadsheet,
+    Plus,
     RefreshCw,
     Settings,
     Trash2,
@@ -31,6 +35,13 @@ interface LaporanKeuangan {
     keterangan: string;
     jenis: string;
     bulan: string;
+    selisih: number;
+    saldo: string;
+    summary?: {
+        totalPendapatan: number;
+        totalPengeluaran: number;
+        jumlahTransaksi: number;
+    };
 }
 
 interface FlashInfo {
@@ -42,18 +53,9 @@ interface Tarif {
     category_name: string;
     tanggal: string;
     id_tarif: number;
-    jenis_penyewa: string;
     harga_per_unit: number;
     updated_at: string;
 }
-
-interface CurrentMonthSummary {
-    pendapatan: number;
-    pengeluaran: number;
-    selisih: number;
-    last_updated?: string;
-}
-
 
 interface TarifDetail {
     id_tarif: number;
@@ -63,6 +65,13 @@ interface TarifDetail {
     harga_per_unit: number;
     created_at: string;
     updated_at: string;
+}
+
+interface CurrentMonthSummary {
+    pendapatan: number;
+    pengeluaran: number;
+    selisih: number;
+    last_updated?: string;
 }
 
 interface PageProps {
@@ -78,7 +87,7 @@ interface PageProps {
 // Constants
 const FLASH_TIMEOUT = 3000;
 const MIN_NOMINAL = 1;
-const DEFAULT_UNIT_ID = 1;
+const DEFAULT_UNIT_ID = 3;
 
 const FLASH_COLORS = {
     delete: 'bg-red-600',
@@ -193,21 +202,22 @@ const TarifCard: React.FC<{
     tarif?: Tarif;
 }> = ({ onSettingsClick, onViewTarifClick, tarif }) => (
     <StatsCard title="Tarif Sewa" icon={Calendar} gradient="bg-gradient-to-br from-purple-50 to-purple-100" iconColor="text-purple-600">
-        <p className="mt-2 text-lg font-semibold text-gray-900">{tarif ? `${formatRupiah(tarif.harga_per_unit)}/Per tahun` : 'Per Kegiatan'}</p>
+        <p className="mt-2 text-lg font-semibold text-gray-900">{tarif ? `${formatRupiah(tarif.harga_per_unit)}/tahun` : 'Per Kegiatan'}</p>
         <p className="mt-1 text-xs text-gray-500">Terakhir diubah: {tarif ? dayjs(tarif.updated_at).format('DD-MM-YYYY') : '05-06-2025'}</p>
         <div className="mt-4 flex gap-2">
             <Button variant="outline" size="sm" className="flex-1 border-purple-200 text-purple-600 hover:bg-purple-50" onClick={onViewTarifClick}>
+                <Eye className="mr-1 h-3 w-3" />
                 Lihat Tarif
             </Button>
             <Button onClick={onSettingsClick} size="sm" className="flex-1 bg-purple-600 text-white hover:bg-purple-700">
-                <Settings className="mr-1 h-3 w-3" />
-                Atur
+                <Plus className="mr-1 h-3 w-3" />
+                Tambah baru
             </Button>
         </div>
     </StatsCard>
 );
 
-const SummaryCard: React.FC<{ summary : CurrentMonthSummary}> = ({ summary }) => (
+const SummaryCard: React.FC<{ summary: CurrentMonthSummary }> = ({ summary }) => (
     <StatsCard title="Bulan Ini" icon={TrendingUp} gradient="bg-gradient-to-br from-green-50 to-green-100" iconColor="text-green-600">
         <div className="mt-3 space-y-2">
             <div className="flex justify-between text-sm">
@@ -222,15 +232,12 @@ const SummaryCard: React.FC<{ summary : CurrentMonthSummary}> = ({ summary }) =>
                 <div className="flex justify-between">
                     <span className="text-sm font-medium text-gray-600">Selisih:</span>
                     <span className={`font-bold ${summary.selisih >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {summary.selisih >= 0 ? '+' : ''}{formatRupiah(summary.selisih)}
+                        {summary.selisih >= 0 ? '+' : ''}
+                        {formatRupiah(summary.selisih)}
                     </span>
                 </div>
             </div>
-            {summary.last_updated && (
-                <p className='mt-2 text-xs text-gray-400'>
-                    Update: {dayjs(summary.last_updated).fromNow()}
-                </p>
-            )}
+            {summary.last_updated && <p className="mt-2 text-xs text-gray-400">Update: {dayjs(summary.last_updated).fromNow()}</p>}
         </div>
     </StatsCard>
 );
@@ -241,35 +248,88 @@ const TransactionRow: React.FC<{
 }> = ({ item, index }) => {
     const transactionType = TRANSACTION_TYPES[item.jenis.toLowerCase() as keyof typeof TRANSACTION_TYPES] || TRANSACTION_TYPES.default;
     const Icon = transactionType.icon;
-
     const handleDetailClick = useCallback(() => {
-        router.visit(`/Kios/${item.bulan}`);
+        router.visit(route('Kios.show', item.bulan));
     }, [item.bulan]);
 
-    return (
-        <tr className="hover:bg-gray-50">
-            <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">{index + 1}</td>
-            <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">{item.tanggal}</td>
-            <td className="px-6 py-4 text-sm text-gray-900">{item.keterangan}</td>
-            <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
+    const renderJenisBadge = () => {
+        if (item.jenis === 'Ringkasan') {
+            return (
                 <span
                     className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${transactionType.bg} ${transactionType.text}`}
                 >
                     {Icon && <Icon className="h-3 w-3" />}
                     {item.jenis}
                 </span>
-            </td>
+            );
+        }
+
+        return (
+            <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${transactionType.bg} ${transactionType.text}`}
+            >
+                {Icon && <Icon className="h-3 w-3" />}
+                {item.jenis}
+            </span>
+        );
+    };
+
+    const renderSelisih = () => {
+        if (item.jenis === 'Ringkasan') {
+            return (
+                <span className={`font-semibold ${item.selisih >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {item.selisih >= 0 ? '+' : ''}
+                    {formatRupiah(item.selisih)}
+                </span>
+            );
+        }
+
+        return <span className="font-medium text-gray-900">{formatRupiah(item.selisih)}</span>;
+    };
+
+    const renderKeterangan = () => {
+        if (item.jenis === 'Ringkasan' && item.summary) {
+            return (
+                <div>
+                    <div className="font-medium text-gray-900">{item.keterangan}</div>
+                    <div className="mt-1 text-xs text-gray-500">
+                        Pendapatan: {formatRupiah(item.summary.totalPendapatan)} | Pengeluaran: {formatRupiah(item.summary.totalPengeluaran)}
+                    </div>
+                </div>
+            );
+        }
+
+        return <span className="text-gray-900">{item.keterangan}</span>;
+    };
+
+    return (
+        <tr className="hover:bg-gray-50">
+            <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">{index + 1}</td>
+            <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">{item.tanggal}</td>
+            <td className="px-6 py-4 text-sm">{renderKeterangan()}</td>
+            <td className="px-6 py-4 text-sm whitespace-nowrap">{renderJenisBadge()}</td>
+            <td className="px-6 py-4 text-right text-sm whitespace-nowrap">{renderSelisih()}</td>
+            <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap text-gray-900">{item.saldo}</td>
             <td className="px-6 py-4 text-center text-sm whitespace-nowrap">
                 <div className="flex justify-center gap-2">
-                    <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={handleDetailClick}>
-                        Detail
-                    </Button>
-                    <Button size="sm" variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
-                        <FileDown className="h-3 w-3" />
-                    </Button>
-                    <Button size="sm" variant="outline" className="border-green-200 text-green-600 hover:bg-green-50">
-                        <FileSpreadsheet className="h-3 w-3" />
-                    </Button>
+                    {item.jenis === 'Ringkasan' ? (
+                        <Button size="sm" className="bg-purple-600 text-white hover:bg-purple-700" onClick={handleDetailClick}>
+                            <Eye className="mr-1 h-3 w-3" />
+                            Detail
+                        </Button>
+                    ) : (
+                        <>
+                            <Button size="sm" variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50">
+                                <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button size="sm" variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
+                                <FileDown className="h-3 w-3" />
+                            </Button>
+                            <Button size="sm" variant="outline" className="border-green-200 text-green-600 hover:bg-green-50">
+                                <FileSpreadsheet className="h-3 w-3" />
+                            </Button>
+                        </>
+                    )}
                 </div>
             </td>
         </tr>
@@ -283,18 +343,20 @@ const TransactionTable: React.FC<{ data: LaporanKeuangan[] }> = ({ data }) => (
                 <thead className="bg-gray-50">
                     <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">No</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Tanggal Transaksi</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Periode</th>
                         <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Keterangan</th>
                         <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Jenis</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Selisih</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Saldo</th>
                         <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">Aksi</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
                     {data.length > 0 ? (
-                        data.map((item, index) => <TransactionRow key={`${item.tanggal}-${index}`} item={item} index={index} />)
+                        data.map((item, index) => <TransactionRow key={`${item.bulan || item.tanggal}-${index}`} item={item} index={index} />)
                     ) : (
                         <tr>
-                            <td colSpan={5} className="px-6 py-12 text-center">
+                            <td colSpan={7} className="px-6 py-12 text-center">
                                 <div className="flex flex-col items-center">
                                     <FileSpreadsheet className="h-12 w-12 text-gray-300" />
                                     <p className="mt-2 text-sm text-gray-500">Belum ada data laporan transaksi</p>
@@ -331,13 +393,54 @@ const Modal: React.FC<{
     );
 };
 
-// Modal Lihat Tarif
+// Confirmation Modal for Delete
+const ConfirmationModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    isDestructive?: boolean;
+}> = ({ isOpen, onClose, onConfirm, title, message, confirmText = 'Konfirmasi', cancelText = 'Batal', isDestructive = false }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                <div className="flex items-start gap-3">
+                    {isDestructive && (
+                        <div className="flex-shrink-0">
+                            <AlertTriangle className="h-6 w-6 text-red-600" />
+                        </div>
+                    )}
+                    <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+                        <p className="mt-2 text-sm text-gray-600">{message}</p>
+                    </div>
+                </div>
+                <div className="mt-6 flex justify-end gap-3">
+                    <Button variant="outline" onClick={onClose}>
+                        {cancelText}
+                    </Button>
+                    <Button onClick={onConfirm} className={isDestructive ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}>
+                        {confirmText}
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Modal Lihat Tarif dengan Edit & Delete
 const ModalLihatTarif: React.FC<{
     isOpen: boolean;
     onClose: () => void;
-    onEditClick: () => void;
+    onEditClick: (tarif?: TarifDetail) => void;
+    onDeleteClick: (tarif: TarifDetail) => void;
     data: TarifDetail[];
-}> = ({ isOpen, onClose, onEditClick, data }) => {
+}> = ({ isOpen, onClose, onEditClick, onDeleteClick, data }) => {
     if (!isOpen) return null;
 
     return (
@@ -345,7 +448,7 @@ const ModalLihatTarif: React.FC<{
             <div className="max-h-[80vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
                 <div className="mb-6 flex items-center justify-between">
                     <div>
-                        <h3 className="text-xl font-semibold text-gray-900">Daftar Tarif Bumi Perkemahan</h3>
+                        <h3 className="text-xl font-semibold text-gray-900">Daftar Tarif sewa kios</h3>
                         <p className="mt-1 text-sm text-gray-500">Semua tarif yang berlaku saat ini</p>
                     </div>
                     <button
@@ -357,7 +460,7 @@ const ModalLihatTarif: React.FC<{
                     </button>
                 </div>
 
-                {/* Tabel Tarif */}
+                {/* Tabel Tarif dengan tombol edit dan delete per row */}
                 <div className="overflow-hidden rounded-xl border border-gray-200">
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
@@ -373,7 +476,7 @@ const ModalLihatTarif: React.FC<{
                                     <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                         Terakhir Diubah
                                     </th>
-                                    <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">Status</th>
+                                    <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 bg-white">
@@ -394,7 +497,7 @@ const ModalLihatTarif: React.FC<{
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-900">Per {item.satuan === 'jam' ? 'Per Kegiatan' : item.satuan}</td>
+                                            <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-900">Per {item.satuan}</td>
                                             <td className="px-6 py-4 text-sm whitespace-nowrap">
                                                 <div className="font-medium text-gray-900">{formatRupiah(item.harga_per_unit)}</div>
                                             </td>
@@ -405,10 +508,24 @@ const ModalLihatTarif: React.FC<{
                                                 {dayjs(item.updated_at).format('DD/MM/YYYY HH:mm')}
                                             </td>
                                             <td className="px-6 py-4 text-center text-sm whitespace-nowrap">
-                                                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                                                    <CheckCircle className="mr-1 h-3 w-3" />
-                                                    Aktif
-                                                </span>
+                                                <div className="flex justify-center gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => onEditClick(item)}
+                                                        className="bg-blue-600 text-white hover:bg-blue-700"
+                                                    >
+                                                        <Edit className="mr-1 h-3 w-3" />
+                                                        Edit
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => onDeleteClick(item)}
+                                                        className="border-red-200 text-red-600 hover:bg-red-50"
+                                                    >
+                                                        <Trash2 className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -465,9 +582,9 @@ const ModalLihatTarif: React.FC<{
                     <Button variant="outline" onClick={onClose} className="border-gray-300 text-gray-700 hover:bg-gray-50">
                         Tutup
                     </Button>
-                    <Button onClick={onEditClick} className="bg-blue-600 text-white hover:bg-blue-700">
-                        <Settings className="mr-2 h-4 w-4" />
-                        Edit Tarif
+                    <Button onClick={() => onEditClick()} className="bg-green-600 text-white hover:bg-green-700">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Tambah Tarif Baru
                     </Button>
                 </div>
             </div>
@@ -496,7 +613,15 @@ function formatRupiah(value: number): string {
 
 // Main component
 export default function Kios() {
-    const { flash, laporanKeuangan = [], initial_balance = 0, tanggal_diubah, tarif, allTarifs = [], currentMonthSummary } = usePage().props as unknown as PageProps;
+    const {
+        flash,
+        laporanKeuangan = [],
+        initial_balance = 0,
+        tanggal_diubah,
+        tarif,
+        allTarifs = [],
+        currentMonthSummary,
+    } = usePage().props as unknown as PageProps;
 
     // Flash message handling
     const { message: flashMessage, method: flashMethod, color: flashColor } = useFlashMessage(flash?.info);
@@ -505,41 +630,83 @@ export default function Kios() {
     const [showModalSaldo, setShowModalSaldo] = useState(false);
     const [showModalTarif, setShowModalTarif] = useState(false);
     const [showModalLihatTarif, setShowModalLihatTarif] = useState(false);
+    const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
     const [formData, setFormData] = useState({
         tanggal: '',
-        category_name: '', // ganti dari 'penyewa'
+        category_name: '',
         nominalBaru: '',
-        jumlahMin: '',
-        jumlahMax: '',
         hargaPerUnit: '',
     });
+    const [tarifMode, setTarifMode] = useState<'create' | 'edit'>('create');
+    const [editingTarifId, setEditingTarifId] = useState<number | null>(null);
+    const [deletingTarif, setDeletingTarif] = useState<TarifDetail | null>(null);
 
-    // Set initial value saat edit atau tambah baru
-    useEffect(() => {
-        if (tarif && typeof tarif === 'object') {
-            const category = tarif.category_name === 'Member' ? 'Member' : 'Umum';
+    // Handler untuk tambah tarif baru
+    const handleAturTarif = useCallback(() => {
+        setFormData({
+            tanggal: dayjs().format('YYYY-MM-DD'),
+            category_name: 'Umum',
+            nominalBaru: '',
+            hargaPerUnit: '',
+        });
+        setTarifMode('create');
+        setEditingTarifId(null);
+        setShowModalTarif(true);
+    }, []);
 
+    // Handler untuk edit tarif dari modal lihat tarif
+    const handleEditTarifFromView = useCallback((tarifData?: TarifDetail) => {
+        if (tarifData) {
             setFormData({
-                tanggal: tarif.tanggal ?? '',
-                category_name: category, // ganti dari 'penyewa'
+                tanggal: tarifData.created_at ? dayjs(tarifData.created_at).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
+                category_name: tarifData.category_name || '',
                 nominalBaru: '',
-                jumlahMin: '1',
-                jumlahMax: '>300',
-                hargaPerUnit: tarif.harga_per_unit ? formatCurrency(tarif.harga_per_unit.toString()) : '',
+                hargaPerUnit: tarifData.harga_per_unit ? formatCurrency(tarifData.harga_per_unit.toString()) : '',
             });
+
+            setTarifMode('edit');
+            setEditingTarifId(tarifData.id_tarif);
         } else {
-            // Reset form saat tambah baru
+            // Mode create
             setFormData({
-                tanggal: '',
-                category_name: '', // ganti dari 'penyewa'
+                tanggal: dayjs().format('YYYY-MM-DD'),
+                category_name: 'Umum',
                 nominalBaru: '',
-                jumlahMin: '1',
-                jumlahMax: '>300',
                 hargaPerUnit: '',
             });
+
+            setTarifMode('create');
+            setEditingTarifId(null);
         }
-    }, [tarif]);
+
+        setShowModalLihatTarif(false);
+        setShowModalTarif(true);
+    }, []);
+
+    // Handler untuk delete tarif
+    const handleDeleteTarif = useCallback((tarif: TarifDetail) => {
+        setDeletingTarif(tarif);
+        setShowConfirmDelete(true);
+    }, []);
+
+    const confirmDeleteTarif = useCallback(() => {
+        if (!deletingTarif) return;
+
+        router.delete(route('Kios.deleteTarif', { unitId: DEFAULT_UNIT_ID, tarifId: deletingTarif.id_tarif }), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowConfirmDelete(false);
+                setDeletingTarif(null);
+                setShowModalLihatTarif(false); // Close the tarif list modal
+            },
+            onError: (errors) => {
+                console.error('Error deleting tarif:', errors);
+                setShowConfirmDelete(false);
+                setDeletingTarif(null);
+            },
+        });
+    }, [deletingTarif]);
 
     // Handlers
     const handleNominalChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -577,7 +744,7 @@ export default function Kios() {
         const nominal = parseCurrency(formData.nominalBaru);
 
         router.post(
-            route('storeInitialBalance', DEFAULT_UNIT_ID),
+            route('Kios.storeInitialBalance', DEFAULT_UNIT_ID),
             {
                 tanggal: formData.tanggal,
                 nominal,
@@ -602,27 +769,45 @@ export default function Kios() {
             tanggal: formData.tanggal,
             category_name: formData.category_name,
             harga_per_unit: hargaPerUnit,
-            jumlah_min: parseInt(formData.jumlahMin),
-            jumlah_max: parseInt(formData.jumlahMax),
         };
 
-        // Jika ada tarif existing, update. Jika tidak, create baru
-        const routeName = tarif ? 'updateTarif' : 'storeTarif';
-        const routeParams = tarif ? [DEFAULT_UNIT_ID, tarif.id_tarif] : [DEFAULT_UNIT_ID];
+        if (tarifMode === 'edit' && editingTarifId) {
+            // Mode edit - update existing tarif
+            router.put(route('Kios.updateTarif', { unitId: DEFAULT_UNIT_ID, tarifId: editingTarifId }), payload, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setShowModalTarif(false);
+                    resetTarifForm();
+                },
+                onError: (errors) => {
+                    console.error('Error updating tarif:', errors);
+                },
+            });
+        } else {
+            // Mode create - store new tarif
+            router.post(route('Kios.storeTarif', { unitId: DEFAULT_UNIT_ID }), payload, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setShowModalTarif(false);
+                    resetTarifForm();
+                },
+                onError: (errors) => {
+                    console.error('Error storing tarif:', errors);
+                },
+            });
+        }
+    }, [formData.tanggal, formData.category_name, formData.hargaPerUnit, tarifMode, editingTarifId]);
 
-        const method = tarif ? 'put' : 'post';
-
-        router[method](route(routeName, routeParams), payload, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setShowModalTarif(false);
-                setFormData((prev) => ({ ...prev, tanggal: '', hargaPerUnit: '' }));
-            },
-            onError: (errors) => {
-                console.error('Error saving tarif:', errors);
-            },
+    const resetTarifForm = useCallback(() => {
+        setFormData({
+            tanggal: dayjs().format('YYYY-MM-DD'),
+            category_name: 'Umum',
+            nominalBaru: '',
+            hargaPerUnit: '',
         });
-    }, [formData.tanggal, formData.category_name, formData.hargaPerUnit, formData.jumlahMin, formData.jumlahMax, tarif]);
+        setTarifMode('create');
+        setEditingTarifId(null);
+    }, []);
 
     const closeModal = useCallback((modalType: 'saldo' | 'tarif') => {
         if (modalType === 'saldo') {
@@ -630,11 +815,6 @@ export default function Kios() {
         } else {
             setShowModalTarif(false);
         }
-    }, []);
-
-    const handleEditTarifFromView = useCallback(() => {
-        setShowModalLihatTarif(false);
-        setShowModalTarif(true);
     }, []);
 
     return (
@@ -647,7 +827,7 @@ export default function Kios() {
                 {/* Header */}
                 <header className="mb-8">
                     <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Unit Usaha - Sewa Kios</h1>
-                    <p className="mt-2 text-sm text-gray-600">Kelola keuangan dan operasional lapangan Bumi Perkemahan Anda</p>
+                    <p className="mt-2 text-sm text-gray-600">Kelola keuangan dan operasional sewa kios</p>
                 </header>
 
                 {/* Stats Cards */}
@@ -660,7 +840,10 @@ export default function Kios() {
                 {/* Transaction Report */}
                 <section className="rounded-2xl bg-white p-6 shadow-sm">
                     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <h2 className="text-xl font-semibold text-gray-900">Laporan Transaksi</h2>
+                        <div>
+                            <h2 className="text-xl font-semibold text-gray-900">Ringkasan Laporan Bulanan</h2>
+                            <p className="mt-1 text-sm text-gray-500">Klik "Detail" pada ringkasan bulanan untuk melihat transaksi per tanggal</p>
+                        </div>
                         <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-gray-400" />
                             <input
@@ -675,7 +858,7 @@ export default function Kios() {
             </div>
 
             {/* Modal: Saldo */}
-            <Modal isOpen={showModalSaldo} onClose={() => closeModal('saldo')} title="Atur Saldo Awal Mini Soccer">
+            <Modal isOpen={showModalSaldo} onClose={() => closeModal('saldo')} title="Atur Saldo Awal Kios">
                 <div className="space-y-4">
                     <div>
                         <label className="mb-1 block text-sm font-medium text-gray-700">Tanggal</label>
@@ -710,7 +893,11 @@ export default function Kios() {
             </Modal>
 
             {/* Modal: Tarif Sewa */}
-            <Modal isOpen={showModalTarif} onClose={() => closeModal('tarif')} title="Atur Tarif Sewa Mini Soccer">
+            <Modal
+                isOpen={showModalTarif}
+                onClose={() => closeModal('tarif')}
+                title={`${tarifMode === 'edit' ? 'Edit' : 'Tambah'} Tarif Sewa Kios`}
+            >
                 <div className="space-y-4">
                     <div>
                         <label className="mb-1 block text-sm font-medium text-gray-700">Berlaku Mulai Tanggal</label>
@@ -723,27 +910,18 @@ export default function Kios() {
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700">Jumlah Min</label>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Kategori sewa</label>
                         <input
                             type="text"
-                            value={formData.jumlahMin}
-                            onChange={handleInputChange('jumlahMin')}
+                            value={formData.category_name}
+                            onChange={handleInputChange('category_name')}
+                            placeholder="Contoh: puskemas, kantor desa, dll"
                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                         />
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700">Jumlah Max</label>
-                        <input
-                            type="text"
-                            value={formData.jumlahMax}
-                            onChange={handleInputChange('jumlahMax')}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-black focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700">Harga Sewa</label>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Tarif per tahun</label>
                         <input
                             type="text"
                             value={formData.hargaPerUnit}
@@ -763,7 +941,7 @@ export default function Kios() {
                         Batal
                     </Button>
                     <Button onClick={handleSimpanTarif} className="bg-blue-600 hover:bg-blue-700">
-                        Simpan
+                        {tarifMode === 'edit' ? 'Update' : 'Simpan'}
                     </Button>
                 </div>
             </Modal>
@@ -773,7 +951,23 @@ export default function Kios() {
                 isOpen={showModalLihatTarif}
                 onClose={() => setShowModalLihatTarif(false)}
                 onEditClick={handleEditTarifFromView}
+                onDeleteClick={handleDeleteTarif}
                 data={allTarifs}
+            />
+
+            {/* Confirmation Modal for Delete */}
+            <ConfirmationModal
+                isOpen={showConfirmDelete}
+                onClose={() => {
+                    setShowConfirmDelete(false);
+                    setDeletingTarif(null);
+                }}
+                onConfirm={confirmDeleteTarif}
+                title="Hapus Tarif"
+                message={`Apakah Anda yakin ingin menghapus tarif "${deletingTarif?.category_name}" dengan harga ${deletingTarif ? formatRupiah(deletingTarif.harga_per_unit) : ''}/tahun? Tindakan ini tidak dapat dibatalkan.`}
+                confirmText="Hapus"
+                cancelText="Batal"
+                isDestructive={true}
             />
         </AppLayout>
     );

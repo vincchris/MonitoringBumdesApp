@@ -146,22 +146,111 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
 
-    // =============================
-    // Route Kepala desa / bumdes
-    // =============================
+    // ==============================================
+    // Route Kepala desa / bumdes (Dashboard utama)
+    // ==============================================
 
     Route::get('/dashboard-KepalaBumdes', [DashboardBumdesController::class, 'index'])->name('dashboard.bumdes');
     Route::post('/update-saldo-awal', [DashboardBumdesController::class, 'updateSaldoAwal'])->name('saldo-awal.update');
     Route::get('user', [UserController::class, 'index']);
     Route::resource('/admin/users', UserController::class)->except(['create', 'edit']);
+
+    // =============================
+    // Route Bumdes Minisoc
+    // =============================
+
     Route::resource('MiniSoccer', MiniSocController::class);
-    Route::post('/store/{UNIT_ID}/initialBalance', action: [MiniSocController::class, 'storeInitialBalance'])->name('storeInitialBalance');
-    Route::put('/unit/{unitId}/tarif/{tarifId}', [MiniSocController::class, 'updateTarif'])->name('updateTarif');
+    Route::prefix('unit/{unitId}/minisoc')
+        ->as('minisoc.')
+        ->controller(MiniSocController::class)
+        ->group(function () {
+            // Route untuk saldo awal
+            Route::post('/initial-balance', 'storeInitialBalance')->name('storeInitialBalance');
+
+            // Routes untuk tarif
+            Route::post('/tarif', 'storeTarif')->name('storeTarif');
+            Route::put('/tarif/{tarifId}', 'updateTarif')->name('updateTarif');
+            Route::delete('/tarif/{tarifId}', 'deleteTarif')->name('deleteTarif');
+
+            Route::get('/tarif', 'getTarif')->name('getTarif');
+            Route::get('/tarif/all', 'getAllTarifsAPI')->name('getAllTarifs');
+        });
+
+    // =============================
+    // Route Bumdes Buper
+    // =============================
 
     Route::resource('Buper', BuperController::class);
-    Route::resource('Kios', KiosController::class); 
+    Route::prefix('unit/{unitId}/buper')
+        ->as('buper.')
+        ->controller(BuperController::class)
+        ->group(function () {
+            // Route untuk saldo awal
+            Route::post('/initial-balance', 'storeInitialBalance')->name('storeInitialBalance');
+
+            // Routes untuk tarif
+            Route::post('/tarif', 'storeTarif')->name('storeTarif');
+            Route::put('/tarif/{tarifId}', 'updateTarif')->name('updateTarif');
+            Route::delete('/tarif/{tarifId}', 'deleteTarif')->name('deleteTarif');
+
+            Route::get('/tarif', 'getTarif')->name('getTarif');
+            Route::get('/tarif/all', 'getAllTarifsAPI')->name('getAllTarifs');
+        });
+
+    // =============================
+    // Route BUMDes Kios
+    // =============================
+    Route::resource('Kios', KiosController::class);
+    Route::prefix('unit/{unitId}/kios')
+        ->as('Kios.')
+        ->controller(KiosController::class)
+        ->group(function () {
+            Route::post('/initial-balance', 'storeInitialBalance')->name('storeInitialBalance');
+
+            // Route tarif sewa
+            Route::post('/tarif', 'storeTarif')->name('storeTarif');
+            Route::put('/tarif/{tarifId}', 'updateTarif')->name('updateTarif');
+            Route::delete('/tarif/{tarifId}', 'deleteTarif')->name('deleteTarif');
+
+            // get tarif
+            Route::get('/tarif', 'getTarif')->name('getTarif');
+            Route::get('/tarif/all', 'getAllTarifsAPI')->name('getAllTarifs');
+        });
+
+    // =============================
+    // Route BUMDes Air Weslik
+    // =============================
     Route::resource('Airweslik', AirWeslikController::class);
+    Route::prefix('unit/{unitId}/airweslik')
+        ->as('airweslik.')
+        ->controller(AirWeslikController::class)
+        ->group(function () {
+            Route::post('/initial-balance', 'storeInitialBalance')->name('storeInitialBalance');
+
+            // Route tarif
+            Route::post('/tarif', 'storeTarif')->name('storeTarif');
+            Route::put('/tarif/{tarifId}', 'updateTarif')->name('updateTarif');
+            Route::delete('/tarif/{tarifId}', 'deleteTarif')->name('deleteTarif');
+            
+            Route::get('/tarif', 'getTarif')->name('getTarif');
+            Route::get('/tarif/all', 'getAllTarifsAPI')->name('getAllTarifs');
+        });
+
+    // =============================
+    // Route BUMDes Internet Desa
+    // =============================
     Route::resource('InterDesa', InternetDesaController::class);
+    Route::prefix('unit/{unitId}/interdesa')
+        ->as('interdesa.')
+        ->controller(InternetDesaController::class)
+        ->group(function () {
+            Route::post('/initial-balance', 'storeInitialBalance')->name('storeInitialBalance');
+            Route::post('/tarif', 'storeTarif')->name('storeTarif');
+            Route::put('/tarif/{tarifId}', 'updateTarif')->name('updateTarif');
+            Route::delete('/tarif/{tarifId}', 'deleteTarif')->name('deleteTarif');
+            Route::get('/tarif', 'getTarif')->name('getTarif');
+            Route::get('/tarif/all', 'getAllTarifsAPI')->name('getAllTarifs');
+        });
 });
 
 // =============================

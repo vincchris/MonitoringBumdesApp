@@ -216,11 +216,10 @@ class alldataSeeder extends Seeder
         DB::table('unit_user')->insert([
             ['user_id' => 1, 'unit_id' => 1, 'created_at' => now(), 'updated_at' => now()],
 
-            ['user_id' => 2, 'unit_id' => 1, 'created_at' => now(), 'updated_at' => now()],
             ['user_id' => 2, 'unit_id' => 2, 'created_at' => now(), 'updated_at' => now()],
-            ['user_id' => 2, 'unit_id' => 3, 'created_at' => now(), 'updated_at' => now()],
-            ['user_id' => 2, 'unit_id' => 4, 'created_at' => now(), 'updated_at' => now()],
-            ['user_id' => 2, 'unit_id' => 5, 'created_at' => now(), 'updated_at' => now()],
+            ['user_id' => 3, 'unit_id' => 3, 'created_at' => now(), 'updated_at' => now()],
+            ['user_id' => 4, 'unit_id' => 4, 'created_at' => now(), 'updated_at' => now()],
+            ['user_id' => 5, 'unit_id' => 5, 'created_at' => now(), 'updated_at' => now()],
         ]);
     }
 }

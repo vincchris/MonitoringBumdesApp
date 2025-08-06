@@ -15,19 +15,48 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
 
-        User::create([
-            'name' => 'Kairi Kumar',
-            'email' => 'pengelola@gmail.com',
-            'password' => Hash::make('123456789'),
-            'roles' => 'pengelola'
-        ]);
-        
-        User::create([
-            'name' => 'Admin',
-            'email' => 'admin@gmail.com',
-            'password' => Hash::make('password123'),
-            'roles' => 'kepala_desa'
-        ]);
+        $users = [
+            [
+                'name' => 'Kairi Kumar',
+                'email' => 'pengelolaminisoc@gmail.com',
+                'password' => Hash::make('123456789'),
+                'roles' => 'pengelola',
+            ],
+            [
+                'name' => 'Beatrice Audrey',
+                'email' => 'pengelolabuper@gmail.com',
+                'password' => Hash::make('123456789'),
+                'roles' => 'pengelola',
+            ],
+            [
+                'name' => 'Angelia Christy',
+                'email' => 'pengelolasewakios@gmail.com',
+                'password' => Hash::make('123456789'),
+                'roles' => 'pengelola',
+            ],
+            [
+                'name' => 'Jasmine Allyc',
+                'email' => 'pengelolaairweslik@gmail.com',
+                'password' => Hash::make('123456789'),
+                'roles' => 'pengelola',
+            ],
+            [
+                'name' => 'Hanami Wang',
+                'email' => 'pengelolainternetdesa@gmail.com',
+                'password' => Hash::make('123456789'),
+                'roles' => 'pengelola',
+            ],
+            [
+                'name' => 'Deddy Supatra',
+                'email' => 'bumdes@gmail.com',
+                'password' => Hash::make('123456789'),
+                'roles' => 'kepala_desa',
+            ],
+        ];
+
+        foreach ($users as $user) {
+            User::create($user);
+        }
 
         $this->call([
             alldataSeeder::class,

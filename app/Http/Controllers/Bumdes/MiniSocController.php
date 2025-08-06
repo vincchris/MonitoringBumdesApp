@@ -24,7 +24,7 @@ class MiniSocController extends Controller
         $unit = Unit::findOrFail($unitId);
         $histories = $this->getRingkasanLaporanBulanan($unitId);
         $tarif = $this->getCurrentTarif($unitId);
-        $allTarifs = $this->getAllTarifs($unitId); // Tambahan untuk semua data tarif
+        $allTarifs = $this->getAllTarifs($unitId);
         $currentMonthSummary = $this->getCurrentMonthSummary($unitId);
 
         $page = (int) $request->get('page', 1);
@@ -40,7 +40,7 @@ class MiniSocController extends Controller
             'tanggal_diubah' => $this->getInitialBalanceTanggal($unitId),
             'currentMonthSummary' => $currentMonthSummary,
             'tarif' => $tarif,
-            'allTarifs' => $allTarifs, // Data semua tarif untuk modal
+            'allTarifs' => $allTarifs,
             'unit' => [
                 'id' => $unit->id,
                 'name' => $unit->name,
@@ -68,7 +68,6 @@ class MiniSocController extends Controller
                 ['nominal' => $validated['nominal']]
             );
 
-            // Hapus cache agar data terbaru bisa dimuat
             Cache::forget("initial_balance_{$unitID}");
         });
 
@@ -131,7 +130,9 @@ class MiniSocController extends Controller
 
         return $histories->map(function ($item) use ($unitId) {
             return [
+                'id' => $item->id,
                 'tanggal' => $item->updated_at->translatedFormat('d F Y'),
+                'tanggal_raw' => $item->updated_at->format('Y-m-d'),
                 'keterangan' => $this->getTransactionDescription($item, $unitId),
                 'jenis' => $item->jenis,
                 'selisih' => $this->calculateSelisih($item),
@@ -150,16 +151,27 @@ class MiniSocController extends Controller
             ->get()
             ->groupBy(fn($item) => $item->updated_at->format('Y-m'))
             ->map(function ($items, $month) use ($unitId, $currentMonth) {
-                $item = $items->sortByDesc('updated_at')->first();
+                $totalPendapatan = $items->where('jenis', 'Pendapatan')->sum(fn($item) => $this->calculateSelisih($item));
+                $totalPengeluaran = $items->where('jenis', 'Pengeluaran')->sum(fn($item) => $this->calculateSelisih($item));
+                $jumlahTransaksi = $items->count();
+
+                // Ambil transaksi terakhir untuk referensi tanggal
+                $lastTransaction = $items->sortByDesc('updated_at')->first();
+
                 return [
-                    'tanggal' => $item->updated_at->translatedFormat('d F Y'),
-                    'keterangan' => $this->getTransactionDescription($item, $unitId),
-                    'jenis' => $item->jenis,
-                    'selisih' => $this->calculateSelisih($item),
-                    'saldo' => number_format($item->saldo_sekarang, 0, '', ','),
-                    'updated_at' => $item->updated_at,
+                    'tanggal' => $lastTransaction->updated_at->translatedFormat('F Y'),
+                    'keterangan' => "Ringkasan {$jumlahTransaksi} transaksi",
+                    'jenis' => 'Ringkasan',
+                    'selisih' => $totalPendapatan - $totalPengeluaran,
+                    'saldo' => number_format($lastTransaction->saldo_sekarang, 0, '', ','),
+                    'updated_at' => $lastTransaction->updated_at,
                     'bulan' => $month,
-                    'is_current_month' => $month === $currentMonth
+                    'is_current_month' => $month === $currentMonth,
+                    'summary' => [
+                        'totalPendapatan' => $totalPendapatan,
+                        'totalPengeluaran' => $totalPengeluaran,
+                        'jumlahTransaksi' => $jumlahTransaksi,
+                    ]
                 ];
             })->values();
     }
@@ -173,11 +185,11 @@ class MiniSocController extends Controller
             ->whereBetween('updated_at', [$startOfMonth, $endOfMonth])
             ->get();
 
-        $pendapatan = $histories->where('jenis', 'Pendapatan')->sum(function($item) {
+        $pendapatan = $histories->where('jenis', 'Pendapatan')->sum(function ($item) {
             return $this->calculateSelisih($item);
         });
 
-        $pengeluaran = $histories->where('jenis', 'Pengeluaran')->sum(function($item) {
+        $pengeluaran = $histories->where('jenis', 'Pengeluaran')->sum(function ($item) {
             return $this->calculateSelisih($item);
         });
 
@@ -191,29 +203,69 @@ class MiniSocController extends Controller
 
     private function getTransactionDescription($item, int $unitId): string
     {
-        $tanggalAwal = $item->updated_at->copy()->startOfDay();
-        $tanggalAkhir = $item->updated_at->copy()->endOfDay();
+        $tanggal = $item->updated_at->toDateString();
+        $selisih = $this->calculateSelisih($item);
 
         if ($item->jenis === 'Pendapatan') {
-            $income = Income::with(['rent.tarif.unit'])
-                ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
-                ->get()
-                ->filter(fn($i) => optional($i->rent?->tarif?->unit)->id_units == $unitId)
-                ->sortByDesc('updated_at')
-                ->first();
+            $tanggal = $item->updated_at->toDateString();
+            $selisih = $this->calculateSelisih($item);
 
-            return $income->rent->description ?? 'Pemasukan dari sewa';
+            $matchingRents = RentTransaction::with('tarif.unit')
+                ->whereDate('updated_at', $tanggal)
+                ->get()
+                ->filter(function ($r) use ($unitId, $selisih) {
+                    return optional($r->tarif?->unit)->id_units == $unitId &&
+                        (int) $r->total_bayar === (int) $selisih;
+                })
+                ->sortBy('updated_at')
+                ->values();
+
+            $matchingHistories = BalanceHistory::where('unit_id', $unitId)
+                ->where('jenis', 'Pendapatan')
+                ->whereDate('updated_at', $tanggal)
+                ->get()
+                ->filter(fn($h) => $this->calculateSelisih($h) == $selisih)
+                ->sortBy('updated_at')
+                ->values();
+
+            $index = $matchingHistories->search(fn($h) => $h->id == $item->id);
+
+            if ($index !== false && isset($matchingRents[$index])) {
+                // dd($matchingRents->pluck('description'));
+                return $matchingRents[$index]->description ?? 'Pemasukan dari sewa';
+            }
+
+            return 'Pemasukan dari sewa';
         }
 
         if ($item->jenis === 'Pengeluaran') {
-            return Expense::where('unit_id', $unitId)
-                ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
-                ->orderByDesc('updated_at')
-                ->value('description') ?? 'Pengeluaran operasional';
+            $expenses = Expense::where('unit_id', $unitId)
+                ->whereDate('updated_at', $tanggal)
+                ->where('nominal', (int) $selisih)
+                ->orderBy('updated_at')
+                ->get()
+                ->values();
+
+            $matchingHistories = BalanceHistory::where('unit_id', $unitId)
+                ->where('jenis', 'Pengeluaran')
+                ->whereDate('updated_at', $tanggal)
+                ->get()
+                ->filter(fn($h) => $this->calculateSelisih($h) == $selisih)
+                ->sortBy('updated_at')
+                ->values();
+
+            $index = $matchingHistories->search(fn($h) => $h->id == $item->id);
+
+            if ($index !== false && isset($expenses[$index])) {
+                return $expenses[$index]->description ?? 'Pengeluaran operasional';
+            }
+
+            return 'Pengeluaran operasional';
         }
 
         return '-';
     }
+
 
     private function calculateSelisih($item): int
     {
@@ -226,22 +278,20 @@ class MiniSocController extends Controller
     {
         $validated = $request->validate([
             'tanggal' => 'required|date',
-            'jenis_penyewa' => 'required|string|max:255',
+            'category_name' => 'required|string|max:255',
             'harga_per_unit' => 'required|numeric|min:1',
         ]);
 
         DB::transaction(function () use ($validated, $unitID) {
             Tarif::create([
                 'unit_id' => $unitID,
-                'satuan' => 'jam', // Default satuan untuk mini soccer
-                'category_name' => $validated['jenis_penyewa'],
+                'satuan' => 'jam',
+                'category_name' => $validated['category_name'],
                 'harga_per_unit' => $validated['harga_per_unit'],
-                'berlaku_dari' => $validated['tanggal'],
-                'created_at' => now(),
-                'updated_at' => now(),
+                'created_at' => $validated['tanggal'],
+                'updated_at' => $validated['tanggal'],
             ]);
 
-            // Hapus cache agar data terbaru bisa dimuat
             Cache::forget("current_tarif_{$unitID}");
             Cache::forget("all_tarifs_{$unitID}");
         });
@@ -256,15 +306,15 @@ class MiniSocController extends Controller
     {
         $validated = $request->validate([
             'tanggal' => 'required|date',
-            'category_name' => 'required|string|in:Umum,Member',
+            'category_name' => 'required|string',
             'harga_per_unit' => 'required|numeric|min:1',
         ]);
 
         DB::transaction(function () use ($validated, $unitID, $tarifID) {
+            // Perbaikan: Gunakan id_tarif untuk find tarif yang spesifik
             $tarif = Tarif::where('unit_id', $unitID)
-                ->where('category_name', $validated['category_name'])
+                ->where('id_tarif', $tarifID)
                 ->firstOrFail();
-
 
             $tarif->update([
                 'category_name' => $validated['category_name'],
@@ -273,7 +323,6 @@ class MiniSocController extends Controller
                 'updated_at' => now(),
             ]);
 
-            // Hapus cache agar data terbaru bisa dimuat
             Cache::forget("current_tarif_{$unitID}");
             Cache::forget("all_tarifs_{$unitID}");
         });
@@ -282,6 +331,33 @@ class MiniSocController extends Controller
             'message' => 'Tarif berhasil diperbarui',
             'method' => 'update'
         ]);
+    }
+
+    // Method baru untuk delete tarif
+    public function deleteTarif(Request $request, $unitID, $tarifID)
+    {
+        try {
+            DB::transaction(function () use ($unitID, $tarifID) {
+                $tarif = Tarif::where('id_tarif', $tarifID)
+                    ->where('unit_id', $unitID)
+                    ->firstOrFail();
+
+                $tarif->delete();
+
+                // Clear cache
+                Cache::forget("current_tarif_{$unitID}");
+                Cache::forget("all_tarifs_{$unitID}");
+            });
+
+            return back()->with('info', [
+                'message' => 'Tarif berhasil dihapus',
+                'method' => 'delete'
+            ]);
+        } catch (\Exception $e) {
+            return back()->withErrors([
+                'error' => 'Gagal menghapus tarif: ' . $e->getMessage()
+            ]);
+        }
     }
 
     private function getCurrentTarif(int $unitId): ?array
@@ -297,16 +373,15 @@ class MiniSocController extends Controller
 
             return [
                 'id_tarif' => $tarif->id_tarif,
-                'jenis_penyewa' => $tarif->category_name ?? $tarif->jenis_penyewa, // Fallback untuk kompabilitas
+                'jenis_penyewa' => $tarif->category_name ?? $tarif->jenis_penyewa,
+                'category_name' => $tarif->category_name ?? $tarif->jenis_penyewa,
                 'harga_per_unit' => $tarif->harga_per_unit,
                 'updated_at' => $tarif->updated_at->format('Y-m-d H:i:s'),
+                'tanggal' => $tarif->berlaku_dari ? Carbon::parse($tarif->berlaku_dari)->format('Y-m-d') : $tarif->updated_at->format('Y-m-d'),
             ];
         });
     }
 
-    /**
-     * Method baru untuk mengambil semua data tarif unit
-     */
     private function getAllTarifs(int $unitId): array
     {
         return Cache::remember("all_tarifs_{$unitId}", self::CACHE_TTL, function () use ($unitId) {
@@ -318,8 +393,8 @@ class MiniSocController extends Controller
                 return [
                     'id_tarif' => $tarif->id_tarif,
                     'unit_id' => $tarif->unit_id,
-                    'satuan' => $tarif->satuan ?? 'jam', // Default ke 'jam' jika null
-                    'category_name' => $tarif->category_name ?? $tarif->jenis_penyewa, // Fallback untuk kompabilitas
+                    'satuan' => $tarif->satuan ?? 'jam',
+                    'category_name' => $tarif->category_name ?? $tarif->jenis_penyewa,
                     'harga_per_unit' => $tarif->harga_per_unit,
                     'created_at' => $tarif->created_at->format('Y-m-d H:i:s'),
                     'updated_at' => $tarif->updated_at->format('Y-m-d H:i:s'),
@@ -330,16 +405,13 @@ class MiniSocController extends Controller
 
     public function getTarif()
     {
-        $this->authorize('member'); // hanya role member
+        $this->authorize('member');
 
         $tarifs = $this->getAllTarifs(self::UNIT_ID);
 
         return response()->json($tarifs);
     }
 
-    /**
-     * API endpoint untuk mengambil semua tarif (jika diperlukan untuk AJAX)
-     */
     public function getAllTarifsAPI(Request $request)
     {
         $this->authorize('member');
@@ -356,7 +428,6 @@ class MiniSocController extends Controller
         ]);
     }
 
-    // Update tarif tertentu (method yang sudah ada, bisa tetap digunakan untuk API)
     public function updateTarifAPI(Request $request)
     {
         $this->authorize('member');
@@ -378,7 +449,6 @@ class MiniSocController extends Controller
 
         $tarif->update($updateData);
 
-        // Clear cache
         Cache::forget("current_tarif_" . self::UNIT_ID);
         Cache::forget("all_tarifs_" . self::UNIT_ID);
 
@@ -392,32 +462,6 @@ class MiniSocController extends Controller
                 'harga_per_unit' => $tarif->harga_per_unit,
                 'updated_at' => $tarif->updated_at->format('Y-m-d H:i:s'),
             ]
-        ]);
-    }
-
-
-    /**
-     * Method untuk menghapus tarif (jika diperlukan)
-     */
-    public function deleteTarif(Request $request, $unitID, $tarifID)
-    {
-        $this->authorize('member');
-
-        DB::transaction(function () use ($unitID, $tarifID) {
-            $tarif = Tarif::where('id_tarif', $tarifID)
-                ->where('unit_id', $unitID)
-                ->firstOrFail();
-
-            $tarif->delete();
-
-            // Hapus cache
-            Cache::forget("current_tarif_{$unitID}");
-            Cache::forget("all_tarifs_{$unitID}");
-        });
-
-        return back()->with('info', [
-            'message' => 'Tarif berhasil dihapus',
-            'method' => 'delete'
         ]);
     }
 }
