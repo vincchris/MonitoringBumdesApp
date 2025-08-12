@@ -160,6 +160,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // =============================
 
     Route::resource('MiniSoccer', MiniSocController::class);
+    Route::prefix('MiniSoccer')->name('minisoc.')->controller(MiniSocController::class)->group(function () {
+    Route::get('/download-pdf/{bulan}', 'downloadPdfDetail')->name('downloadPdfDetail');
+    Route::get('/download-excel/{bulan}', 'downloadExcelDetail')->name('downloadExcelDetail');
+    });
+    
     Route::prefix('unit/{unitId}/minisoc')
         ->as('minisoc.')
         ->controller(MiniSocController::class)
@@ -231,7 +236,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/tarif', 'storeTarif')->name('storeTarif');
             Route::put('/tarif/{tarifId}', 'updateTarif')->name('updateTarif');
             Route::delete('/tarif/{tarifId}', 'deleteTarif')->name('deleteTarif');
-            
+
             Route::get('/tarif', 'getTarif')->name('getTarif');
             Route::get('/tarif/all', 'getAllTarifsAPI')->name('getAllTarifs');
         });

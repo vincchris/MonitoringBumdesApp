@@ -2,13 +2,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
+import localeData from 'dayjs/plugin/localeData';
 import { ArrowLeft, Calendar, Download, FileSpreadsheet, FileText, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { useState } from 'react';
+import { route } from 'ziggy-js';
 
 // Initialize dayjs
 dayjs.locale('id');
+dayjs.extend(localeData);
 
 interface DetailItem {
     id: number;
@@ -47,6 +51,7 @@ interface PageProps {
 
 export default function DetailLaporanMiniSoccer() {
     const { detailLaporan, bulan, unit, summary, auth } = usePage().props as unknown as PageProps;
+    const [isDownloading, setIsDownloading] = useState({ pdf: false, excel: false });
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', {
@@ -79,14 +84,65 @@ export default function DetailLaporanMiniSoccer() {
         history.back();
     };
 
-    const handleExportPDF = () => {
-        // Implementasi export PDF
-        console.log('Export PDF');
+    const handleExportPDF = async () => {
+        try {
+            setIsDownloading((prev) => ({ ...prev, pdf: true }));
+
+            // Pastikan format bulan benar untuk parameter route
+            let bulanParam = bulan;
+
+            // Jika bulan dalam format "January 2024", konversi ke "2024-01"
+            if (bulan.includes(' ')) {
+                const [monthName, year] = bulan.split(' ');
+                // Gunakan dayjs untuk konversi nama bulan Indonesia ke angka
+                const monthIndex = dayjs().locale('id').localeData().months().indexOf(monthName);
+                if (monthIndex !== -1) {
+                    bulanParam = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+                }
+            }
+
+            // Langsung redirect ke URL download - lebih reliable daripada create element
+            window.location.href = route('minisoc.downloadPdfDetail', { bulan: bulanParam });
+        } catch (error) {
+            alert('Terjadi kesalahan saat mendownload PDF. Silakan coba lagi.');
+            setIsDownloading((prev) => ({ ...prev, pdf: false }));
+        }
+
+        // Reset loading state setelah delay (karena window.location.href tidak trigger onload)
+        setTimeout(() => {
+            setIsDownloading((prev) => ({ ...prev, pdf: false }));
+        }, 3000);
     };
 
-    const handleExportExcel = () => {
-        // Implementasi export Excel
-        console.log('Export Excel');
+    // Handler untuk download Excel - DIPERBAIKI
+    const handleExportExcel = async () => {
+        try {
+            setIsDownloading((prev) => ({ ...prev, excel: true }));
+
+            // Pastikan format bulan benar untuk parameter route
+            let bulanParam = bulan;
+
+            // Jika bulan dalam format "January 2024", konversi ke "2024-01"
+            if (bulan.includes(' ')) {
+                const [monthName, year] = bulan.split(' ');
+                // Gunakan dayjs untuk konversi nama bulan Indonesia ke angka
+                const monthIndex = dayjs().locale('id').localeData().months().indexOf(monthName);
+                if (monthIndex !== -1) {
+                    bulanParam = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+                }
+            }
+
+            // Langsung redirect ke URL download - lebih reliable daripada create element
+            window.location.href = route('minisoc.downloadExcelDetail', { bulan: bulanParam });
+        } catch (error) {
+            alert('Terjadi kesalahan saat mendownload Excel. Silakan coba lagi.');
+            setIsDownloading((prev) => ({ ...prev, excel: false }));
+        }
+
+        // Reset loading state setelah delay (karena window.location.href tidak trigger onload)
+        setTimeout(() => {
+            setIsDownloading((prev) => ({ ...prev, excel: false }));
+        }, 3000);
     };
 
     return (
@@ -116,8 +172,18 @@ export default function DetailLaporanMiniSoccer() {
 
                             {/* Export Actions */}
                             <div className="flex items-center gap-2">
-                                <Button onClick={handleExportPDF} variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50">
-                                    <Download className="mr-1 h-3 w-3" />
+                                <Button
+                                    onClick={handleExportPDF}
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-red-200 text-red-600 hover:bg-red-50"
+                                    disabled={isDownloading.pdf || detailLaporan.length === 0}
+                                >
+                                    {isDownloading.pdf ? (
+                                        <div className="mr-1 h-3 w-3 animate-spin rounded-full border-2 border-red-600 border-t-transparent"></div>
+                                    ) : (
+                                        <Download className="mr-1 h-3 w-3" />
+                                    )}
                                     PDF
                                 </Button>
                                 <Button
@@ -125,8 +191,13 @@ export default function DetailLaporanMiniSoccer() {
                                     variant="outline"
                                     size="sm"
                                     className="border-green-200 text-green-600 hover:bg-green-50"
+                                    disabled={isDownloading.excel || detailLaporan.length === 0}
                                 >
-                                    <FileSpreadsheet className="mr-1 h-3 w-3" />
+                                    {isDownloading.excel ? (
+                                        <div className="mr-1 h-3 w-3 animate-spin rounded-full border-2 border-green-600 border-t-transparent"></div>
+                                    ) : (
+                                        <FileSpreadsheet className="mr-1 h-3 w-3" />
+                                    )}
                                     Excel
                                 </Button>
                             </div>
@@ -359,4 +430,3 @@ export default function DetailLaporanMiniSoccer() {
         </AppLayout>
     );
 }
-    

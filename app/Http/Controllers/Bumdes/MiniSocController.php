@@ -10,6 +10,12 @@ use Illuminate\Support\Facades\{Auth, Cache, DB};
 use Inertia\Inertia;
 use App\Models\Tarif;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\DetailLaporanExport;
+use Illuminate\Support\Facades\Log;
+
+
 
 class MiniSocController extends Controller
 {
@@ -54,6 +60,160 @@ class MiniSocController extends Controller
             ]
         ]);
     }
+
+public function downloadPdfDetail($bulan)
+{
+    try {
+        $unitId = self::UNIT_ID;
+
+        // Validasi dan parsing parameter bulan
+        $year = null;
+        $month = null;
+
+        if (strpos($bulan, '-') !== false) {
+            // Format: YYYY-MM
+            [$year, $month] = explode('-', $bulan);
+        } elseif (strlen($bulan) === 6 && is_numeric($bulan)) {
+            // Format: YYYYMM
+            $year = substr($bulan, 0, 4);
+            $month = substr($bulan, 4, 2);
+        } else {
+            // Coba parse sebagai string bulan
+            try {
+                $date = Carbon::parse($bulan);
+                $year = $date->year;
+                $month = $date->month;
+            } catch (\Exception $e) {
+                return back()->withErrors(['error' => 'Format bulan tidak valid: ' . $bulan]);
+            }
+        }
+
+        // Validasi year dan month
+        if (!$year || !$month || !is_numeric($year) || !is_numeric($month)) {
+            return back()->withErrors(['error' => 'Parameter bulan tidak valid']);
+        }
+
+        // Pastikan month dalam format 2 digit
+        $month = str_pad($month, 2, '0', STR_PAD_LEFT);
+
+        $unit = Unit::findOrFail($unitId);
+        $histories = $this->getDetailLaporan($unitId, $year, $month);
+
+        // Debugging: Log data yang akan digunakan
+        Log::info('PDF Data Debug', [
+            'unitId' => $unitId,
+            'year' => $year,
+            'month' => $month,
+            'histories_count' => $histories->count(),
+            'unit' => $unit->toArray()
+        ]);
+
+        $summary = [
+            'totalPendapatan' => $histories->where('jenis', 'Pendapatan')->sum('selisih'),
+            'totalPengeluaran' => $histories->where('jenis', 'Pengeluaran')->sum('selisih'),
+            'selisih' => $histories->where('jenis', 'Pendapatan')->sum('selisih')
+                - $histories->where('jenis', 'Pengeluaran')->sum('selisih'),
+            'jumlahTransaksi' => $histories->count(),
+        ];
+
+        $data = [
+            'detailLaporan' => $histories->sortByDesc('updated_at')->values(),
+            'bulan' => Carbon::createFromDate($year, $month, 1)->translatedFormat('F Y'),
+            'unit' => $unit,
+            'summary' => $summary,
+            'generated_at' => now()->translatedFormat('l, d F Y H:i') . ' WIB',
+            'generated_by' => Auth::user()->name,
+        ];
+
+        // Debugging: Log data sebelum generate PDF
+        Log::info('PDF Generation Data', [
+            'bulan' => $data['bulan'],
+            'summary' => $summary,
+            'laporan_count' => $data['detailLaporan']->count()
+        ]);
+
+        // Pastikan view ada dan dapat diakses
+        if (!view()->exists('exports.laporan_pdf')) {
+            Log::error('PDF View not found: exports.laporan_pdf');
+            return back()->withErrors(['error' => 'Template PDF tidak ditemukan']);
+        }
+
+        try {
+            $pdf = PDF::loadView('exports.laporan_pdf', $data);
+            $pdf->setPaper('A4', 'landscape');
+
+            // Set timeout untuk PDF generation
+            $pdf->setTimeout(300);
+
+            $filename = "Detail-Transaksi-Mini-Soccer-{$year}-{$month}.pdf";
+
+            // Log sebelum download
+            Log::info('PDF Download attempt', ['filename' => $filename]);
+
+            // Gunakan stream untuk debugging
+            // return $pdf->stream($filename); // Untuk test di browser
+
+            // Untuk download langsung
+            return $pdf->download($filename);
+
+        } catch (\Exception $pdfError) {
+            Log::error('PDF Generation Error', [
+                'error' => $pdfError->getMessage(),
+                'trace' => $pdfError->getTraceAsString()
+            ]);
+            return back()->withErrors(['error' => 'Gagal generate PDF: ' . $pdfError->getMessage()]);
+        }
+
+    } catch (\Exception $e) {
+        Log::error('Error downloading PDF: ' . $e->getMessage(), [
+            'trace' => $e->getTraceAsString(),
+            'bulan' => $bulan
+        ]);
+        return back()->withErrors(['error' => 'Terjadi kesalahan saat mendownload PDF: ' . $e->getMessage()]);
+    }
+}
+
+public function downloadExcelDetail($bulan)
+{
+    try {
+        $unitId = self::UNIT_ID;
+
+        // Validasi dan parsing parameter bulan (sama seperti PDF)
+        $year = null;
+        $month = null;
+
+        if (strpos($bulan, '-') !== false) {
+            // Format: YYYY-MM
+            [$year, $month] = explode('-', $bulan);
+        } elseif (strlen($bulan) === 6 && is_numeric($bulan)) {
+            // Format: YYYYMM
+            $year = substr($bulan, 0, 4);
+            $month = substr($bulan, 4, 2);
+        } else {
+            // Coba parse sebagai string bulan
+            try {
+                $date = Carbon::parse($bulan);
+                $year = $date->year;
+                $month = $date->month;
+            } catch (\Exception $e) {
+                return back()->withErrors(['error' => 'Format bulan tidak valid: ' . $bulan]);
+            }
+        }
+
+        // Validasi year dan month
+        if (!$year || !$month || !is_numeric($year) || !is_numeric($month)) {
+            return back()->withErrors(['error' => 'Parameter bulan tidak valid']);
+        }
+
+        $filename = "Detail-Transaksi-Mini-Soccer-{$year}-{$month}.xlsx";
+
+        return Excel::download(new DetailLaporanExport($unitId, $year, $month), $filename);
+
+    } catch (\Exception $e) {
+        Log::error('Error downloading Excel: ' . $e->getMessage());
+        return back()->withErrors(['error' => 'Terjadi kesalahan saat mendownload Excel']);
+    }
+}
 
     public function storeInitialBalance(Request $request, $unitID)
     {
