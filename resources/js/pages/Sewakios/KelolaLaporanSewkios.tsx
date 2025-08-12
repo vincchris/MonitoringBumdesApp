@@ -43,35 +43,31 @@ export default function KelolaLaporan({ auth, unit_id, laporanKeuangan, paginati
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Kelola Laporan Buper" />
 
-            <div className="flex items-center justify-between px-6 pt-6 pb-8 text-black">
-                <h1 className="text-lg font-semibold text-black">Selamat datang, Pengelola Sewa Kios</h1>
-                <div className="flex items-center gap-3">
-                    <img src={user.image || '/assets/images/avatar.png'} alt="User Avatar" className="h-9 w-9 rounded-full object-cover" />
-                    <div className="text-right">
-                        <p className="text-sm font-semibold text-black">{user.name}</p>
-                        <p className="text-xs text-black">{user.roles}</p>
+            <div className="rounded-2xl bg-white px-4 py-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-4 px-6">
+                    {/* Kolom kiri: Judul */}
+                    <div className="min-w-[200px] flex-1">
+                        <h2 className="text-xl font-semibold text-gray-800">Kelola Laporan Keuangan - Sewa Kios</h2>
+                    </div>
+
+                    {/* Kolom kanan: Tombol export */}
+                    <div className="flex gap-2">
+                        <a
+                            href={`/unit/${unit_id}/kelolalaporan-sewakios/export-pdf`}
+                            className="rounded-md bg-red-500 px-4 py-2 text-white hover:bg-red-600"
+                        >
+                            Download PDF
+                        </a>
+                        <a
+                            href={`/unit/${unit_id}/kelolalaporan-sewakios/export-excel`}
+                            className="rounded-md bg-green-500 px-4 py-2 text-white hover:bg-green-600"
+                        >
+                            Download Excel
+                        </a>
                     </div>
                 </div>
-            </div>
 
-            <div className="rounded-2xl bg-white px-2 py-4">
-                <div className="mb-4 px-6">
-                    <h2 className="text-xl font-semibold text-gray-800">Kelola Laporan Keuangan - Sewa Kios</h2>
-                </div>
-
-                <div className="mb-4 flex justify-end gap-2 px-6">
-                    <a href={`/unit/${unit_id}/kelolalaporan-sewakios/export-pdf`} className="rounded-md bg-red-500 px-4 py-2 text-white hover:bg-red-600">
-                        Download PDF
-                    </a>
-                    <a
-                        href={`/unit/${unit_id}/kelolalaporan-sewakios/export-excel`}
-                        className="rounded-md bg-green-500 px-4 py-2 text-white hover:bg-green-600"
-                    >
-                        Download Excel
-                    </a>
-                </div>
-
-                <div className="overflow-x-auto rounded-xl border border-gray-200 px-6">
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
                     {laporanKeuangan && laporanKeuangan.length > 0 ? (
                         <>
                             <table className="min-w-full bg-white text-sm text-black">

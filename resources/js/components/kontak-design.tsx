@@ -1,6 +1,30 @@
 import MainLayout from '@/components/layout_compro/MainLayout';
-import { Mail, MapPin, Phone } from 'lucide-react';
+import { LucideIcon, Mail, MapPin, Phone } from 'lucide-react';
 import React from 'react';
+
+interface ContactItem {
+    icon: LucideIcon;
+    label: string;
+    value: string;
+}
+
+const contactInfo: ContactItem[] = [
+    {
+        icon: Phone,
+        label: 'Telepon',
+        value: '081324030282',
+    },
+    {
+        icon: Mail,
+        label: 'Email',
+        value: 'bmdsbagjawaluya21@gmail.com',
+    },
+    {
+        icon: MapPin,
+        label: 'Alamat',
+        value: 'Jl.Raya Cihaurbeuti No. 440 Desa Sumberjaya Kecamatan Cihaurbeuti Kabupaten Ciamis',
+    },
+];
 
 const Kontak: React.FC = () => {
     return (
@@ -24,23 +48,13 @@ const Kontak: React.FC = () => {
                     </div>
 
                     <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-                        <div className="rounded-xl border bg-gray-50 p-6 text-center shadow-sm">
-                            <Phone className="mx-auto mb-3 h-6 w-6 text-blue-600" />
-                            <p className="font-semibold text-gray-700">Telepon</p>
-                            <p className="mt-1 text-sm text-gray-600">081220869444</p>
-                        </div>
-
-                        <div className="rounded-xl border bg-gray-50 p-6 text-center shadow-sm">
-                            <Mail className="mx-auto mb-3 h-6 w-6 text-blue-600" />
-                            <p className="font-semibold text-gray-700">Email</p>
-                            <p className="mt-1 text-sm text-gray-600">info@bumdescihaurbeuti.id</p>
-                        </div>
-
-                        <div className="rounded-xl border bg-gray-50 p-6 text-center shadow-sm">
-                            <MapPin className="mx-auto mb-3 h-6 w-6 text-blue-600" />
-                            <p className="font-semibold text-gray-700">Alamat</p>
-                            <p className="mt-1 text-sm text-gray-600">Jl. Raya Cihaurbeuti No.17, Sumberjaya, Kec. Cihaurbeuti, Kabupaten Ciamis, Jawa Barat 46262</p>
-                        </div>
+                        {contactInfo.map(({ icon: Icon, label, value }, index) => (
+                            <div key={index} className="rounded-xl border bg-gray-50 p-6 text-center shadow-sm">
+                                <Icon className="mx-auto mb-3 h-6 w-6 text-blue-600" />
+                                <p className="font-semibold text-gray-700">{label}</p>
+                                <p className="mt-1 text-sm text-gray-600">{value}</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </section>

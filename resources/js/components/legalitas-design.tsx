@@ -10,7 +10,6 @@ interface DasarHukum {
 interface Dokumen {
     name: string;
     number: string;
-    date: string;
     image: string; // path ke gambar dokumen
 }
 
@@ -31,29 +30,11 @@ const dasarHukum: DasarHukum[] = [
 
 const dokumenLegal: Dokumen[] = [
     {
-        name: 'Akta Pendirian',
-        number: 'No. 15/Akt/2019',
-        date: '15 Juli 2019',
-        image: 'https://tse3.mm.bing.net/th/id/OIP.ATWFGvYeyY77gaaCOxrBnwHaKK?rs=1&pid=ImgDetMain',
+        name: 'Sertifikat Pendaftaran Pendirian Badan Hukum BUMDes',
+        number: 'AHU-01539.AH.01.33.TAHUN 2022',
+        image: '/assets/images/legalitas.jpg',
     },
-    {
-        name: 'SK Kepala Desa',
-        number: 'No. 421/2019',
-        date: '20 Juli 2019',
-        image: 'https://tse3.mm.bing.net/th/id/OIP.ATWFGvYeyY77gaaCOxrBnwHaKK?rs=1&pid=ImgDetMain',
-    },
-    {
-        name: 'NPWP BUMDes',
-        number: '99.123.456.7-999.000',
-        date: '2 Agustus 2019',
-        image: 'https://tse3.mm.bing.net/th/id/OIP.ATWFGvYeyY77gaaCOxrBnwHaKK?rs=1&pid=ImgDetMain',
-    },
-    {
-        name: 'NIB (Nomor Induk Berusaha)',
-        number: '8123456789123',
-        date: '10 Januari 2020',
-        image: 'https://tse3.mm.bing.net/th/id/OIP.ATWFGvYeyY77gaaCOxrBnwHaKK?rs=1&pid=ImgDetMain',
-    },
+    
 ];
 
 const Legalitas: React.FC = () => {
@@ -115,7 +96,7 @@ const Legalitas: React.FC = () => {
                                         <div>
                                             <h3 className="text-md font-semibold text-blue-800">{doc.name}</h3>
                                             <p className="text-sm text-gray-600">
-                                                {doc.number} - {doc.date}
+                                                {doc.number}
                                             </p>
                                         </div>
                                     </div>

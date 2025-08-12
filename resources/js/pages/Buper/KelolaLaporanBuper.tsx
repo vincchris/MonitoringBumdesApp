@@ -43,17 +43,6 @@ export default function KelolaLaporan({ auth, unit_id, laporanKeuangan, paginati
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Kelola Laporan Buper" />
 
-            <div className="flex items-center justify-between px-6 pt-6 pb-8 text-black">
-                <h1 className="text-lg font-semibold text-black">Selamat datang, Pengelola Buper</h1>
-                <div className="flex items-center gap-3">
-                    <img src={user.image || '/assets/images/avatar.png'} alt="User Avatar" className="h-9 w-9 rounded-full object-cover" />
-                    <div className="text-right">
-                        <p className="text-sm font-semibold text-black">{user.name}</p>
-                        <p className="text-xs text-black">{user.roles}</p>
-                    </div>
-                </div>
-            </div>
-
             <div className="rounded-2xl bg-white px-2 py-4">
                 <div className="mb-4 px-6">
                     <h2 className="text-xl font-semibold text-gray-800">Kelola Laporan Keuangan - Bumi Perkemahan</h2>

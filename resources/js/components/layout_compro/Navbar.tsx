@@ -55,7 +55,7 @@ const Navbar: React.FC = () => {
             ],
         },
         { name: 'Unit Usaha', href: '/unit-usaha' },
-        { name: 'Galeri', href: '/galeri' },
+        // { name: 'Galeri', href: '/galeri' },
         { name: 'Laporan & Transparansi', href: '/laporan-transparansi' },
         { name: 'Kontak', href: '/kontak' },
     ];
@@ -190,7 +190,7 @@ const Navbar: React.FC = () => {
                             className="bg-blue-600 text-white transition-colors duration-200 hover:bg-blue-700"
                             size="default"
                         >
-                            <Link href="/Login">Login</Link>
+                            <Link href="/Login">Dashboard</Link>
                         </Button>
                     </div>
 
@@ -269,8 +269,8 @@ const Navbar: React.FC = () => {
                             className="w-full bg-blue-600 text-white transition-colors duration-200 hover:bg-blue-700"
                             size="default"
                         >
-                            <Link href="/login" onClick={closeMenu}>
-                                Login
+                            <Link href="/Login" onClick={closeMenu}>
+                                Dashboard
                             </Link>
                         </Button>
                     </div>

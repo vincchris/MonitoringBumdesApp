@@ -176,17 +176,6 @@ export default function PemasukanSewKios({ user, unit_id, pemasukan, tarifs }: P
                 </div>
             )}
 
-            <div className="flex items-center justify-between px-6 pt-6 pb-8 text-black">
-                <h1 className="text-lg font-semibold text-black">Selamat datang, Pengelola Sewa Kios</h1>
-                <div className="flex items-center gap-3">
-                    <img src={user.image || '/assets/images/avatar.png'} alt="User Avatar" className="h-9 w-9 rounded-full object-cover" />
-                    <div className="text-right">
-                        <p className="text-sm font-semibold text-black">{user.name}</p>
-                        <p className="mr-3 text-xs text-black">{user.roles}</p>
-                    </div>
-                </div>
-            </div>
-
             <div className='bg-white px-2 py-4 rounded-2xl'>
                 <div className="mt-3 mb-4 flex items-center justify-between px-6">
                     <h2 className="text-xl font-semibold text-gray-800">Pemasukan - Sewa Kios</h2>

@@ -13,7 +13,7 @@ interface BusinessUnit {
     pricing: {
         label: string;
         detail: string;
-        basePrice: number; // Harga dasar untuk perhitungan
+        basePrice: number; 
     }[];
     operatingHours: string;
     contact: string;
@@ -21,8 +21,8 @@ interface BusinessUnit {
     location: string;
     terms: string[];
     note?: string;
-    calculationType: 'duration' | 'participants' | 'none'; // Tipe perhitungan
-    unit: string; // Unit perhitungan (jam, peserta, dll)
+    calculationType: 'duration' | 'participants' | 'none';
+    unit: string; 
 }
 
 interface FAQ {
@@ -35,16 +35,16 @@ const units: BusinessUnit[] = [
         title: 'Mini Soccer',
         icon: Volleyball,
         imageUrl: 'assets/images/lapang_minisoc.jpg',
-        highlights: ['Fasilitas: Lapangan rumput sintetis', 'Bonus: Air mineral gelas 1 dus', 'Parkir luas tersedia', 'Toilet dan ruang ganti'],
+        highlights: ['Fasilitas: Lapangan rumput sintetis', 'Bonus: Air mineral gelas 1 dus', 'Parkir luas tersedia'],
         pricing: [
             { label: 'Umum', detail: 'Rp250.000 / jam', basePrice: 250000 },
             { label: 'Member', detail: 'Rp200.000 / jam', basePrice: 200000 },
         ],
-        operatingHours: '06:00 - 22:00 WIB',
-        contact: '0812-3456-7890',
-        whatsapp: '6281234567890',
-        location: 'Jl. Desa Utama No. 15, Bagja Waluya',
-        terms: ['Booking minimal 1 jam sebelumnya', 'DP 50% untuk konfirmasi booking', 'Pembayaran cash/transfer'],
+        operatingHours: '08:00 - 22:00 WIB',
+        contact: '0813-2403-0282',
+        whatsapp: '081324030282',
+        location: 'Jl.Raya Cihaurbeuti No. 440',
+        terms: ['Booking minimal 2 jam sebelumnya', 'DP 50% untuk konfirmasi booking', 'Pembayaran cash/transfer'],
         calculationType: 'duration',
         unit: 'jam',
     },
@@ -52,17 +52,17 @@ const units: BusinessUnit[] = [
         title: 'Bumi Perkemahan (Buper)',
         icon: Globe,
         imageUrl: 'assets/images/lapang_buper.jpg',
-        highlights: ['Lahan luas dan rindang', 'Cocok untuk event besar seperti perkemahan', 'Fasilitas MCK lengkap', 'Area parkir luas'],
+        highlights: ['Lahan luas dan rindang', 'Cocok untuk event besar seperti perkemahan'],
         pricing: [
             { label: '> 300 Peserta', detail: 'Rp3.000.000 / kegiatan', basePrice: 3000000 },
             { label: '< 300 Peserta', detail: 'Rp2.500.000 / kegiatan', basePrice: 2500000 },
         ],
         operatingHours: '24 Jam (dengan koordinasi)',
-        contact: '0812-3456-7891',
-        whatsapp: '6281234567891',
+        contact: '0813-2403-0282',
+        whatsapp: '081324030282',
         location: 'Area Perkemahan Desa, Bagja Waluya',
         terms: ['Booking minimal 1 minggu sebelumnya', 'DP 30% untuk konfirmasi', 'Termasuk fasilitas dasar'],
-        calculationType: 'none', // Harga tetap per kegiatan
+        calculationType: 'none', 
         unit: 'kegiatan',
     },
     {
@@ -80,7 +80,7 @@ const units: BusinessUnit[] = [
         whatsapp: '6281234567892',
         location: 'Berbagai lokasi strategis di Desa',
         terms: ['Kontrak minimal 1 tahun', 'Pembayaran di muka', 'Deposit keamanan Rp500.000'],
-        calculationType: 'none', // Harga tetap per tahun
+        calculationType: 'none',
         unit: 'tahun',
     },
     {
@@ -98,7 +98,7 @@ const units: BusinessUnit[] = [
         whatsapp: '6281234567893',
         location: 'Seluruh area Desa Bagja Waluya',
         terms: ['Pendaftaran dengan KTP', 'Deposit meter Rp200.000', 'Pembayaran bulanan'],
-        calculationType: 'participants', // Menggunakan untuk volume m³
+        calculationType: 'participants',
         unit: 'm³',
     },
     {
@@ -112,7 +112,7 @@ const units: BusinessUnit[] = [
         whatsapp: '6281234567894',
         location: 'Seluruh area Desa Bagja Waluya',
         terms: ['Instalasi gratis', 'Kontrak minimal 6 bulan', 'Pembayaran di awal bulan'],
-        calculationType: 'duration', // Untuk berapa bulan
+        calculationType: 'duration', 
         unit: 'bulan',
     },
 ];
@@ -185,7 +185,7 @@ const UnitUsaha: React.FC = () => {
 
         const pesan = `Halo, saya ingin booking:\n\nNama: ${namaPenyewa}\nUnit: ${selectedUnit?.title}\nPaket: ${selectedPackage.label}${detailQuantity}\nTanggal: ${formattedDate}${detailHarga}`;
 
-        const nomorAdmin = '6287737709694';
+        const nomorAdmin = '6281324030282';
         const encodedPesan = encodeURIComponent(pesan);
         const whatsappURL = `https://wa.me/${nomorAdmin}?text=${encodedPesan}`;
 

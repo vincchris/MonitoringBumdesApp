@@ -43,27 +43,31 @@ export default function KelolaLaporan({ auth, unit_id, laporanKeuangan, paginati
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Kelola Laporan" />
 
-            <div className="rounded-2xl bg-white px-2 py-4">
-                <div className="mb-4 px-6">
-                    <h2 className="text-xl font-semibold text-gray-800">Kelola Laporan Keuangan - Mini Soccer</h2>
+            <div className="rounded-2xl bg-white px-4 py-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-4 px-6">
+                    {/* Kolom kiri: Judul */}
+                    <div className="min-w-[200px] flex-1">
+                        <h2 className="text-xl font-semibold text-gray-800">Kelola Laporan Keuangan - Mini Soccer</h2>
+                    </div>
+
+                    {/* Kolom kanan: Tombol export */}
+                    <div className="flex gap-2">
+                        <a
+                            href={`/unit/${unit_id}/kelolalaporan-minisoc/export-pdf`}
+                            className="rounded-md bg-red-500 px-4 py-2 text-white hover:bg-red-600"
+                        >
+                            Download PDF
+                        </a>
+                        <a
+                            href={`/unit/${unit_id}/kelolalaporan-minisoc/export-excel`}
+                            className="rounded-md bg-green-500 px-4 py-2 text-white hover:bg-green-600"
+                        >
+                            Download Excel
+                        </a>
+                    </div>
                 </div>
 
-                <div className="mb-4 flex justify-end gap-2 px-6">
-                    <a
-                        href={`/unit/${unit_id}/kelolalaporan-minisoc/export-pdf`}
-                        className="rounded-md bg-red-500 px-4 py-2 text-white hover:bg-red-600"
-                    >
-                        Download PDF
-                    </a>
-                    <a
-                        href={`/unit/${unit_id}/kelolalaporan-minisoc/export-excel`}
-                        className="rounded-md bg-green-500 px-4 py-2 text-white hover:bg-green-600"
-                    >
-                        Download Excel
-                    </a>
-                </div>
-
-                <div className="overflow-x-auto rounded-xl border border-gray-200 px-6">
+                <div className="w-full overflow-x-auto rounded-xl border border-gray-200 lg:overflow-x-visible">
                     <table className="min-w-full bg-white text-sm text-black">
                         <thead className="bg-gray-100 font-semibold text-black">
                             <tr>

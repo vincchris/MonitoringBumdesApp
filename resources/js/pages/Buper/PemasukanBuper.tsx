@@ -160,18 +160,7 @@ export default function PemasukanBuper({ user, unit_id, pemasukan, tarifs }: Pro
                 </div>
             )}
 
-            <div className="flex items-center justify-between px-6 pt-6 pb-8 text-black">
-                <h1 className="text-lg font-semibold text-black">Selamat datang, Pengelola Bumi Perkemahan</h1>
-                <div className="flex items-center gap-3">
-                    <img src={user.image || '/assets/images/avatar.png'} alt="User Avatar" className="h-9 w-9 rounded-full object-cover" />
-                    <div className="text-right">
-                        <p className="text-sm font-semibold text-black">{user.name}</p>
-                        <p className="mr-3 text-xs text-black">{user.roles}</p>
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-white px-2 py-4 rounded-2xl">
+            <div className="rounded-2xl bg-white px-2 py-4">
                 <div className="mt-3 mb-4 flex items-center justify-between px-6">
                     <h2 className="text-xl font-semibold text-gray-800">Pemasukan - Bumi perkemahan</h2>
                     <Button onClick={() => setShowModal(true)} className="bg-blue-700 text-white hover:bg-blue-500">
@@ -259,7 +248,7 @@ export default function PemasukanBuper({ user, unit_id, pemasukan, tarifs }: Pro
                     </div>
                 )}
 
-                <div className="my-8 mx-6 overflow-x-auto rounded-xl border border-gray-200">
+                <div className="mx-6 my-8 overflow-x-auto rounded-xl border border-gray-200">
                     <table className="min-w-full bg-white text-sm text-black">
                         <thead className="bg-gray-100 font-semibold text-black">
                             <tr>
