@@ -13,7 +13,7 @@ interface BusinessUnit {
     pricing: {
         label: string;
         detail: string;
-        basePrice: number; 
+        basePrice: number;
     }[];
     operatingHours: string;
     contact: string;
@@ -22,7 +22,7 @@ interface BusinessUnit {
     terms: string[];
     note?: string;
     calculationType: 'duration' | 'participants' | 'none';
-    unit: string; 
+    unit: string;
 }
 
 interface FAQ {
@@ -62,7 +62,7 @@ const units: BusinessUnit[] = [
         whatsapp: '081324030282',
         location: 'Area Perkemahan Desa, Bagja Waluya',
         terms: ['Booking minimal 1 minggu sebelumnya', 'DP 30% untuk konfirmasi', 'Termasuk fasilitas dasar'],
-        calculationType: 'none', 
+        calculationType: 'none',
         unit: 'kegiatan',
     },
     {
@@ -112,7 +112,7 @@ const units: BusinessUnit[] = [
         whatsapp: '6281234567894',
         location: 'Seluruh area Desa Bagja Waluya',
         terms: ['Instalasi gratis', 'Kontrak minimal 6 bulan', 'Pembayaran di awal bulan'],
-        calculationType: 'duration', 
+        calculationType: 'duration',
         unit: 'bulan',
     },
 ];
@@ -424,7 +424,7 @@ const UnitUsaha: React.FC = () => {
                                 <div className="space-y-6 border-t pt-6">
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         {/* Nama Penyewa */}
-                                        <div className="col-span-1 sm:col-span-2">
+                                        <div className="col-span-1 sm:col-span-2 text-black">
                                             <label className="mb-2 block text-sm font-medium text-gray-700">Nama Penyewa *</label>
                                             <input
                                                 type="text"
@@ -453,7 +453,7 @@ const UnitUsaha: React.FC = () => {
                                         )}
 
                                         {/* Tanggal & Waktu */}
-                                        <div className="col-span-1">
+                                        <div className="col-span-1 text-black">
                                             <label className="mb-2 block text-sm font-medium text-gray-700">Tanggal & Waktu *</label>
                                             <DatePicker
                                                 selected={selectedDate}
