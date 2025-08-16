@@ -47,10 +47,16 @@ class DatabaseSeeder extends Seeder
                 'roles' => 'pengelola',
             ],
             [
-                'name' => 'Deddy Supatra',
-                'email' => 'bumdes@gmail.com',
+                'name' => 'H. haris iwan gunawan',
+                'email' => 'KepalaDesa@gmail.com',
                 'password' => Hash::make('123456789'),
                 'roles' => 'kepala_desa',
+            ],
+            [
+                'name' => 'Asep Rohendi',
+                'email' => 'kepalaBumdes@gmail.com',
+                'password' => Hash::make('123456789'),
+                'roles' => 'kepala_bumdes',
             ],
         ];
 

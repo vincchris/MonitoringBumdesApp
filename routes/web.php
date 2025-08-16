@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\Bumdes\AirWeslikController;
-use App\Http\Controllers\Bumdes\BuperController;
-use App\Http\Controllers\Bumdes\InternetDesaController;
-use App\Http\Controllers\Bumdes\KiosController;
-use App\Http\Controllers\Bumdes\MiniSocController;
+use App\Http\Controllers\kepala_bumdes\AirWeslikController;
+use App\Http\Controllers\kepala_desa\BuperController;
+use App\Http\Controllers\kepala_bumdes\InternetDesaController;
+use App\Http\Controllers\kepala_desa\KiosController;
+use App\Http\Controllers\kepala_desa\MiniSocController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -12,7 +12,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\frontend\HomeController;
 use App\Http\Controllers\frontend\UnitUsahaPageController;
-use App\Http\Controllers\Bumdes\UserController;
+use App\Http\Controllers\kepala_desa\UserController;
 
 // Kelola Laporan Controller
 use App\Http\Controllers\frontend\laporanTransparansiController;
@@ -36,13 +36,14 @@ use App\Http\Controllers\backend\Airweslik\PengeluaranAirweslikController;
 use App\Http\Controllers\backend\MiniSoc\DashboardMiniSocController;
 use App\Http\Controllers\backend\Buper\DashboardBuperController;
 use App\Http\Controllers\backend\SewaKios\DashboardSewKiosController;
-use App\Http\Controllers\Bumdes\DashboardBumdesController;
+use App\Http\Controllers\kepala_desa\DashboardKepalaDesaController;
 use App\Http\Controllers\backend\Airweslik\DashboardAirweslikController;
 use App\Http\Controllers\backend\Internetdesa\DashboardInterDesaController;
 
 use App\Http\Controllers\backend\MiniSoc\PengeluaranMiniSocController;
 use App\Http\Controllers\backend\SewaKios\PengeluaranSewKiosController;
-use App\Http\Controllers\Bumdes\MiniSocContoller;
+use App\Http\Controllers\kepala_bumdes\DashboardKepalaBumdesController;
+use App\Http\Controllers\kepala_desa\MiniSocContoller;
 
 // =============================
 // Public Routes
@@ -147,24 +148,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
     // ==============================================
-    // Route Kepala desa / bumdes (Dashboard utama)
+    // Route Kepala desa
     // ==============================================
 
-    Route::get('/dashboard-KepalaBumdes', [DashboardBumdesController::class, 'index'])->name('dashboard.bumdes');
-    Route::post('/update-saldo-awal', [DashboardBumdesController::class, 'updateSaldoAwal'])->name('saldo-awal.update');
+    Route::get('/dashboard-KepalaDesa', [DashboardKepalaDesaController::class, 'index'])->name('dashboard.kepalaDesa');
+    Route::get('/dashboard-kepalaBumdes', [DashboardKepalaBumdesController::class, 'index'])->name('dashboard.kepalaBumdes');
+    Route::post('/update-saldo-awal', [DashboardKepalaDesaController::class, 'updateSaldoAwal'])->name('saldo-awal.update');
     Route::get('user', [UserController::class, 'index']);
     Route::resource('/admin/users', UserController::class)->except(['create', 'edit']);
 
     // =============================
-    // Route Bumdes Minisoc
+    // Route kepala_desa Minisoc
     // =============================
 
     Route::resource('MiniSoccer', MiniSocController::class);
     Route::prefix('MiniSoccer')->name('minisoc.')->controller(MiniSocController::class)->group(function () {
-    Route::get('/download-pdf/{bulan}', 'downloadPdfDetail')->name('downloadPdfDetail');
-    Route::get('/download-excel/{bulan}', 'downloadExcelDetail')->name('downloadExcelDetail');
+        Route::get('/download-pdf/{bulan}', 'downloadPdfDetail')->name('downloadPdfDetail');
+        Route::get('/download-excel/{bulan}', 'downloadExcelDetail')->name('downloadExcelDetail');
     });
-    
+
     Route::prefix('unit/{unitId}/minisoc')
         ->as('minisoc.')
         ->controller(MiniSocController::class)
@@ -182,7 +184,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
     // =============================
-    // Route Bumdes Buper
+    // Route kepala_desa Buper
     // =============================
 
     Route::resource('Buper', BuperController::class);
@@ -203,7 +205,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
     // =============================
-    // Route BUMDes Kios
+    // Route kepala_desa Kios
     // =============================
     Route::resource('Kios', KiosController::class);
     Route::prefix('unit/{unitId}/kios')
@@ -223,9 +225,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
     // =============================
-    // Route BUMDes Air Weslik
+    // Route Kepala bumdes Air Weslik
     // =============================
-    Route::resource('Airweslik', AirWeslikController::class);
+    Route::resource('airweslik', AirWeslikController::class);
     Route::prefix('unit/{unitId}/airweslik')
         ->as('airweslik.')
         ->controller(AirWeslikController::class)
@@ -242,7 +244,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
     // =============================
-    // Route BUMDes Internet Desa
+    // Route Kepala bumdes Internet Desa
     // =============================
     Route::resource('InterDesa', InternetDesaController::class);
     Route::prefix('unit/{unitId}/interdesa')

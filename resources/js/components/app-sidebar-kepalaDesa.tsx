@@ -1,16 +1,16 @@
 import { NavFooter } from '@/components/nav-footer';
-import { NavMain } from '@/components/nav-main-bumdes';
+import NavMainKepalaDesa from '@/components/nav-main-kepala-desa';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { LayoutGrid, ArrowDown, ArrowUp, BookOpenCheck, LogOut,Volleyball } from 'lucide-react';
+import { ArrowDown, BookOpenCheck, LayoutGrid, LogOut, Volleyball } from 'lucide-react';
 import AppLogo from './app-logo';
 
-const mainNavItems: NavItem[] = [
+export const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: '/dashboard-KepalaBumdes',
+        href: '/dashboard-KepalaDesa',
         icon: LayoutGrid,
     },
     {
@@ -34,24 +34,13 @@ const mainNavItems: NavItem[] = [
         icon: BookOpenCheck,
     },
     {
-        title: 'Unit Usaha Air Weslik',
-        href: '/Airweslik',
-        icon: BookOpenCheck,
-    },
-    {
-        title: 'Unit Usaha Internet Desa',
-        href: '/InternetDesa',
-        icon: BookOpenCheck,
-    },
-    {
         title: 'Keluar',
         href: '/Login',
         icon: LogOut,
     },
 ];
 
-const footerNavItems: NavItem[] = [
-];
+const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
     return (
@@ -69,7 +58,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMainKepalaDesa />
             </SidebarContent>
 
             <SidebarFooter>

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Bumdes;
+namespace App\Http\Controllers\kepala_desa;
 
 use App\Http\Controllers\Controller;
 use App\Models\BalanceHistory;
@@ -15,22 +15,19 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
-class DashboardBumdesController extends Controller
+class DashboardKepalaDesaController extends Controller
 {
+    // Target hanya unit 1, 2, dan 3
+    private const TARGET_UNIT_IDS = [1, 2, 3];
+
     public function index()
     {
         $user = Auth::user();
-
-        // Ambil semua unit dari tabel unit (untuk kepala desa)
-        $unitId = Unit::pluck('id_units')->toArray();
-
-        if (empty($unitId)) {
-            abort(404, 'Tidak ada unit usaha yang terdaftar.');
-        }
+        $unitId = self::TARGET_UNIT_IDS;
 
         $dashboardData = $this->getDashboardData($unitId);
 
-        return Inertia::render('Bumdes/DashboardBumdes', [
+        return Inertia::render('kepala_desa/DashboardKepalaDesa', [
             'unit_id' => $unitId,
             'auth' => [
                 'user' => $user->only(['id_users', 'name', 'email', 'roles'])
@@ -39,16 +36,11 @@ class DashboardBumdesController extends Controller
         ]);
     }
 
-
     // API endpoint untuk real-time data
     public function getDashboardDataApi($unitId)
     {
-        $user = Auth::user()->load('units');
-        $unitId = $user->units->pluck('id_units')->toArray();
-
-        if (empty($unitId)) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
+        // Override dengan target unit IDs
+        $unitId = self::TARGET_UNIT_IDS;
 
         $dashboardData = $this->getDashboardData($unitId);
 
@@ -60,9 +52,12 @@ class DashboardBumdesController extends Controller
 
     private function getDashboardData($unitId)
     {
+        // Override unitId dengan target units
+        $unitId = self::TARGET_UNIT_IDS;
+
         // Cache key untuk dashboard data
         $unitIdString = implode(',', $unitId);
-        $cacheKey = "dashboard_bumdes_data_" . md5($unitIdString);
+        $cacheKey = "dashboard_kepala_desa_data_" . md5($unitIdString);
 
         // Check if data is cached and still fresh (cache for 30 seconds)
         if (Cache::has($cacheKey)) {
@@ -76,7 +71,7 @@ class DashboardBumdesController extends Controller
         $today = Carbon::today();
         $thisMonth = Carbon::now()->startOfMonth();
 
-        // Pendapatan bulan ini dari semua unit
+        // Pendapatan bulan ini dari unit 1, 2, dan 3 saja
         $pendapatanBulanIni = Income::whereHas('rent.tarif.unit', function ($query) use ($unitId) {
             $query->whereIn('id_units', $unitId);
         })
@@ -85,7 +80,7 @@ class DashboardBumdesController extends Controller
             ->get()
             ->sum(fn($income) => $income->rent->total_bayar ?? 0);
 
-        // Pengeluaran bulan ini dari semua unit
+        // Pengeluaran bulan ini dari unit 1, 2, dan 3 saja
         $pengeluaranBulanIni = Expense::whereIn('unit_id', $unitId)
             ->where('created_at', '>=', $thisMonth)
             ->sum('nominal');
@@ -112,7 +107,7 @@ class DashboardBumdesController extends Controller
     public static function clearDashboardCache($unitId)
     {
         if ($unitId) {
-            $cacheKey = "dashboard_bumdes_data_{$unitId}" . md5(implode(',', $unitId));
+            $cacheKey = "dashboard_kepala_desa_data_{$unitId}" . md5(implode(',', $unitId));
             Cache::forget($cacheKey);
         } else {
             // Clear all dashboard cache if no specific units
@@ -124,7 +119,7 @@ class DashboardBumdesController extends Controller
     {
         $totalBalance = 0;
 
-        foreach ($unitIds as $unitId) {
+        foreach (self::TARGET_UNIT_IDS as $unitId) {
             $balance = BalanceHistory::where('unit_id', $unitId)->latest()->value('saldo_sekarang')
                 ?? InitialBalance::where('unit_id', $unitId)->value('nominal')
                 ?? 0;
@@ -137,10 +132,10 @@ class DashboardBumdesController extends Controller
     private function getUnitBalances($unitIds)
     {
         $histories = BalanceHistory::with(['unit.initialBalance'])
-            ->whereIn('unit_id', $unitIds)
+            ->whereIn('unit_id', self::TARGET_UNIT_IDS)
             ->latest()
             ->get()
-            ->unique('unit_id'); // ambil hanya saldo terbaru per unit
+            ->unique('unit_id');
 
         $balances = [];
 
@@ -152,15 +147,50 @@ class DashboardBumdesController extends Controller
                 'unit_name'       => $unit->unit_name ?? 'Unit ' . $unit->id_units,
                 'initial_balance' => $unit->initialBalance->nominal ?? 0,
                 'latest_balance'  => $history->saldo_sekarang ?? 0,
-                'balance'         => $history->saldo_sekarang ?? 0, // bisa diganti jadi $initial kalau perlu
+                'balance'         => $history->saldo_sekarang ?? 0,
             ];
         }
+
+        // Handle jika unit 1, 2, atau 3 tidak memiliki balance history
+        $existingUnitIds = collect($balances)->pluck('unit_id')->toArray();
+        $missingUnitIds = array_diff(self::TARGET_UNIT_IDS, $existingUnitIds);
+
+        foreach ($missingUnitIds as $missingId) {
+            $unit = Unit::with('initialBalance')->where('id_units', $missingId)->first();
+
+            if ($unit) {
+                $balances[] = [
+                    'unit_id'         => $unit->id_units,
+                    'unit_name'       => $unit->unit_name ?? 'Unit ' . $unit->id_units,
+                    'initial_balance' => $unit->initialBalance->nominal ?? 0,
+                    'latest_balance'  => $unit->initialBalance->nominal ?? 0,
+                    'balance'         => $unit->initialBalance->nominal ?? 0,
+                ];
+            } else {
+                // Jika unit tidak ada, buat entry kosong
+                $balances[] = [
+                    'unit_id'         => $missingId,
+                    'unit_name'       => 'Unit ' . $missingId,
+                    'initial_balance' => 0,
+                    'latest_balance'  => 0,
+                    'balance'         => 0,
+                ];
+            }
+        }
+
+        // Sort berdasarkan unit_id
+        usort($balances, function ($a, $b) {
+            return $a['unit_id'] <=> $b['unit_id'];
+        });
 
         return $balances;
     }
 
     private function getMonthlyPendapatan($unitId)
     {
+        // Override dengan target unit IDs
+        $unitId = self::TARGET_UNIT_IDS;
+
         $data = [];
         $startDate = Carbon::now()->subMonths(5)->startOfMonth();
 
@@ -193,6 +223,11 @@ class DashboardBumdesController extends Controller
             'nominal' => 'required|numeric|min:0',
         ]);
 
+        // Validasi hanya untuk unit 1, 2, dan 3
+        if (!in_array($validated['id_unit'], self::TARGET_UNIT_IDS)) {
+            return back()->withErrors(['error' => 'Akses ditolak. Hanya unit 1, 2, dan 3 yang diizinkan.']);
+        }
+
         try {
             DB::beginTransaction();
 
@@ -222,9 +257,11 @@ class DashboardBumdesController extends Controller
         }
     }
 
-
     private function getMonthlyPengeluaran($unitId)
     {
+        // Override dengan target unit IDs
+        $unitId = self::TARGET_UNIT_IDS;
+
         $data = [];
         $startDate = Carbon::now()->subMonths(5)->startOfMonth();
 
@@ -248,11 +285,14 @@ class DashboardBumdesController extends Controller
 
     private function getStatistics($unitId)
     {
+        // Override dengan target unit IDs
+        $unitId = self::TARGET_UNIT_IDS;
+
         $thisMonth = Carbon::now()->startOfMonth();
         $lastMonthStart = Carbon::now()->subMonth()->startOfMonth();
         $lastMonthEnd = Carbon::now()->subMonth()->endOfMonth();
 
-        // Pendapatan bulan ini dan bulan lalu
+        // Pendapatan bulan ini dan bulan lalu dari unit 1, 2, dan 3 saja
         $pendapatanBulanIni = Income::whereHas('rent.tarif.unit', function ($q) use ($unitId) {
             $q->whereIn('id_units', $unitId);
         })
@@ -269,7 +309,7 @@ class DashboardBumdesController extends Controller
             ->get()
             ->sum(fn($income) => $income->rent->total_bayar ?? 0);
 
-        // Pengeluaran bulan ini dan bulan lalu
+        // Pengeluaran bulan ini dan bulan lalu dari unit 1, 2, dan 3 saja
         $pengeluaranBulanIni = Expense::whereIn('unit_id', $unitId)
             ->where('created_at', '>=', $thisMonth)
             ->sum('nominal');

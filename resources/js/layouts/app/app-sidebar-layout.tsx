@@ -2,12 +2,14 @@ import { usePage } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 
+import NavMainKepalaBumdes from '@/components/layout_kepala_bumdes/nav-main-kepalaBumdes';
 import NavMainAirweslik from '@/components/nav-main-airweslik';
-import NavMainBumdes from '@/components/nav-main-bumdes';
 import NavMainBuper from '@/components/nav-main-buper';
 import NavMainInterdesa from '@/components/nav-main-interdesa';
 import NavMainMiniSoc from '@/components/nav-main-minisoc';
 import NavMainSewaKios from '@/components/nav-main-sewakios';
+
+import NavMainKepalaDesa from '@/components/nav-main-kepala-desa';
 
 export default function AppSidebarLayout({ children }: { children: React.ReactNode }) {
     const { props } = usePage<{ unit_id?: number; auth?: { user?: { name: string; roles: string; image?: string } } }>();
@@ -18,6 +20,19 @@ export default function AppSidebarLayout({ children }: { children: React.ReactNo
     const toggleSidebar = () => setSidebarOpen((prev) => !prev);
 
     const getNavComponent = () => {
+        console.log('Getting nav component for:', { roles: user?.roles, unitId });
+
+        if (user?.roles === 'kepala_desa') {
+            console.log('Returning NavMainKepalaDesa');
+            return <NavMainKepalaDesa />;
+        }
+
+        if (user?.roles === 'kepala_bumdes') {
+            console.log('Returning NavMainKepalaBumdes');
+            return <NavMainKepalaBumdes />;
+        }
+
+        // Default: pengelola unit
         switch (unitId) {
             case 1:
                 return <NavMainMiniSoc />;
@@ -30,7 +45,7 @@ export default function AppSidebarLayout({ children }: { children: React.ReactNo
             case 5:
                 return <NavMainInterdesa />;
             default:
-                return <NavMainBumdes />;
+                return null; // kalau pengelola tapi gak punya unit
         }
     };
 

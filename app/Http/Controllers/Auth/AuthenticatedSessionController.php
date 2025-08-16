@@ -35,7 +35,9 @@ class AuthenticatedSessionController extends Controller
         $role = $user->getAttribute('roles');
 
         if ($role === 'kepala_desa') {
-            return redirect()->route('dashboard.bumdes');
+            return redirect()->route('dashboard.kepalaDesa');
+        } elseif ($role === 'kepala_bumdes') {
+            return redirect()->route('dashboard.kepalaBumdes');
         } elseif ($role === 'pengelola') {
             $unit = $user->units()->first();
 

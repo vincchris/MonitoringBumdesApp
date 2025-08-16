@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Bumdes;
+namespace App\Http\Controllers\kepala_desa;
 
 use App\Http\Controllers\Controller;
 use App\Models\{BalanceHistory, Expense, Income, InitialBalance, RentTransaction, Unit};
@@ -10,11 +10,17 @@ use Illuminate\Support\Facades\{Auth, Cache, DB};
 use Inertia\Inertia;
 use App\Models\Tarif;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\DetailLaporanExport;
+use Illuminate\Support\Facades\Log;
 
-class InternetDesaController extends Controller
+
+
+class MiniSocController extends Controller
 {
     use AuthorizesRequests;
-    private const UNIT_ID = 5;
+    private const UNIT_ID = 1;
     private const CACHE_TTL = 3600;
     private const DEFAULT_PER_PAGE = 10;
 
@@ -31,16 +37,22 @@ class InternetDesaController extends Controller
         $perPage = self::DEFAULT_PER_PAGE;
         $paged = $histories->forPage($page, $perPage)->values();
 
-        return Inertia::render('Bumdes/InterDesa', [
+        return Inertia::render('kepala_desa/MiniSoccer', [
+            // PERBAIKAN: Pastikan struktur data sesuai dengan yang diharapkan AppSidebarLayout
             'auth' => [
-                'user' => Auth::user()->only(['name', 'role', 'image']),
+                'user' => [
+                    'name' => Auth::user()->name,
+                    'roles' => Auth::user()->role ?? 'kepala_desa', 
+                    'image' => Auth::user()->image,
+                ],
             ],
+            'unit_id' => $unitId, // TAMBAHAN: Kirim unit_id
             'laporanKeuangan' => $paged,
             'initial_balance' => $this->getInitialBalance($unitId),
             'tanggal_diubah' => $this->getInitialBalanceTanggal($unitId),
             'currentMonthSummary' => $currentMonthSummary,
             'tarif' => $tarif,
-            'allTarifs' => $allTarifs, // Data semua tarif untuk modal
+            'allTarifs' => $allTarifs,
             'unit' => [
                 'id' => $unit->id,
                 'name' => $unit->name,
@@ -53,6 +65,156 @@ class InternetDesaController extends Controller
                 'last_page' => ceil($histories->count() / $perPage),
             ]
         ]);
+    }
+    public function downloadPdfDetail($bulan)
+    {
+        try {
+            $unitId = self::UNIT_ID;
+
+            // Validasi dan parsing parameter bulan
+            $year = null;
+            $month = null;
+
+            if (strpos($bulan, '-') !== false) {
+                // Format: YYYY-MM
+                [$year, $month] = explode('-', $bulan);
+            } elseif (strlen($bulan) === 6 && is_numeric($bulan)) {
+                // Format: YYYYMM
+                $year = substr($bulan, 0, 4);
+                $month = substr($bulan, 4, 2);
+            } else {
+                // Coba parse sebagai string bulan
+                try {
+                    $date = Carbon::parse($bulan);
+                    $year = $date->year;
+                    $month = $date->month;
+                } catch (\Exception $e) {
+                    return back()->withErrors(['error' => 'Format bulan tidak valid: ' . $bulan]);
+                }
+            }
+
+            // Validasi year dan month
+            if (!$year || !$month || !is_numeric($year) || !is_numeric($month)) {
+                return back()->withErrors(['error' => 'Parameter bulan tidak valid']);
+            }
+
+            // Pastikan month dalam format 2 digit
+            $month = str_pad($month, 2, '0', STR_PAD_LEFT);
+
+            $unit = Unit::findOrFail($unitId);
+            $histories = $this->getDetailLaporan($unitId, $year, $month);
+
+            // Debugging: Log data yang akan digunakan
+            Log::info('PDF Data Debug', [
+                'unitId' => $unitId,
+                'year' => $year,
+                'month' => $month,
+                'histories_count' => $histories->count(),
+                'unit' => $unit->toArray()
+            ]);
+
+            $summary = [
+                'totalPendapatan' => $histories->where('jenis', 'Pendapatan')->sum('selisih'),
+                'totalPengeluaran' => $histories->where('jenis', 'Pengeluaran')->sum('selisih'),
+                'selisih' => $histories->where('jenis', 'Pendapatan')->sum('selisih')
+                    - $histories->where('jenis', 'Pengeluaran')->sum('selisih'),
+                'jumlahTransaksi' => $histories->count(),
+            ];
+
+            $data = [
+                'detailLaporan' => $histories->sortByDesc('updated_at')->values(),
+                'bulan' => Carbon::createFromDate($year, $month, 1)->translatedFormat('F Y'),
+                'unit' => $unit,
+                'summary' => $summary,
+                'generated_at' => now()->translatedFormat('l, d F Y H:i') . ' WIB',
+                'generated_by' => Auth::user()->name,
+            ];
+
+            // Debugging: Log data sebelum generate PDF
+            Log::info('PDF Generation Data', [
+                'bulan' => $data['bulan'],
+                'summary' => $summary,
+                'laporan_count' => $data['detailLaporan']->count()
+            ]);
+
+            // Pastikan view ada dan dapat diakses
+            if (!view()->exists('exports.laporan_pdf')) {
+                Log::error('PDF View not found: exports.laporan_pdf');
+                return back()->withErrors(['error' => 'Template PDF tidak ditemukan']);
+            }
+
+            try {
+                $pdf = PDF::loadView('exports.laporan_pdf', $data);
+                $pdf->setPaper('A4', 'landscape');
+
+                // Set timeout untuk PDF generation
+                $pdf->setTimeout(300);
+
+                $filename = "Detail-Transaksi-Mini-Soccer-{$year}-{$month}.pdf";
+
+                // Log sebelum download
+                Log::info('PDF Download attempt', ['filename' => $filename]);
+
+                // Gunakan stream untuk debugging
+                // return $pdf->stream($filename); // Untuk test di browser
+
+                // Untuk download langsung
+                return $pdf->download($filename);
+            } catch (\Exception $pdfError) {
+                Log::error('PDF Generation Error', [
+                    'error' => $pdfError->getMessage(),
+                    'trace' => $pdfError->getTraceAsString()
+                ]);
+                return back()->withErrors(['error' => 'Gagal generate PDF: ' . $pdfError->getMessage()]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error downloading PDF: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'bulan' => $bulan
+            ]);
+            return back()->withErrors(['error' => 'Terjadi kesalahan saat mendownload PDF: ' . $e->getMessage()]);
+        }
+    }
+
+    public function downloadExcelDetail($bulan)
+    {
+        try {
+            $unitId = self::UNIT_ID;
+
+            // Validasi dan parsing parameter bulan (sama seperti PDF)
+            $year = null;
+            $month = null;
+
+            if (strpos($bulan, '-') !== false) {
+                // Format: YYYY-MM
+                [$year, $month] = explode('-', $bulan);
+            } elseif (strlen($bulan) === 6 && is_numeric($bulan)) {
+                // Format: YYYYMM
+                $year = substr($bulan, 0, 4);
+                $month = substr($bulan, 4, 2);
+            } else {
+                // Coba parse sebagai string bulan
+                try {
+                    $date = Carbon::parse($bulan);
+                    $year = $date->year;
+                    $month = $date->month;
+                } catch (\Exception $e) {
+                    return back()->withErrors(['error' => 'Format bulan tidak valid: ' . $bulan]);
+                }
+            }
+
+            // Validasi year dan month
+            if (!$year || !$month || !is_numeric($year) || !is_numeric($month)) {
+                return back()->withErrors(['error' => 'Parameter bulan tidak valid']);
+            }
+
+            $filename = "Detail-Transaksi-Mini-Soccer-{$year}-{$month}.xlsx";
+
+            return Excel::download(new DetailLaporanExport($unitId, $year, $month), $filename);
+        } catch (\Exception $e) {
+            Log::error('Error downloading Excel: ' . $e->getMessage());
+            return back()->withErrors(['error' => 'Terjadi kesalahan saat mendownload Excel']);
+        }
     }
 
     public function storeInitialBalance(Request $request, $unitID)
@@ -68,7 +230,6 @@ class InternetDesaController extends Controller
                 ['nominal' => $validated['nominal']]
             );
 
-            // Hapus cache agar data terbaru bisa dimuat
             Cache::forget("initial_balance_{$unitID}");
         });
 
@@ -93,9 +254,9 @@ class InternetDesaController extends Controller
             'jumlahTransaksi' => $histories->count(),
         ];
 
-        return Inertia::render('Bumdes/DetailLaporan', [
+        return Inertia::render('kepala_desa/DetailLaporan', [
             'auth' => [
-                'user' => Auth::user()->only(['name', 'role', 'image']),
+                'user' => Auth::user()->only(['name', 'roles', 'image']),
             ],
             'bulan' => Carbon::createFromDate($year, $month, 1)->translatedFormat('F Y'),
             'unit' => [
@@ -202,7 +363,6 @@ class InternetDesaController extends Controller
         ];
     }
 
-
     private function getTransactionDescription($item, int $unitId): string
     {
         $tanggal = $item->updated_at->toDateString();
@@ -268,6 +428,7 @@ class InternetDesaController extends Controller
         return '-';
     }
 
+
     private function calculateSelisih($item): int
     {
         return $item->jenis === 'Pendapatan'
@@ -275,7 +436,7 @@ class InternetDesaController extends Controller
             : $item->saldo_sebelum - $item->saldo_sekarang;
     }
 
-    public function storeTarif(Request $request, $unitId)
+    public function storeTarif(Request $request, $unitID)
     {
         $validated = $request->validate([
             'tanggal' => 'required|date',
@@ -283,18 +444,18 @@ class InternetDesaController extends Controller
             'harga_per_unit' => 'required|numeric|min:1',
         ]);
 
-        DB::transaction(function () use ($validated, $unitId) {
+        DB::transaction(function () use ($validated, $unitID) {
             Tarif::create([
-                'unit_id' => $unitId,
-                'satuan' => 'bulan',
+                'unit_id' => $unitID,
+                'satuan' => 'jam',
                 'category_name' => $validated['category_name'],
                 'harga_per_unit' => $validated['harga_per_unit'],
                 'created_at' => $validated['tanggal'],
                 'updated_at' => $validated['tanggal'],
             ]);
 
-            Cache::forget("current_tarif_{$unitId}");
-            Cache::forget("all_tarifs_{$unitId}");
+            Cache::forget("current_tarif_{$unitID}");
+            Cache::forget("all_tarifs_{$unitID}");
         });
 
         return back()->with('info', [
@@ -303,7 +464,7 @@ class InternetDesaController extends Controller
         ]);
     }
 
-    public function updateTarif(Request $request, $unitId, $tarifID)
+    public function updateTarif(Request $request, $unitID, $tarifID)
     {
         $validated = $request->validate([
             'tanggal' => 'required|date',
@@ -311,9 +472,9 @@ class InternetDesaController extends Controller
             'harga_per_unit' => 'required|numeric|min:1',
         ]);
 
-        DB::transaction(function () use ($validated, $unitId, $tarifID) {
+        DB::transaction(function () use ($validated, $unitID, $tarifID) {
             // Perbaikan: Gunakan id_tarif untuk find tarif yang spesifik
-            $tarif = Tarif::where('unit_id', $unitId)
+            $tarif = Tarif::where('unit_id', $unitID)
                 ->where('id_tarif', $tarifID)
                 ->firstOrFail();
 
@@ -324,8 +485,8 @@ class InternetDesaController extends Controller
                 'updated_at' => now(),
             ]);
 
-            Cache::forget("current_tarif_{$unitId}");
-            Cache::forget("all_tarifs_{$unitId}");
+            Cache::forget("current_tarif_{$unitID}");
+            Cache::forget("all_tarifs_{$unitID}");
         });
 
         return back()->with('info', [
@@ -335,19 +496,19 @@ class InternetDesaController extends Controller
     }
 
     // Method baru untuk delete tarif
-    public function deleteTarif(Request $request, $unitId, $tarifID)
+    public function deleteTarif(Request $request, $unitID, $tarifID)
     {
         try {
-            DB::transaction(function () use ($unitId, $tarifID) {
+            DB::transaction(function () use ($unitID, $tarifID) {
                 $tarif = Tarif::where('id_tarif', $tarifID)
-                    ->where('unit_id', $unitId)
+                    ->where('unit_id', $unitID)
                     ->firstOrFail();
 
                 $tarif->delete();
 
                 // Clear cache
-                Cache::forget("current_tarif_{$unitId}");
-                Cache::forget("all_tarifs_{$unitId}");
+                Cache::forget("current_tarif_{$unitID}");
+                Cache::forget("all_tarifs_{$unitID}");
             });
 
             return back()->with('info', [
@@ -382,7 +543,6 @@ class InternetDesaController extends Controller
             ];
         });
     }
-
 
     private function getAllTarifs(int $unitId): array
     {

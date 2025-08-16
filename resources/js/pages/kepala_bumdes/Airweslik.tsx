@@ -249,7 +249,7 @@ const TransactionRow: React.FC<{
     const transactionType = TRANSACTION_TYPES[item.jenis.toLowerCase() as keyof typeof TRANSACTION_TYPES] || TRANSACTION_TYPES.default;
     const Icon = transactionType.icon;
     const handleDetailClick = useCallback(() => {
-        router.visit(route('Airweslik.show', item.bulan));
+        router.visit(route('airweslik.show', item.bulan));
     }, [item.bulan]);
 
     const renderJenisBadge = () => {
@@ -612,7 +612,7 @@ function formatRupiah(value: number): string {
 }
 
 // Main component
-export default function Airweslik() {
+export default function airweslik() {
     const {
         flash,
         laporanKeuangan = [],

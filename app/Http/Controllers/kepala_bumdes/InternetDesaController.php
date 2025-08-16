@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Bumdes;
+namespace App\Http\Controllers\kepala_bumdes;
 
 use App\Http\Controllers\Controller;
 use App\Models\{BalanceHistory, Expense, Income, InitialBalance, RentTransaction, Unit};
@@ -11,10 +11,10 @@ use Inertia\Inertia;
 use App\Models\Tarif;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
-class AirWeslikController extends Controller
+class InternetDesaController extends Controller
 {
     use AuthorizesRequests;
-    private const UNIT_ID = 4;
+    private const UNIT_ID = 5;
     private const CACHE_TTL = 3600;
     private const DEFAULT_PER_PAGE = 10;
 
@@ -24,16 +24,16 @@ class AirWeslikController extends Controller
         $unit = Unit::findOrFail($unitId);
         $histories = $this->getRingkasanLaporanBulanan($unitId);
         $tarif = $this->getCurrentTarif($unitId);
-        $allTarifs = $this->getAllTarifs($unitId); // Tambahan untuk semua data tarif
+        $allTarifs = $this->getAllTarifs($unitId);
         $currentMonthSummary = $this->getCurrentMonthSummary($unitId);
 
         $page = (int) $request->get('page', 1);
         $perPage = self::DEFAULT_PER_PAGE;
         $paged = $histories->forPage($page, $perPage)->values();
 
-        return Inertia::render('Bumdes/Airweslik', [
+        return Inertia::render('kepala_bumdes/InterDesa', [
             'auth' => [
-                'user' => Auth::user()->only(['name', 'role', 'image']),
+                'user' => Auth::user()->only(['name', 'roles', 'image']),
             ],
             'laporanKeuangan' => $paged,
             'initial_balance' => $this->getInitialBalance($unitId),
@@ -93,9 +93,9 @@ class AirWeslikController extends Controller
             'jumlahTransaksi' => $histories->count(),
         ];
 
-        return Inertia::render('Bumdes/DetailLaporan', [
+        return Inertia::render('kepala_bumdes/DetailLaporan', [
             'auth' => [
-                'user' => Auth::user()->only(['name', 'role', 'image']),
+                'user' => Auth::user()->only(['name', 'roles', 'image']),
             ],
             'bulan' => Carbon::createFromDate($year, $month, 1)->translatedFormat('F Y'),
             'unit' => [
@@ -286,7 +286,7 @@ class AirWeslikController extends Controller
         DB::transaction(function () use ($validated, $unitId) {
             Tarif::create([
                 'unit_id' => $unitId,
-                'satuan' => 'm3',
+                'satuan' => 'bulan',
                 'category_name' => $validated['category_name'],
                 'harga_per_unit' => $validated['harga_per_unit'],
                 'created_at' => $validated['tanggal'],

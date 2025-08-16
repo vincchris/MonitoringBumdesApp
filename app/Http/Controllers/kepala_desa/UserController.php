@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Bumdes;
+namespace App\Http\Controllers\kepala_desa;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -41,7 +41,7 @@ class UserController extends Controller
                 ];
             });
 
-        return Inertia::render('Bumdes/User', [
+        return Inertia::render('kepala_desa/User', [
             'user' => $currentUser->only(['id_users', 'name', 'email', 'roles']),
             'users' => $users,
         ]);

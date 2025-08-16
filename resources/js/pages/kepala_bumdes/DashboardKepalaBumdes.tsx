@@ -15,8 +15,8 @@ function formatRupiah(value: number): string {
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Dashboard BUMDes',
-        href: '/dashboard-bumdes',
+        title: 'Dashboard kepala Bumdes',
+        href: '/dashboard-kepalaBumdes',
     },
 ];
 
