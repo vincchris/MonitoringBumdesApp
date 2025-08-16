@@ -155,7 +155,7 @@ export default function DetailLaporanMiniSoccer() {
                     <div className="mb-8">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <Button onClick={handleBack} variant="outline" className="flex items-center gap-2 hover:bg-gray-100">
+                                <Button onClick={handleBack} variant="outline" className="flex items-center gap-2 hover:bg-gray-100 ">
                                     <ArrowLeft className="h-4 w-4" />
                                     Kembali
                                 </Button>
