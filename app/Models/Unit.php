@@ -14,9 +14,10 @@ class Unit extends Model
 
     protected $guarded = ['id_units'];
 
-     public function user()
+    public function users()
     {
-       return $this->belongsToMany(User::class, 'unit_user', 'unit_id', 'user_id');
+        return $this->belongsToMany(User::class, 'unit_user', 'unit_id', 'user_id')
+            ->withTimestamps();
     }
 
     public function tarif()
