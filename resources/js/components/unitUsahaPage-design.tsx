@@ -30,92 +30,15 @@ interface FAQ {
     answer: string;
 }
 
-const units: BusinessUnit[] = [
-    {
-        title: 'Mini Soccer',
-        icon: Volleyball,
-        imageUrl: 'assets/images/lapang_minisoc.jpg',
-        highlights: ['Fasilitas: Lapangan rumput sintetis', 'Bonus: Air mineral gelas 1 dus', 'Parkir luas tersedia'],
-        pricing: [
-            { label: 'Umum', detail: 'Rp250.000 / jam', basePrice: 250000 },
-            { label: 'Member', detail: 'Rp200.000 / jam', basePrice: 200000 },
-        ],
-        operatingHours: '08:00 - 22:00 WIB',
-        contact: '0813-2403-0282',
-        whatsapp: '081324030282',
-        location: 'Jl.Raya Cihaurbeuti No. 440',
-        terms: ['Booking minimal 2 jam sebelumnya', 'DP 50% untuk konfirmasi booking', 'Pembayaran cash/transfer'],
-        calculationType: 'duration',
-        unit: 'jam',
-    },
-    {
-        title: 'Bumi Perkemahan (Buper)',
-        icon: Globe,
-        imageUrl: 'assets/images/lapang_buper.jpg',
-        highlights: ['Lahan luas dan rindang', 'Cocok untuk event besar seperti perkemahan'],
-        pricing: [
-            { label: '> 300 Peserta', detail: 'Rp3.000.000 / kegiatan', basePrice: 3000000 },
-            { label: '< 300 Peserta', detail: 'Rp2.500.000 / kegiatan', basePrice: 2500000 },
-        ],
-        operatingHours: '24 Jam (dengan koordinasi)',
-        contact: '0813-2403-0282',
-        whatsapp: '081324030282',
-        location: 'Area Perkemahan Desa, Bagja Waluya',
-        terms: ['Booking minimal 1 minggu sebelumnya', 'DP 30% untuk konfirmasi', 'Termasuk fasilitas dasar'],
-        calculationType: 'none',
-        unit: 'kegiatan',
-    },
-    {
-        title: 'Kios',
-        icon: ShoppingBag,
-        imageUrl: 'assets/images/Kios2.jpg',
-        highlights: ['Lokasi strategis', 'Sewa tahunan', 'Akses mudah dari jalan utama', 'Listrik dan air tersedia'],
-        pricing: [
-            { label: 'Depan Puskesmas', detail: 'Rp3.000.000 / tahun', basePrice: 3000000 },
-            { label: 'Depan Kantor Desa', detail: 'Rp1.500.000 / tahun', basePrice: 1500000 },
-            { label: 'Lapang Kuliner atas Buper', detail: 'Rp750.000 / tahun', basePrice: 750000 },
-        ],
-        operatingHours: 'Sesuai kesepakatan',
-        contact: '0812-3456-7892',
-        whatsapp: '6281234567892',
-        location: 'Berbagai lokasi strategis di Desa',
-        terms: ['Kontrak minimal 1 tahun', 'Pembayaran di muka', 'Deposit keamanan Rp500.000'],
-        calculationType: 'none',
-        unit: 'tahun',
-    },
-    {
-        title: 'Air Weslik',
-        icon: Waves,
-        imageUrl: 'https://cdn.pixabay.com/photo/2018/03/19/15/04/faucet-3240211_1280.jpg',
-        highlights: ['Distribusi air bersih untuk berbagai sektor', 'Kualitas air terjamin', 'Pelayanan 24 jam', 'Sistem meteran digital'],
-        pricing: [
-            { label: 'Fasilitas Umum', detail: 'Rp600 / m³', basePrice: 600 },
-            { label: 'Perumahan', detail: 'Rp800 / m³', basePrice: 800 },
-            { label: 'Perusahaan', detail: 'Rp1.500 / m³', basePrice: 1500 },
-        ],
-        operatingHours: '24 Jam',
-        contact: '0812-3456-7893',
-        whatsapp: '6281234567893',
-        location: 'Seluruh area Desa Bagja Waluya',
-        terms: ['Pendaftaran dengan KTP', 'Deposit meter Rp200.000', 'Pembayaran bulanan'],
-        calculationType: 'participants',
-        unit: 'm³',
-    },
-    {
-        title: 'Internet Desa',
-        icon: Building2,
-        imageUrl: 'https://cdn.pixabay.com/photo/2014/08/09/21/53/network-connection-414415_960_720.jpg',
-        highlights: ['Internet murah untuk warga', 'Stabil dan terjangkau', 'Kecepatan hingga 20 Mbps', 'Support teknis lokal'],
-        pricing: [{ label: 'Langganan Bulanan', detail: 'Rp125.000 / bulan', basePrice: 125000 }],
-        operatingHours: '24 Jam',
-        contact: '0812-3456-7894',
-        whatsapp: '6281234567894',
-        location: 'Seluruh area Desa Bagja Waluya',
-        terms: ['Instalasi gratis', 'Kontrak minimal 6 bulan', 'Pembayaran di awal bulan'],
-        calculationType: 'duration',
-        unit: 'bulan',
-    },
-];
+interface Tarif {
+    label: string;
+    detail: string;
+    basePrice: number;
+}
+
+type Props = {
+    tarifs: Record<string, Tarif[]>;
+};
 
 const faqs: FAQ[] = [
     {
@@ -136,7 +59,82 @@ const faqs: FAQ[] = [
     },
 ];
 
-const UnitUsaha: React.FC = () => {
+const UnitUsaha: React.FC<Props> = ({ tarifs }) => {
+    // ====== DATA UNIT (pricing diisi dari DB via props `tarifs`) ======
+    const units: BusinessUnit[] = [
+        {
+            title: 'Mini Soccer',
+            icon: Volleyball,
+            imageUrl: 'assets/images/lapang_minisoc.jpg',
+            highlights: ['Fasilitas: Lapangan rumput sintetis', 'Bonus: Air mineral gelas 1 dus', 'Parkir luas tersedia'],
+            pricing: tarifs['1'] || [],
+            operatingHours: '08:00 - 22:00 WIB',
+            contact: '0813-2403-0282',
+            whatsapp: '081324030282',
+            location: 'Jl.Raya Cihaurbeuti No. 440',
+            terms: ['Booking minimal 2 jam sebelumnya', 'DP 50% untuk konfirmasi booking', 'Pembayaran cash/transfer'],
+            calculationType: 'duration',
+            unit: 'jam',
+        },
+        {
+            title: 'Bumi Perkemahan (Buper)',
+            icon: Globe,
+            imageUrl: 'assets/images/lapang_buper.jpg',
+            highlights: ['Lahan luas dan rindang', 'Cocok untuk event besar seperti perkemahan'],
+            pricing: tarifs['2'] || [],
+            operatingHours: '24 Jam (dengan koordinasi)',
+            contact: '0813-2403-0282',
+            whatsapp: '081324030282',
+            location: 'Area Perkemahan Desa, Bagja Waluya',
+            terms: ['Booking minimal 1 minggu sebelumnya', 'DP 30% untuk konfirmasi', 'Termasuk fasilitas dasar'],
+            calculationType: 'none',
+            unit: 'kegiatan',
+        },
+        {
+            title: 'Kios',
+            icon: ShoppingBag,
+            imageUrl: 'assets/images/Kios2.jpg',
+            highlights: ['Lokasi strategis', 'Sewa tahunan', 'Akses mudah dari jalan utama', 'Listrik dan air tersedia'],
+            pricing: tarifs['3'] || [],
+            operatingHours: 'Sesuai kesepakatan',
+            contact: '0812-3456-7892',
+            whatsapp: '6281234567892',
+            location: 'Berbagai lokasi strategis di Desa',
+            terms: ['Kontrak minimal 1 tahun', 'Pembayaran di muka', 'Deposit keamanan Rp500.000'],
+            calculationType: 'none',
+            unit: 'tahun',
+        },
+        {
+            title: 'Air Weslik',
+            icon: Waves,
+            imageUrl: 'https://cdn.pixabay.com/photo/2018/03/19/15/04/faucet-3240211_1280.jpg',
+            highlights: ['Distribusi air bersih untuk berbagai sektor', 'Kualitas air terjamin', 'Pelayanan 24 jam', 'Sistem meteran digital'],
+            pricing: tarifs['4'] || [],
+            operatingHours: '24 Jam',
+            contact: '0812-3456-7893',
+            whatsapp: '6281234567893',
+            location: 'Seluruh area Desa Bagja Waluya',
+            terms: ['Pendaftaran dengan KTP', 'Deposit meter Rp200.000', 'Pembayaran bulanan'],
+            calculationType: 'participants',
+            unit: 'm³',
+        },
+        {
+            title: 'Internet Desa',
+            icon: Building2,
+            imageUrl: 'https://cdn.pixabay.com/photo/2014/08/09/21/53/network-connection-414415_960_720.jpg',
+            highlights: ['Internet murah untuk warga', 'Stabil dan terjangkau', 'Kecepatan hingga 20 Mbps', 'Support teknis lokal'],
+            pricing: tarifs['5'] || [],
+            operatingHours: '24 Jam',
+            contact: '0812-3456-7894',
+            whatsapp: '6281234567894',
+            location: 'Seluruh area Desa Bagja Waluya',
+            terms: ['Instalasi gratis', 'Kontrak minimal 6 bulan', 'Pembayaran di awal bulan'],
+            calculationType: 'duration',
+            unit: 'bulan',
+        },
+    ];
+
+    // ====== STATE & LOGIC ======
     const [selectedUnit, setSelectedUnit] = useState<BusinessUnit | null>(null);
     const [selectedPackage, setSelectedPackage] = useState<{ label: string; detail: string; basePrice: number } | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -144,7 +142,6 @@ const UnitUsaha: React.FC = () => {
     const [quantity, setQuantity] = useState<string>('1');
     const [totalPrice, setTotalPrice] = useState<number>(0);
 
-    // Hitung total harga otomatis
     useEffect(() => {
         if (selectedPackage && selectedUnit) {
             const qty = parseInt(quantity) || 1;
@@ -153,6 +150,8 @@ const UnitUsaha: React.FC = () => {
             } else {
                 setTotalPrice(selectedPackage.basePrice);
             }
+        } else {
+            setTotalPrice(0);
         }
     }, [selectedPackage, quantity, selectedUnit]);
 
@@ -162,19 +161,19 @@ const UnitUsaha: React.FC = () => {
 
     const handleSubmit = () => {
         const toastId = undefined;
-        if (!selectedPackage || !selectedDate || !namaPenyewa) {
+        if (!selectedUnit || !selectedPackage || !selectedDate || !namaPenyewa) {
             toast.error('Mohon lengkapi semua data booking', { id: toastId });
             return;
         }
 
         let detailQuantity = '';
-        if (selectedUnit?.calculationType === 'duration' || selectedUnit?.calculationType === 'participants') {
+        if (selectedUnit.calculationType === 'duration' || selectedUnit.calculationType === 'participants') {
             detailQuantity = `\n${selectedUnit.calculationType === 'duration' ? 'Durasi' : 'Jumlah'}: ${quantity} ${selectedUnit.unit}`;
         }
 
         const detailHarga = `\nTotal Harga: Rp${totalPrice.toLocaleString('id-ID')}`;
 
-        const formattedDate = selectedDate?.toLocaleString('id-ID', {
+        const formattedDate = selectedDate.toLocaleString('id-ID', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
@@ -183,12 +182,11 @@ const UnitUsaha: React.FC = () => {
             hour12: false,
         });
 
-        const pesan = `Halo, saya ingin booking:\n\nNama: ${namaPenyewa}\nUnit: ${selectedUnit?.title}\nPaket: ${selectedPackage.label}${detailQuantity}\nTanggal: ${formattedDate}${detailHarga}`;
+        const pesan = `Halo, saya ingin booking:\n\nNama: ${namaPenyewa}\nUnit: ${selectedUnit.title}\nPaket: ${selectedPackage.label}${detailQuantity}\nTanggal: ${formattedDate}${detailHarga}`;
 
-        const nomorAdmin = '6281324030282';
+        const nomorAdmin = '6287737709694';
         const encodedPesan = encodeURIComponent(pesan);
         const whatsappURL = `https://wa.me/${nomorAdmin}?text=${encodedPesan}`;
-
         window.open(whatsappURL, '_blank');
 
         // Reset form
@@ -244,14 +242,13 @@ const UnitUsaha: React.FC = () => {
                                     key={idx}
                                     className="group transform overflow-hidden rounded-3xl bg-white shadow-lg transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl"
                                 >
-                                    {/* Image Container with fixed aspect ratio */}
+                                    {/* Image */}
                                     <div className="relative aspect-video overflow-hidden">
                                         <img
                                             src={unit.imageUrl}
                                             alt={unit.title}
                                             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                                         />
-
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                                         <div className="absolute top-4 left-4 rounded-full bg-white/90 p-3 backdrop-blur-sm">
                                             <Icon className="h-6 w-6 text-blue-600" />
@@ -285,6 +282,7 @@ const UnitUsaha: React.FC = () => {
                                                     <span className="text-sm font-bold text-blue-700">{price.detail}</span>
                                                 </div>
                                             ))}
+                                            {unit.pricing.length === 0 && <div className="text-sm text-gray-500">Tarif belum tersedia.</div>}
                                         </div>
 
                                         {/* Quick Info */}
@@ -299,7 +297,7 @@ const UnitUsaha: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        {/* CTA Buttons */}
+                                        {/* CTA */}
                                         <div className="space-y-3">
                                             <button
                                                 onClick={() => setSelectedUnit(unit)}
@@ -316,7 +314,7 @@ const UnitUsaha: React.FC = () => {
                 </div>
             </section>
 
-            {/* FAQ Section */}
+            {/* FAQ */}
             <section className="bg-white py-20">
                 <div className="mx-auto max-w-4xl px-6">
                     <div className="mb-12 text-center">
@@ -346,7 +344,7 @@ const UnitUsaha: React.FC = () => {
                 </div>
             </section>
 
-            {/* Modal */}
+            {/* MODAL */}
             {selectedUnit && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
                     <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
@@ -368,7 +366,10 @@ const UnitUsaha: React.FC = () => {
                             <div className="absolute bottom-6 left-6 text-white">
                                 <div className="mb-2 flex items-center gap-3">
                                     <div className="rounded-full bg-white/20 p-2 backdrop-blur-sm">
-                                        <selectedUnit.icon className="h-6 w-6" />
+                                        {(() => {
+                                            const SelectedIcon = selectedUnit.icon;
+                                            return <SelectedIcon className="h-6 w-6" />;
+                                        })()}
                                     </div>
                                     <h2 className="text-3xl font-bold">{selectedUnit.title}</h2>
                                 </div>
@@ -390,7 +391,7 @@ const UnitUsaha: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Clickable Pricing Packages */}
+                            {/* Paket */}
                             <div className="mb-6">
                                 <h3 className="mb-3 text-lg font-semibold text-gray-900">Pilih Paket</h3>
                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -405,9 +406,7 @@ const UnitUsaha: React.FC = () => {
                                             }`}
                                         >
                                             <div
-                                                className={`font-semibold ${
-                                                    selectedPackage?.label === pkg.label ? 'text-blue-700' : 'text-gray-800'
-                                                }`}
+                                                className={`font-semibold ${selectedPackage?.label === pkg.label ? 'text-blue-700' : 'text-gray-800'}`}
                                             >
                                                 {pkg.label}
                                             </div>
@@ -419,12 +418,11 @@ const UnitUsaha: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Booking Form */}
+                            {/* Form Booking */}
                             {selectedPackage && (
                                 <div className="space-y-6 border-t pt-6">
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                        {/* Nama Penyewa */}
-                                        <div className="col-span-1 sm:col-span-2 text-black">
+                                        <div className="col-span-1 text-black sm:col-span-2">
                                             <label className="mb-2 block text-sm font-medium text-gray-700">Nama Penyewa *</label>
                                             <input
                                                 type="text"
@@ -435,7 +433,6 @@ const UnitUsaha: React.FC = () => {
                                             />
                                         </div>
 
-                                        {/* Quantity (Jika diperlukan) */}
                                         {(selectedUnit.calculationType === 'duration' || selectedUnit.calculationType === 'participants') && (
                                             <div className="col-span-1">
                                                 <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -452,7 +449,6 @@ const UnitUsaha: React.FC = () => {
                                             </div>
                                         )}
 
-                                        {/* Tanggal & Waktu */}
                                         <div className="col-span-1 text-black">
                                             <label className="mb-2 block text-sm font-medium text-gray-700">Tanggal & Waktu *</label>
                                             <DatePicker
@@ -472,7 +468,6 @@ const UnitUsaha: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    {/* Total Harga */}
                                     <div className="rounded-lg bg-blue-50 p-4">
                                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                                             <span className="font-medium text-gray-700">Total Harga:</span>
@@ -487,11 +482,10 @@ const UnitUsaha: React.FC = () => {
                                         )}
                                     </div>
 
-                                    {/* Action Buttons */}
                                     <div className="flex flex-col gap-3 pt-4 sm:flex-row">
                                         <button
                                             type="button"
-                                            className="w-full flex-1 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 sm:w-auto"
+                                            className="w-full flex-1 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 focus:outline-none sm:w-auto"
                                             onClick={handleSubmit}
                                         >
                                             Konfirmasi Booking
@@ -512,7 +506,7 @@ const UnitUsaha: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Terms & Contact Info */}
+                            {/* Terms & Contact */}
                             <div className="mt-6 space-y-4 border-t pt-6">
                                 <div>
                                     <h4 className="mb-2 font-semibold text-gray-900">Syarat & Ketentuan:</h4>

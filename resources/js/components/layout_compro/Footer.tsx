@@ -68,7 +68,7 @@ const Footer: React.FC = () => {
         },
         {
             name: 'Jam Operasional',
-            value: 'Senin - Jumat: 08:00 - 16:00 | Sabtu: 08:00 - 12:00',
+            value: 'Senin - Jumat: 08:00 - 14:00',
             href: '#',
             icon: Clock,
         },
