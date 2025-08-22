@@ -55,6 +55,8 @@ interface BookingWindow {
     end: Date;
 }
 
+type FilterMode = 'day' | 'month';
+
 // ============ CONSTANTS ============
 const UNIT_ID_MAP: Record<string, number> = {
     'Mini Soccer': 1,
@@ -106,6 +108,16 @@ const roundTo30Minutes = (date: Date): Date => {
     return rounded;
 };
 
+const isToday = (date: Date): boolean => {
+    const now = new Date();
+    return date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+};
+
+const isThisMonth = (date: Date): boolean => {
+    const now = new Date();
+    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+};
+
 const getUnitIdByTitle = (title: string): number | null => {
     return UNIT_ID_MAP[title] || null;
 };
@@ -119,7 +131,7 @@ const getBookingWindow = (booking: Booking): BookingWindow | null => {
     const start = roundTo30Minutes(startDate);
     const durationHours = Math.max(1, Number(booking.nominal) || 1);
     const end = new Date(start);
-    end.setMinutes(end.getMinutes() + Math.round(durationHours * 60));
+    end.setHours(start.getHours() + durationHours);
 
     return { start, end };
 };
@@ -259,6 +271,112 @@ const getOperatingHours = (unitTitle: string, selectedDate: Date | null) => {
     return { minTime, maxTime };
 };
 
+const getFilteredBookings = (bookings: Booking[], selectedUnit: BusinessUnit | null, filterMode: FilterMode): Booking[] => {
+    if (!selectedUnit) return [];
+
+    const unitId = getUnitIdByTitle(selectedUnit.title);
+    if (!unitId) return [];
+
+    return bookings
+        .filter((booking) => {
+            if (booking.unit_id !== unitId) return false;
+
+            const bookingDate = parseSQLDate(booking.updated_at ?? booking.created_at);
+            if (!bookingDate) return false;
+
+            return filterMode === 'day' ? isToday(bookingDate) : isThisMonth(bookingDate);
+        })
+        .sort((a, b) => {
+            const dateA = parseSQLDate(a.updated_at ?? a.created_at)?.getTime() ?? 0;
+            const dateB = parseSQLDate(b.updated_at ?? b.created_at)?.getTime() ?? 0;
+            return dateB - dateA; // Sort by newest first
+        });
+};
+
+// ============ COMPONENTS ============
+interface BookingScheduleProps {
+    bookings: Booking[];
+    selectedUnit: BusinessUnit | null;
+}
+
+const BookingSchedule: React.FC<BookingScheduleProps> = ({ bookings, selectedUnit }) => {
+    const [filterMode, setFilterMode] = useState<FilterMode>('day');
+
+    if (!selectedUnit || !['Mini Soccer', 'Bumi Perkemahan (Buper)'].includes(selectedUnit.title)) {
+        return null;
+    }
+
+    const filteredBookings = getFilteredBookings(bookings, selectedUnit, filterMode);
+
+    return (
+        <div className="mb-6">
+            <h3 className="text-md mb-2 font-semibold text-gray-900">Jadwal Terisi</h3>
+
+            {/* Filter Tabs */}
+            <div className="mb-3 flex space-x-2">
+                <button
+                    className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+                        filterMode === 'day' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                    onClick={() => setFilterMode('day')}
+                >
+                    Hari Ini
+                </button>
+                <button
+                    className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+                        filterMode === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                    onClick={() => setFilterMode('month')}
+                >
+                    Bulan Ini
+                </button>
+            </div>
+
+            <p className="mb-2 text-sm text-gray-600">
+                {filterMode === 'day' ? 'Menampilkan jadwal booking hanya untuk hari ini.' : 'Menampilkan jadwal booking untuk bulan ini.'}
+            </p>
+
+            {/* Booking List */}
+            <div className="max-h-40 space-y-2 overflow-y-auto rounded-lg border p-3">
+                {filteredBookings.length > 0 ? (
+                    filteredBookings.map((booking) => {
+                        const window = getBookingWindow(booking);
+                        if (!window) return null;
+
+                        const formattedDate = new Intl.DateTimeFormat('id-ID', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                        }).format(window.start);
+
+                        const startTime = window.start.toLocaleTimeString('id-ID', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
+                        });
+                        const endTime = window.end.toLocaleTimeString('id-ID', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
+                        });
+
+                        return (
+                            <div key={booking.id} className="flex items-center justify-between rounded-md bg-gray-100 p-2 text-sm">
+                                <span className="font-medium">{booking.tenant}</span>
+                                <span className="text-gray-600">
+                                    {formattedDate} pukul {startTime} - {endTime}
+                                </span>
+                            </div>
+                        );
+                    })
+                ) : (
+                    <p className="text-sm text-gray-500">{filterMode === 'day' ? 'Tidak ada booking hari ini.' : 'Tidak ada booking bulan ini.'}</p>
+                )}
+            </div>
+        </div>
+    );
+};
+
 // ============ MAIN COMPONENT ============
 const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
     // State
@@ -334,17 +452,6 @@ const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
     // Computed values
     const unitIdForPicker = selectedUnit ? getUnitIdByTitle(selectedUnit.title) : null;
     const { minTime, maxTime } = getOperatingHours(selectedUnit?.title || '', selectedDate);
-
-    const sortedBookings = bookings
-        .filter((booking) => {
-            const uid = getUnitIdByTitle(selectedUnit?.title || '');
-            return uid !== null && booking.unit_id === uid;
-        })
-        .sort((a, b) => {
-            const dateA = parseSQLDate(a.updated_at ?? a.created_at)?.getTime() ?? 0;
-            const dateB = parseSQLDate(b.updated_at ?? b.created_at)?.getTime() ?? 0;
-            return dateB - dateA;
-        });
 
     return (
         <MainLayout title="Unit Usaha">
@@ -491,7 +598,7 @@ const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
                             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                             <button
                                 onClick={resetForm}
-                                className="absolute top-4 right-4 rounded-full bg-white/20 p-2 text-white backdrop-blur-sm hover:bg-white/30"
+                                className="absolute top-4 right-4 rounded-full bg-white/20 p-2 text-white backdrop-blur-sm transition-colors hover:bg-white/30"
                             >
                                 <X className="h-6 w-6" />
                             </button>
@@ -548,47 +655,7 @@ const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
                             </div>
 
                             {/* Jadwal Booking */}
-                            {['Mini Soccer', 'Bumi Perkemahan (Buper)'].includes(selectedUnit.title) && (
-                                <div className="mb-6">
-                                    <h3 className="mb-2 text-md font-semibold text-gray-900">Jadwal Terisi (Bulan ini)</h3>
-                                    <div className="max-h-40 space-y-2 overflow-y-auto rounded-lg border p-3">
-                                        {sortedBookings.map((booking) => {
-                                            const window = getBookingWindow(booking);
-                                            if (!window) return null;
-
-                                            const formattedDate = new Intl.DateTimeFormat('id-ID', {
-                                                day: 'numeric',
-                                                month: 'long',
-                                                year: 'numeric',
-                                            }).format(window.start);
-
-                                            const startTime = window.start.toLocaleTimeString('id-ID', {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                                hour12: false,
-                                            });
-                                            const endTime = window.end.toLocaleTimeString('id-ID', {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                                hour12: false,
-                                            });
-
-                                            return (
-                                                <div
-                                                    key={booking.id}
-                                                    className="flex items-center justify-between rounded-md bg-gray-100 p-2 text-sm"
-                                                >
-                                                    <span className="font-medium">{booking.tenant}</span>
-                                                    <span className="text-gray-600">
-                                                        {formattedDate} pukul {startTime} - {endTime}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
-                                        {sortedBookings.length === 0 && <p className="text-sm text-gray-500">Belum ada booking.</p>}
-                                    </div>
-                                </div>
-                            )}
+                            <BookingSchedule bookings={bookings} selectedUnit={selectedUnit} />
 
                             {/* Form Booking */}
                             {selectedPackage && (
