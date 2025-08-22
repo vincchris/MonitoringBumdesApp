@@ -1,0 +1,36 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\frontend\HomeController;
+use App\Http\Controllers\frontend\UnitUsahaPageController;
+use App\Http\Controllers\frontend\laporanTransparansiController;
+
+Route::get('/', fn() => Inertia::render('welcome'))->name('home');
+
+Route::get('/Login', [LoginController::class, 'index'])->name('loginform');
+Route::post('/logout', function () {
+    Auth::logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect()->route('loginform');
+})->name('logout');
+
+// Company profile
+Route::get('/Home', [HomeController::class, 'index'])->name('HomeCompro');
+Route::get('/unit-usaha', [UnitUsahaPageController::class, 'index'])->name('UnitUsahaPage');
+Route::get('/galeri', fn() => Inertia::render('galeri'));
+Route::get('/kontak', fn() => Inertia::render('kontak'));
+
+Route::prefix('laporan-transparansi')->controller(laporanTransparansiController::class)->group(function () {
+    Route::get('/', 'index')->name('laporan-transparansi');
+    Route::get('download', 'download')->name('laporan.download');
+});
+
+Route::prefix('profil')->group(function () {
+    Route::get('/tentang-kami', fn() => Inertia::render('Profil/TentangKami'));
+    Route::get('/struktur-organisasi', fn() => Inertia::render('Profil/StrukturOrganisasi'));
+    Route::get('/legalitas', fn() => Inertia::render('Profil/legalitas'));
+});
