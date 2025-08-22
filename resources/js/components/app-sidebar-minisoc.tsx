@@ -1,5 +1,5 @@
 import { NavFooter } from '@/components/nav-footer';
-import { NavMain } from '@/components/nav-main-minisoc';
+import NavMain from '@/components/nav-main-minisoc';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
@@ -54,7 +54,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain />
             </SidebarContent>
 
             <SidebarFooter>

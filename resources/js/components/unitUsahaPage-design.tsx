@@ -5,16 +5,13 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import toast from 'react-hot-toast';
 
+// ============ TYPES & INTERFACES ============
 interface BusinessUnit {
     title: string;
     icon: LucideIcon;
     imageUrl: string;
     highlights: string[];
-    pricing: {
-        label: string;
-        detail: string;
-        basePrice: number;
-    }[];
+    pricing: Tarif[];
     operatingHours: string;
     contact: string;
     whatsapp: string;
@@ -36,11 +33,40 @@ interface Tarif {
     basePrice: number;
 }
 
-type Props = {
+interface Booking {
+    id: number;
+    tenant: string;
+    tarif_id: number;
+    unit_id: number;
+    nominal: number;
+    total: number;
+    description: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+interface Props {
     tarifs: Record<string, Tarif[]>;
+    bookings: Booking[];
+}
+
+interface BookingWindow {
+    start: Date;
+    end: Date;
+}
+
+// ============ CONSTANTS ============
+const UNIT_ID_MAP: Record<string, number> = {
+    'Mini Soccer': 1,
+    'Bumi Perkemahan (Buper)': 2,
 };
 
-const faqs: FAQ[] = [
+const OPERATING_HOURS = {
+    'Mini Soccer': { start: 8, end: 22 },
+    default: { start: 0, end: 23.5 },
+};
+
+const FAQS: FAQ[] = [
     {
         question: 'Bagaimana cara melakukan booking?',
         answer: 'Anda bisa menghubungi kami melalui WhatsApp atau telepon. Tim kami akan membantu proses booking dan memberikan informasi detail.',
@@ -51,7 +77,7 @@ const faqs: FAQ[] = [
     },
     {
         question: 'Bagaimana jika ingin membatalkan booking?',
-        answer: 'Pembatalan dapat dilakukan maksimal 24 jam sebelum jadwal. DP yang sudah dibayarkan dapat dikembalikan 80% atau dialihkan ke jadwal lain.',
+        answer: 'Pembatalan dapat dilakukan maksimal 24 jam sebelumnya. DP yang sudah dibayarkan dapat dikembalikan 80% atau dialihkan ke jadwal lain.',
     },
     {
         question: 'Apakah tersedia paket khusus untuk event besar?',
@@ -59,89 +85,193 @@ const faqs: FAQ[] = [
     },
 ];
 
-const UnitUsaha: React.FC<Props> = ({ tarifs }) => {
-    // ====== DATA UNIT (pricing diisi dari DB via props `tarifs`) ======
-    const units: BusinessUnit[] = [
-        {
-            title: 'Mini Soccer',
-            icon: Volleyball,
-            imageUrl: 'assets/images/lapang_minisoc.jpg',
-            highlights: ['Fasilitas: Lapangan rumput sintetis', 'Bonus: Air mineral gelas 1 dus', 'Parkir luas tersedia'],
-            pricing: tarifs['1'] || [],
-            operatingHours: '08:00 - 22:00 WIB',
-            contact: '0813-2403-0282',
-            whatsapp: '081324030282',
-            location: 'Jl.Raya Cihaurbeuti No. 440',
-            terms: ['Booking minimal 2 jam sebelumnya', 'DP 50% untuk konfirmasi booking', 'Pembayaran cash/transfer'],
-            calculationType: 'duration',
-            unit: 'jam',
-        },
-        {
-            title: 'Bumi Perkemahan (Buper)',
-            icon: Globe,
-            imageUrl: 'assets/images/lapang_buper.jpg',
-            highlights: ['Lahan luas dan rindang', 'Cocok untuk event besar seperti perkemahan'],
-            pricing: tarifs['2'] || [],
-            operatingHours: '24 Jam (dengan koordinasi)',
-            contact: '0813-2403-0282',
-            whatsapp: '081324030282',
-            location: 'Area Perkemahan Desa, Bagja Waluya',
-            terms: ['Booking minimal 1 minggu sebelumnya', 'DP 30% untuk konfirmasi', 'Termasuk fasilitas dasar'],
-            calculationType: 'none',
-            unit: 'kegiatan',
-        },
-        {
-            title: 'Kios',
-            icon: ShoppingBag,
-            imageUrl: 'assets/images/Kios2.jpg',
-            highlights: ['Lokasi strategis', 'Sewa tahunan', 'Akses mudah dari jalan utama', 'Listrik dan air tersedia'],
-            pricing: tarifs['3'] || [],
-            operatingHours: 'Sesuai kesepakatan',
-            contact: '0812-3456-7892',
-            whatsapp: '6281234567892',
-            location: 'Berbagai lokasi strategis di Desa',
-            terms: ['Kontrak minimal 1 tahun', 'Pembayaran di muka', 'Deposit keamanan Rp500.000'],
-            calculationType: 'none',
-            unit: 'tahun',
-        },
-        {
-            title: 'Air Weslik',
-            icon: Waves,
-            imageUrl: 'https://cdn.pixabay.com/photo/2018/03/19/15/04/faucet-3240211_1280.jpg',
-            highlights: ['Distribusi air bersih untuk berbagai sektor', 'Kualitas air terjamin', 'Pelayanan 24 jam', 'Sistem meteran digital'],
-            pricing: tarifs['4'] || [],
-            operatingHours: '24 Jam',
-            contact: '0812-3456-7893',
-            whatsapp: '6281234567893',
-            location: 'Seluruh area Desa Bagja Waluya',
-            terms: ['Pendaftaran dengan KTP', 'Deposit meter Rp200.000', 'Pembayaran bulanan'],
-            calculationType: 'participants',
-            unit: 'm³',
-        },
-        {
-            title: 'Internet Desa',
-            icon: Building2,
-            imageUrl: 'https://cdn.pixabay.com/photo/2014/08/09/21/53/network-connection-414415_960_720.jpg',
-            highlights: ['Internet murah untuk warga', 'Stabil dan terjangkau', 'Kecepatan hingga 20 Mbps', 'Support teknis lokal'],
-            pricing: tarifs['5'] || [],
-            operatingHours: '24 Jam',
-            contact: '0812-3456-7894',
-            whatsapp: '6281234567894',
-            location: 'Seluruh area Desa Bagja Waluya',
-            terms: ['Instalasi gratis', 'Kontrak minimal 6 bulan', 'Pembayaran di awal bulan'],
-            calculationType: 'duration',
-            unit: 'bulan',
-        },
-    ];
+// ============ UTILITY FUNCTIONS ============
+const parseSQLDate = (dateString?: string | null): Date | null => {
+    if (!dateString || typeof dateString !== 'string') return null;
+    const isoString = dateString.replace(' ', 'T');
+    const date = new Date(isoString);
+    return isNaN(date.getTime()) ? null : date;
+};
 
-    // ====== STATE & LOGIC ======
+const roundTo30Minutes = (date: Date): Date => {
+    const rounded = new Date(date);
+    const minutes = rounded.getMinutes();
+    const snappedMinutes = minutes < 15 ? 0 : minutes < 45 ? 30 : 0;
+
+    if (snappedMinutes === 0 && minutes >= 45) {
+        rounded.setHours(rounded.getHours() + 1);
+    }
+
+    rounded.setMinutes(snappedMinutes, 0, 0);
+    return rounded;
+};
+
+const getUnitIdByTitle = (title: string): number | null => {
+    return UNIT_ID_MAP[title] || null;
+};
+
+const getBookingWindow = (booking: Booking): BookingWindow | null => {
+    const rawDate = booking.updated_at ?? booking.created_at;
+    const startDate = parseSQLDate(rawDate);
+
+    if (!startDate) return null;
+
+    const start = roundTo30Minutes(startDate);
+    const durationHours = Math.max(1, Number(booking.nominal) || 1);
+    const end = new Date(start);
+    end.setMinutes(end.getMinutes() + Math.round(durationHours * 60));
+
+    return { start, end };
+};
+
+const getBlockedTimesForDate = (date: Date, unitId: number | null, bookings: Booking[]): Date[] => {
+    if (!unitId) return [];
+
+    const targetYear = date.getFullYear();
+    const targetMonth = date.getMonth();
+    const targetDate = date.getDate();
+    const blocked: Date[] = [];
+
+    const relevantBookings = bookings.filter((booking) => booking.unit_id === unitId);
+
+    relevantBookings.forEach((booking) => {
+        const window = getBookingWindow(booking);
+        if (!window) return;
+
+        const isSameDate =
+            window.start.getFullYear() === targetYear && window.start.getMonth() === targetMonth && window.start.getDate() === targetDate;
+
+        if (!isSameDate) return;
+
+        const cursor = new Date(window.start);
+        cursor.setSeconds(0, 0);
+        cursor.setMinutes(cursor.getMinutes() - (cursor.getMinutes() % 30));
+
+        while (cursor < window.end) {
+            blocked.push(new Date(cursor));
+            cursor.setMinutes(cursor.getMinutes() + 30);
+        }
+    });
+
+    return blocked;
+};
+
+const isTimeFree = (time: Date, unitId: number | null, bookings: Booking[]): boolean => {
+    const blockedTimes = getBlockedTimesForDate(time, unitId, bookings);
+    return !blockedTimes.some((blocked) => blocked.getHours() === time.getHours() && blocked.getMinutes() === time.getMinutes());
+};
+
+const createBusinessUnits = (tarifs: Record<string, Tarif[]>): BusinessUnit[] => [
+    {
+        title: 'Mini Soccer',
+        icon: Volleyball,
+        imageUrl: 'assets/images/lapang_minisoc.jpg',
+        highlights: ['Fasilitas: Lapangan rumput sintetis', 'Bonus: Air mineral gelas 1 dus', 'Parkir luas tersedia'],
+        pricing: tarifs['1'] || [],
+        operatingHours: '08:00 - 22:00 WIB',
+        contact: '0813-2403-0282',
+        whatsapp: '081324030282',
+        location: 'Jl.Raya Cihaurbeuti No. 440',
+        terms: ['Booking minimal 2 jam sebelumnya', 'DP 50% untuk konfirmasi booking', 'Pembayaran cash/transfer'],
+        calculationType: 'duration',
+        unit: 'jam',
+    },
+    {
+        title: 'Bumi Perkemahan (Buper)',
+        icon: Globe,
+        imageUrl: 'assets/images/lapang_buper.jpg',
+        highlights: ['Lahan luas dan rindang', 'Cocok untuk event besar seperti perkemahan'],
+        pricing: tarifs['2'] || [],
+        operatingHours: '24 Jam (dengan koordinasi)',
+        contact: '0813-2403-0282',
+        whatsapp: '081324030282',
+        location: 'Area Perkemahan Desa, Bagja Waluya',
+        terms: ['Booking minimal 1 minggu sebelumnya', 'DP 30% untuk konfirmasi', 'Termasuk fasilitas dasar'],
+        calculationType: 'none',
+        unit: 'kegiatan',
+    },
+    {
+        title: 'Kios',
+        icon: ShoppingBag,
+        imageUrl: 'assets/images/Kios2.jpg',
+        highlights: ['Lokasi strategis', 'Sewa tahunan', 'Akses mudah dari jalan utama', 'Listrik dan air tersedia'],
+        pricing: tarifs['3'] || [],
+        operatingHours: 'Sesuai kesepakatan',
+        contact: '0812-3456-7892',
+        whatsapp: '6281234567892',
+        location: 'Berbagai lokasi strategis di Desa',
+        terms: ['Kontrak minimal 1 tahun', 'Pembayaran di muka', 'Deposit keamanan Rp500.000'],
+        calculationType: 'none',
+        unit: 'tahun',
+    },
+    {
+        title: 'Air Weslik',
+        icon: Waves,
+        imageUrl: 'https://cdn.pixabay.com/photo/2018/03/19/15/04/faucet-3240211_1280.jpg',
+        highlights: ['Distribusi air bersih untuk berbagai sektor', 'Kualitas air terjamin', 'Pelayanan 24 jam', 'Sistem meteran digital'],
+        pricing: tarifs['4'] || [],
+        operatingHours: '24 Jam',
+        contact: '0812-3456-7893',
+        whatsapp: '6281234567893',
+        location: 'Seluruh area Desa Bagja Waluya',
+        terms: ['Pendaftaran dengan KTP', 'Deposit meter Rp200.000', 'Pembayaran bulanan'],
+        calculationType: 'participants',
+        unit: 'm³',
+    },
+    {
+        title: 'Internet Desa',
+        icon: Building2,
+        imageUrl: 'https://cdn.pixabay.com/photo/2014/08/09/21/53/network-connection-414415_960_720.jpg',
+        highlights: ['Internet murah untuk warga', 'Stabil dan terjangkau', 'Kecepatan hingga 20 Mbps', 'Support teknis lokal'],
+        pricing: tarifs['5'] || [],
+        operatingHours: '24 Jam',
+        contact: '0812-3456-7894',
+        whatsapp: '6281234567894',
+        location: 'Seluruh area Desa Bagja Waluya',
+        terms: ['Instalasi gratis', 'Kontrak minimal 6 bulan', 'Pembayaran di awal bulan'],
+        calculationType: 'duration',
+        unit: 'bulan',
+    },
+];
+
+// ============ COMPONENT FUNCTIONS ============
+const getQuantityLabel = (unit: BusinessUnit): string => {
+    switch (unit.calculationType) {
+        case 'duration':
+            return unit.title === 'Mini Soccer' ? 'Durasi (jam)' : `Durasi (${unit.unit})`;
+        case 'participants':
+            return unit.title === 'Air Weslik' ? 'Volume (m³)' : `Jumlah (${unit.unit})`;
+        default:
+            return '';
+    }
+};
+
+const getOperatingHours = (unitTitle: string, selectedDate: Date | null) => {
+    const date = selectedDate ?? new Date();
+    const minTime = new Date(date);
+    const maxTime = new Date(date);
+
+    const hours = OPERATING_HOURS[unitTitle as keyof typeof OPERATING_HOURS] || OPERATING_HOURS.default;
+
+    minTime.setHours(hours.start, 0, 0, 0);
+    maxTime.setHours(Math.floor(hours.end), (hours.end % 1) * 60, 0, 0);
+
+    return { minTime, maxTime };
+};
+
+// ============ MAIN COMPONENT ============
+const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
+    // State
     const [selectedUnit, setSelectedUnit] = useState<BusinessUnit | null>(null);
-    const [selectedPackage, setSelectedPackage] = useState<{ label: string; detail: string; basePrice: number } | null>(null);
+    const [selectedPackage, setSelectedPackage] = useState<Tarif | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [namaPenyewa, setNamaPenyewa] = useState<string>('');
     const [quantity, setQuantity] = useState<string>('1');
     const [totalPrice, setTotalPrice] = useState<number>(0);
 
+    const units = createBusinessUnits(tarifs);
+
+    // Effects
     useEffect(() => {
         if (selectedPackage && selectedUnit) {
             const qty = parseInt(quantity) || 1;
@@ -155,14 +285,23 @@ const UnitUsaha: React.FC<Props> = ({ tarifs }) => {
         }
     }, [selectedPackage, quantity, selectedUnit]);
 
-    const handlePackageSelect = (pkg: { label: string; detail: string; basePrice: number }) => {
+    // Event Handlers
+    const handlePackageSelect = (pkg: Tarif) => {
         setSelectedPackage(pkg);
     };
 
+    const resetForm = () => {
+        setSelectedUnit(null);
+        setSelectedPackage(null);
+        setSelectedDate(null);
+        setNamaPenyewa('');
+        setQuantity('1');
+        setTotalPrice(0);
+    };
+
     const handleSubmit = () => {
-        const toastId = undefined;
         if (!selectedUnit || !selectedPackage || !selectedDate || !namaPenyewa) {
-            toast.error('Mohon lengkapi semua data booking', { id: toastId });
+            toast.error('Mohon lengkapi semua data booking');
             return;
         }
 
@@ -182,32 +321,30 @@ const UnitUsaha: React.FC<Props> = ({ tarifs }) => {
             hour12: false,
         });
 
-        const pesan = `Halo, saya ingin booking:\n\nNama: ${namaPenyewa}\nUnit: ${selectedUnit.title}\nPaket: ${selectedPackage.label}${detailQuantity}\nTanggal: ${formattedDate}${detailHarga}`;
+        const message = `Halo, saya ingin booking:\n\nNama: ${namaPenyewa}\nUnit: ${selectedUnit.title}\nPaket: ${selectedPackage.label}${detailQuantity}\nTanggal: ${formattedDate}${detailHarga}`;
 
-        const nomorAdmin = '6287737709694';
-        const encodedPesan = encodeURIComponent(pesan);
-        const whatsappURL = `https://wa.me/${nomorAdmin}?text=${encodedPesan}`;
+        const adminNumber = '6287737709694';
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappURL = `https://wa.me/${adminNumber}?text=${encodedMessage}`;
+
         window.open(whatsappURL, '_blank');
-
-        // Reset form
-        setSelectedUnit(null);
-        setSelectedPackage(null);
-        setSelectedDate(null);
-        setNamaPenyewa('');
-        setQuantity('1');
-        setTotalPrice(0);
+        resetForm();
     };
 
-    const getQuantityLabel = (unit: BusinessUnit) => {
-        switch (unit.calculationType) {
-            case 'duration':
-                return unit.title === 'Mini Soccer' ? 'Durasi (jam)' : `Durasi (${unit.unit})`;
-            case 'participants':
-                return unit.title === 'Air Weslik' ? 'Volume (m³)' : `Jumlah (${unit.unit})`;
-            default:
-                return '';
-        }
-    };
+    // Computed values
+    const unitIdForPicker = selectedUnit ? getUnitIdByTitle(selectedUnit.title) : null;
+    const { minTime, maxTime } = getOperatingHours(selectedUnit?.title || '', selectedDate);
+
+    const sortedBookings = bookings
+        .filter((booking) => {
+            const uid = getUnitIdByTitle(selectedUnit?.title || '');
+            return uid !== null && booking.unit_id === uid;
+        })
+        .sort((a, b) => {
+            const dateA = parseSQLDate(a.updated_at ?? a.created_at)?.getTime() ?? 0;
+            const dateB = parseSQLDate(b.updated_at ?? b.created_at)?.getTime() ?? 0;
+            return dateB - dateA;
+        });
 
     return (
         <MainLayout title="Unit Usaha">
@@ -323,7 +460,7 @@ const UnitUsaha: React.FC<Props> = ({ tarifs }) => {
                     </div>
 
                     <div className="space-y-4">
-                        {faqs.map((faq, idx) => (
+                        {FAQS.map((faq, idx) => (
                             <div key={idx} className="overflow-hidden rounded-2xl border border-gray-200">
                                 <details className="group">
                                     <summary className="flex cursor-pointer items-center justify-between p-6 transition-colors hover:bg-gray-50">
@@ -353,12 +490,7 @@ const UnitUsaha: React.FC<Props> = ({ tarifs }) => {
                             <img src={selectedUnit.imageUrl} alt={selectedUnit.title} className="h-full w-full object-cover" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                             <button
-                                onClick={() => {
-                                    setSelectedUnit(null);
-                                    setSelectedPackage(null);
-                                    setQuantity('1');
-                                    setTotalPrice(0);
-                                }}
+                                onClick={resetForm}
                                 className="absolute top-4 right-4 rounded-full bg-white/20 p-2 text-white backdrop-blur-sm hover:bg-white/30"
                             >
                                 <X className="h-6 w-6" />
@@ -366,10 +498,7 @@ const UnitUsaha: React.FC<Props> = ({ tarifs }) => {
                             <div className="absolute bottom-6 left-6 text-white">
                                 <div className="mb-2 flex items-center gap-3">
                                     <div className="rounded-full bg-white/20 p-2 backdrop-blur-sm">
-                                        {(() => {
-                                            const SelectedIcon = selectedUnit.icon;
-                                            return <SelectedIcon className="h-6 w-6" />;
-                                        })()}
+                                        <selectedUnit.icon className="h-6 w-6" />
                                     </div>
                                     <h2 className="text-3xl font-bold">{selectedUnit.title}</h2>
                                 </div>
@@ -418,6 +547,49 @@ const UnitUsaha: React.FC<Props> = ({ tarifs }) => {
                                 </div>
                             </div>
 
+                            {/* Jadwal Booking */}
+                            {['Mini Soccer', 'Bumi Perkemahan (Buper)'].includes(selectedUnit.title) && (
+                                <div className="mb-6">
+                                    <h3 className="mb-3 text-lg font-semibold text-gray-900">Jadwal Terisi</h3>
+                                    <div className="max-h-40 space-y-2 overflow-y-auto rounded-lg border p-3">
+                                        {sortedBookings.map((booking) => {
+                                            const window = getBookingWindow(booking);
+                                            if (!window) return null;
+
+                                            const formattedDate = new Intl.DateTimeFormat('id-ID', {
+                                                day: 'numeric',
+                                                month: 'long',
+                                                year: 'numeric',
+                                            }).format(window.start);
+
+                                            const startTime = window.start.toLocaleTimeString('id-ID', {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                                hour12: false,
+                                            });
+                                            const endTime = window.end.toLocaleTimeString('id-ID', {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                                hour12: false,
+                                            });
+
+                                            return (
+                                                <div
+                                                    key={booking.id}
+                                                    className="flex items-center justify-between rounded-md bg-gray-100 p-2 text-sm"
+                                                >
+                                                    <span className="font-medium">{booking.tenant}</span>
+                                                    <span className="text-gray-600">
+                                                        {formattedDate} pukul {startTime} - {endTime}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                        {sortedBookings.length === 0 && <p className="text-sm text-gray-500">Belum ada booking.</p>}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Form Booking */}
                             {selectedPackage && (
                                 <div className="space-y-6 border-t pt-6">
@@ -461,9 +633,10 @@ const UnitUsaha: React.FC<Props> = ({ tarifs }) => {
                                                 placeholderText="Pilih tanggal dan waktu booking"
                                                 className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                                                 minDate={new Date()}
-                                                minTime={new Date()}
-                                                maxTime={new Date(new Date().setHours(22, 0, 0, 0))}
+                                                minTime={minTime}
+                                                maxTime={maxTime}
                                                 popperPlacement="bottom-start"
+                                                filterTime={(time) => isTimeFree(time, unitIdForPicker, bookings)}
                                             />
                                         </div>
                                     </div>
@@ -493,12 +666,7 @@ const UnitUsaha: React.FC<Props> = ({ tarifs }) => {
                                         <button
                                             type="button"
                                             className="w-full rounded-lg bg-gray-300 px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-400 sm:w-auto"
-                                            onClick={() => {
-                                                setSelectedUnit(null);
-                                                setSelectedPackage(null);
-                                                setQuantity('1');
-                                                setTotalPrice(0);
-                                            }}
+                                            onClick={resetForm}
                                         >
                                             Batal
                                         </button>
