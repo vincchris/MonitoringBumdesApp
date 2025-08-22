@@ -550,7 +550,7 @@ const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
                             {/* Jadwal Booking */}
                             {['Mini Soccer', 'Bumi Perkemahan (Buper)'].includes(selectedUnit.title) && (
                                 <div className="mb-6">
-                                    <h3 className="mb-3 text-lg font-semibold text-gray-900">Jadwal Terisi</h3>
+                                    <h3 className="mb-2 text-md font-semibold text-gray-900">Jadwal Terisi (Bulan ini)</h3>
                                     <div className="max-h-40 space-y-2 overflow-y-auto rounded-lg border p-3">
                                         {sortedBookings.map((booking) => {
                                             const window = getBookingWindow(booking);
