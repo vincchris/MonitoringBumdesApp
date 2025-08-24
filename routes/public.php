@@ -10,12 +10,12 @@ use App\Http\Controllers\frontend\laporanTransparansiController;
 
 Route::get('/', fn() => Inertia::render('welcome'))->name('home');
 
-Route::get('/Login', [LoginController::class, 'index'])->name('loginform');
+Route::get('/login', [LoginController::class, 'index'])->name('login');
 Route::post('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
-    return redirect()->route('loginform');
+    return redirect()->route('login');
 })->name('logout');
 
 // Company profile
