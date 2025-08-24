@@ -3,13 +3,15 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 
 import NavMainKepalaBumdes from '@/components/layout_kepala_bumdes/nav-main-kepalaBumdes';
+import NavMainAdminn from '@/components/layout_admin/nav-main-admin';
+import NavMainKepalaDesa from '@/components/nav-main-kepala-desa';
+
 import NavMainAirweslik from '@/components/nav-main-airweslik';
 import NavMainBuper from '@/components/nav-main-buper';
 import NavMainInterdesa from '@/components/nav-main-interdesa';
 import NavMainMiniSoc from '@/components/nav-main-minisoc';
 import NavMainSewaKios from '@/components/nav-main-sewakios';
 
-import NavMainKepalaDesa from '@/components/nav-main-kepala-desa';
 
 export default function AppSidebarLayout({ children }: { children: React.ReactNode }) {
     const { props } = usePage<{ unit_id?: number; auth?: { user?: { name: string; roles: string; image?: string } } }>();
@@ -22,8 +24,10 @@ export default function AppSidebarLayout({ children }: { children: React.ReactNo
     const getNavComponent = () => {
         console.log('Getting nav component for:', { roles: user?.roles, unitId });
 
+        if (user?.roles === 'admin') {
+            return <NavMainAdminn />;
+        }
         if (user?.roles === 'kepala_desa') {
-            console.log('Returning NavMainKepalaDesa');
             return <NavMainKepalaDesa />;
         }
 

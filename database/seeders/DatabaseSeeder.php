@@ -58,6 +58,12 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make('123456789'),
                 'roles' => 'kepala_bumdes',
             ],
+            [
+                'name' => 'Admin desa',
+                'email' => 'adminDesa@gmail.com',
+                'password' => Hash::make('123456789'),
+                'roles' => 'admin',
+            ],
         ];
 
         foreach ($users as $user) {
