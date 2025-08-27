@@ -6,13 +6,11 @@ interface FooterLink {
     name: string;
     href: string;
 }
-
 interface SocialLink {
     name: string;
     href: string;
     icon: LucideIcon;
 }
-
 interface ContactItem {
     name: string;
     value: string;
@@ -26,8 +24,7 @@ const Footer: React.FC = () => {
     const quickLinks: FooterLink[] = [
         { name: 'Tentang Kami', href: '/profil/tentang-kami' },
         { name: 'Unit Usaha', href: '/unit-usaha' },
-        { name: 'legalitas', href: '/profil/legalitas' },
-        // { name: 'Galeri', href: '/galeri' },
+        { name: 'Legalitas', href: '/profil/legalitas' },
         { name: 'Laporan Keuangan', href: '/laporan-transparansi' },
         { name: 'Kontak', href: '/kontak' },
     ];
@@ -50,7 +47,7 @@ const Footer: React.FC = () => {
     const contactInfo: ContactItem[] = [
         {
             name: 'Alamat',
-            value: 'Jl.Raya Cihaurbeuti No. 440, Desa Sumberjaya, Kec. Cihaurbeuti, Kab. Ciamis',
+            value: 'Jl. Raya Cihaurbeuti No. 440, Desa Sumberjaya, Ciamis',
             href: 'https://maps.google.com/?q=Jl.Raya+Cihaurbeuti+No.+440+Desa+Sumberjaya+Kecamatan+Cihaurbeuti+Kabupaten+Ciamis',
             icon: MapPin,
         },
@@ -79,53 +76,37 @@ const Footer: React.FC = () => {
         copyright: 'Hak Cipta Dilindungi.',
     };
 
+    const supportImgs = [
+        { src: '/assets/images/logobima.png', alt: 'Logo Bima' },
+        { src: '/assets/images/logo-kemendiktisaintek.png', alt: 'Logo Kemendiktisaintek' },
+        { src: '/assets/images/Logo UBSI.png', alt: 'Logo Ubsi' },
+    ];
+
     return (
-        <footer className="bg-gray-900 text-white">
+        <footer className="bg-white text-gray-900 border-t border-gray-200">
             <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
                     {/* Company Info */}
-                    <div className="lg:col-span-1">
-                        <div className="mb-4 flex items-center space-x-3">
-                            <Link href="#" className="flex items-center space-x-3">
-                                <div className="flex h-12 items-center space-x-4">
-                                    {/* Logo Bumdes */}
-                                    <div className="flex h-full flex-shrink-0 items-center">
-                                        <img
-                                            src="/assets/images/Bumdes Logo.png"
-                                            alt="Logo Bumdes"
-                                            height={48}
-                                            style={{ width: 'auto', maxHeight: '100%' }}
-                                            className="object-contain"
-                                        />
-                                    </div>
-                                    {/* Logo SumberJaya */}
-                                    <div className="flex h-full flex-shrink-0 items-center">
-                                        <img
-                                            src="/assets/images/SumberJaya Logo.png"
-                                            alt="Logo SumberJaya"
-                                            height={48}
-                                            style={{ width: 'auto', maxHeight: '100%' }}
-                                            className="object-contain"
-                                        />
-                                    </div>
-                                </div>
-                            </Link>
-                        </div>
-                        <p className="mb-6 text-sm leading-relaxed text-gray-300">
-                            Badan Usaha Milik Desa yang berkomitmen membangun ekonomi desa melalui berbagai unit usaha dan layanan untuk kesejahteraan
-                            masyarakat.
+                    <div>
+                        <Link href="#" className="mb-4 flex items-center space-x-3">
+                            <img src="/assets/images/Bumdes Logo.png" alt="Logo Bumdes" className="h-12 w-auto object-contain" />
+                            <img src="/assets/images/SumberJaya Logo.png" alt="Logo SumberJaya" className="h-12 w-auto object-contain" />
+                        </Link>
+                        <p className="mb-6 text-sm leading-relaxed text-gray-600">
+                            BUMDes yang berkomitmen membangun ekonomi desa melalui berbagai unit usaha untuk kesejahteraan masyarakat.
                         </p>
                         <div className="flex space-x-4">
                             {socialLinks.map(({ name, href, icon: Icon }) => (
                                 <a
                                     key={name}
                                     href={href}
-                                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-800 transition-colors hover:bg-blue-600"
                                     title={name}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 transition hover:bg-blue-600 hover:text-white"
+                                    aria-label={name}
                                 >
-                                    <Icon className="h-5 w-5 text-white" />
+                                    <Icon className="h-5 w-5" />
                                 </a>
                             ))}
                         </div>
@@ -134,10 +115,10 @@ const Footer: React.FC = () => {
                     {/* Quick Links */}
                     <div>
                         <h3 className="mb-4 text-lg font-semibold">Menu Utama</h3>
-                        <ul className="space-y-3">
+                        <ul className="space-y-2">
                             {quickLinks.map((link) => (
                                 <li key={link.name}>
-                                    <Link href={link.href} className="text-sm text-gray-300 transition-colors hover:text-white">
+                                    <Link href={link.href} className="text-sm text-gray-600 transition hover:text-blue-600">
                                         {link.name}
                                     </Link>
                                 </li>
@@ -148,10 +129,10 @@ const Footer: React.FC = () => {
                     {/* Unit Usaha */}
                     <div>
                         <h3 className="mb-4 text-lg font-semibold">Unit Usaha</h3>
-                        <ul className="space-y-3">
+                        <ul className="space-y-2">
                             {unitUsaha.map((unit) => (
                                 <li key={unit.name}>
-                                    <Link href={unit.href} className="text-sm text-gray-300 transition-colors hover:text-white">
+                                    <Link href={unit.href} className="text-sm text-gray-600 transition hover:text-blue-600">
                                         {unit.name}
                                     </Link>
                                 </li>
@@ -162,31 +143,37 @@ const Footer: React.FC = () => {
                     {/* Contact Info */}
                     <div>
                         <h3 className="mb-4 text-lg font-semibold">Kontak Kami</h3>
-                        <div className="space-y-4">
+                        <ul className="space-y-4">
                             {contactInfo.map(({ name, value, href, icon: Icon }) => (
-                                <a
-                                    key={name}
-                                    href={href}
-                                    target={href.startsWith('http') ? '_blank' : undefined}
-                                    rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                                    className="flex items-start space-x-3 hover:text-white"
-                                >
-                                    <Icon className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-400" />
-                                    <p className="text-sm text-gray-300">{value}</p>
-                                </a>
+                                <li key={name}>
+                                    <a
+                                        href={href}
+                                        target={href.startsWith('http') ? '_blank' : undefined}
+                                        rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                                        className="flex items-center space-x-3 text-gray-600 transition hover:text-blue-600"
+                                    >
+                                        <Icon className="h-5 w-5 text-blue-500" />
+                                        <span className="text-sm">{value}</span>
+                                    </a>
+                                </li>
                             ))}
-                        </div>
+                        </ul>
                     </div>
                 </div>
             </div>
 
             {/* Bottom Footer */}
-            <div className="border-t border-gray-800">
-                <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                    <div className="flex flex-col items-center justify-center space-y-4 md:flex-row md:space-y-0">
-                        <div className="text-sm text-gray-400">
-                            © {currentYear} {footerConfig.owner}. {footerConfig.copyright}
-                        </div>
+            <div className="border-t border-gray-200">
+                <div className="mx-auto max-w-7xl px-4 py-6 text-center">
+                    <p className="text-sm text-gray-500">
+                        © {currentYear} {footerConfig.owner}. {footerConfig.copyright}
+                    </p>
+                    <div className="mt-4 flex justify-center gap-6">
+                        {supportImgs.map((img) => (
+                            <div key={img.src} className="flex h-20 w-20 items-center justify-center">
+                                <img src={img.src} alt={img.alt} className="max-h-full max-w-full object-contain" />
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>

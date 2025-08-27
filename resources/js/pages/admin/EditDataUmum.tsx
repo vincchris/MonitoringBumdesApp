@@ -1,3 +1,4 @@
+import { FooterInfo } from '@/components/footer-dashboard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -484,6 +485,8 @@ export default function EditDataUmum({ desa, bumdes, flash }: Props) {
                     )}
                 </form>
             </div>
+
+             <FooterInfo />
         </AppLayout>
     );
 }

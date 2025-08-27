@@ -1,3 +1,4 @@
+import { FooterInfo } from '@/components/footer-dashboard';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
@@ -101,6 +102,7 @@ export default function DashboardAdmin() {
 
                 {/* Footer Info */}
                 <div className="text-sm text-gray-500">Terakhir diperbarui: {data.last_updated}</div>
+                 <FooterInfo />
             </div>
         </AppLayout>
     );
