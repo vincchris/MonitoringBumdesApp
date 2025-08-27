@@ -1,4 +1,5 @@
 import MainLayout from '@/components/layout_compro/MainLayout';
+import { motion } from 'framer-motion';
 import { Eye, Target } from 'lucide-react';
 import React from 'react';
 
@@ -35,7 +36,12 @@ const TentangKami: React.FC = () => {
     return (
         <MainLayout title="Tentang Kami">
             {/* Hero Section */}
-            <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 py-24 text-white">
+            <motion.section
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+                className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 py-24 text-white"
+            >
                 {/* Overlay */}
                 <div className="absolute inset-0 bg-black/20"></div>
 
@@ -60,14 +66,20 @@ const TentangKami: React.FC = () => {
                         </span>
                     </div>
                 </div>
-            </section>
+            </motion.section>
 
             {/* Profil Section */}
             <section className="bg-gradient-to-br from-gray-50 to-blue-50 py-20">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
                         {/* Data */}
-                        <div className="space-y-8">
+                        <motion.div
+                            initial={{ opacity: 0, x: -50 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.8 }}
+                            viewport={{ once: true }}
+                            className="space-y-8"
+                        >
                             <div>
                                 <h2 className="mb-6 text-4xl font-bold text-gray-900">
                                     Profil <span className="text-blue-600">BUMDes</span>
@@ -78,30 +90,47 @@ const TentangKami: React.FC = () => {
                             </div>
                             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                                 {profilData.map((item, idx) => (
-                                    <div key={idx} className="rounded-xl bg-white p-6 shadow hover:shadow-lg">
+                                    <motion.div
+                                        key={idx}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.5, delay: idx * 0.2 }}
+                                        viewport={{ once: true }}
+                                        className="rounded-xl bg-white p-6 shadow hover:shadow-lg"
+                                    >
                                         <h3 className="text-sm font-semibold text-gray-500">{item.label}</h3>
                                         <p className={`text-lg font-medium ${item.highlight ? 'text-blue-600' : 'text-gray-900'}`}>{item.value}</p>
                                         {item.sub && <p className="text-xs text-gray-500">{item.sub}</p>}
-                                    </div>
+                                    </motion.div>
                                 ))}
                             </div>
-                        </div>
+                        </motion.div>
 
                         {/* Image */}
-                        <div className="relative">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            whileInView={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.8 }}
+                            viewport={{ once: true }}
+                            className="relative"
+                        >
                             <div className="absolute inset-0 rotate-3 transform rounded-3xl bg-gradient-to-r from-blue-400 to-indigo-500"></div>
                             <div className="relative -rotate-1 transform rounded-3xl bg-white p-8 shadow-2xl hover:rotate-0">
-                                <img
+                                <motion.img
                                     src="/assets/images/kantor_desa_sumberjaya.jpg"
                                     alt="Kantor Desa Sumberjaya"
                                     className="h-64 w-full rounded-2xl object-cover"
+                                    initial={{ opacity: 0 }}
+                                    whileInView={{ opacity: 1 }}
+                                    transition={{ duration: 1 }}
+                                    viewport={{ once: true }}
                                 />
                                 <div className="mt-6">
                                     <h4 className="mb-2 text-lg font-semibold text-gray-900">Kantor Desa Sumberjaya</h4>
                                     <p className="text-gray-600">Pusat koordinasi dan pelayanan masyarakat desa.</p>
                                 </div>
                             </div>
-                        </div>
+                        </motion.div>
                     </div>
                 </div>
             </section>
@@ -114,7 +143,13 @@ const TentangKami: React.FC = () => {
                     </div>
                     <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
                         {/* Visi */}
-                        <div className="rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-8">
+                        <motion.div
+                            initial={{ opacity: 0, x: -50 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.8 }}
+                            viewport={{ once: true }}
+                            className="rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-8"
+                        >
                             <div className="mb-6 flex items-center">
                                 <div className="mr-4 rounded-2xl bg-blue-600 p-3">
                                     <Eye className="h-6 w-6 text-white" />
@@ -122,10 +157,16 @@ const TentangKami: React.FC = () => {
                                 <h3 className="text-2xl font-bold text-gray-900">Visi</h3>
                             </div>
                             <p className="text-lg text-gray-700">{visiText}</p>
-                        </div>
+                        </motion.div>
 
                         {/* Misi */}
-                        <div className="rounded-3xl border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8">
+                        <motion.div
+                            initial={{ opacity: 0, x: 50 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.8 }}
+                            viewport={{ once: true }}
+                            className="rounded-3xl border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8"
+                        >
                             <div className="mb-6 flex items-center">
                                 <div className="mr-4 rounded-2xl bg-green-600 p-3">
                                     <Target className="h-6 w-6 text-white" />
@@ -140,7 +181,7 @@ const TentangKami: React.FC = () => {
                                     </li>
                                 ))}
                             </ul>
-                        </div>
+                        </motion.div>
                     </div>
                 </div>
             </section>
@@ -151,19 +192,29 @@ const TentangKami: React.FC = () => {
                     <h2 className="mb-4 text-4xl font-bold text-gray-900">
                         Kepala <span className="text-blue-600">BUMDes</span>
                     </h2>
-                    <div className="flex flex-col items-center">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.8 }}
+                        viewport={{ once: true }}
+                        className="flex flex-col items-center"
+                    >
                         <div className="relative">
                             <div className="absolute inset-0 rounded-full bg-blue-200 blur-2xl"></div>
-                            <img
+                            <motion.img
                                 src={kepalaBUMDes.foto}
                                 alt={kepalaBUMDes.nama}
                                 className="relative z-10 h-48 w-48 rounded-full border-4 border-white object-cover shadow-lg"
+                                initial={{ opacity: 0 }}
+                                whileInView={{ opacity: 1 }}
+                                transition={{ duration: 1 }}
+                                viewport={{ once: true }}
                             />
                         </div>
                         <h3 className="mt-6 text-2xl font-bold text-gray-900">{kepalaBUMDes.nama}</h3>
                         <p className="font-medium text-blue-600">{kepalaBUMDes.jabatan}</p>
                         <p className="mt-4 max-w-xl text-gray-700">{kepalaBUMDes.deskripsi}</p>
-                    </div>
+                    </motion.div>
                 </div>
             </section>
         </MainLayout>

@@ -1,6 +1,8 @@
 import MainLayout from '@/components/layout_compro/MainLayout';
+import { motion } from 'framer-motion';
 import { Briefcase, CheckCircle2, Crown, Layers, LucideIcon, Mail, Phone, User } from 'lucide-react';
 import React, { useState } from 'react';
+
 
 interface OrgItem {
     title: string;
@@ -227,7 +229,13 @@ const SectionGrid: React.FC<{ title: string; data: OrgItem[]; sectionIndex: numb
     ];
 
     return (
-        <div className="mb-20">
+        <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="mb-20"
+        >
             {/* Section Header with Modern Design */}
             <div className="relative mb-12 text-center">
                 <div className={`mx-auto mb-4 h-1 w-24 rounded-full bg-gradient-to-r ${gradientClasses[sectionIndex % 3]}`} />
@@ -243,7 +251,7 @@ const SectionGrid: React.FC<{ title: string; data: OrgItem[]; sectionIndex: numb
                     <OrgCard key={index} item={item} index={index} />
                 ))}
             </div>
-        </div>
+        </motion.div>
     );
 };
 
@@ -258,7 +266,13 @@ const StrukturOrganisasi: React.FC = () => {
                     <div className="absolute right-1/4 bottom-1/4 h-96 w-96 rounded-full bg-blue-300/10 blur-3xl" />
                 </div>
 
-                <div className="relative mx-auto max-w-4xl px-4 text-center">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.8 }}
+                    viewport={{ once: true }}
+                    className="relative mx-auto max-w-4xl px-4 text-center"
+                >
                     <h1 className="mb-6 text-5xl leading-tight font-bold md:text-6xl">
                         Struktur
                         <span className="bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent"> Organisasi</span>
@@ -267,7 +281,7 @@ const StrukturOrganisasi: React.FC = () => {
                     <p className="mx-auto max-w-2xl text-xl leading-relaxed text-blue-100">
                         Tim profesional yang berdedikasi untuk mengembangkan potensi ekonomi desa melalui tata kelola yang transparan dan akuntabel
                     </p>
-                </div>
+                </motion.div>
             </section>
 
             {/* Modern Struktur Organisasi */}
