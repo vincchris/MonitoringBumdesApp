@@ -1,3 +1,4 @@
+import { FooterInfo } from '@/components/footer-dashboard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -144,34 +145,32 @@ export default function Sekretariat() {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                     >
-                        <div className="aspect-video w-full overflow-hidden">
+                        <div className="group relative aspect-video w-full overflow-hidden">
+                            {/* Gambar */}
                             <img src={displayImage} alt={label} className="h-full w-full object-contain" />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition duration-300 group-hover:opacity-100">
+                                {preview && (
+                                    <button type="button" onClick={() => handleRemoveFile(field)} className="rounded-full bg-red-500 p-2 text-white">
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
+                                {!preview && existingImage && (
+                                    <>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            id={`${field}_replace`}
+                                            onChange={(e) => handleFileChange(e, field)}
+                                        />
+                                        <label htmlFor={`${field}_replace`} className="cursor-pointer">
+                                            <Upload className="h-12 w-12 rounded-full bg-blue-500 p-3 text-white" />
+                                        </label>
+                                    </>
+                                )}
+                            </div>
                         </div>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            {preview && (
-                                <button
-                                    type="button"
-                                    onClick={() => handleRemoveFile(field)}
-                                    className="rounded-full bg-red-500 p-2 text-white opacity-0 group-hover:opacity-100"
-                                >
-                                    <X className="h-4 w-4" />
-                                </button>
-                            )}
-                            {!preview && existingImage && (
-                                <div className="opacity-0 group-hover:opacity-100">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        id={`${field}_replace`}
-                                        onChange={(e) => handleFileChange(e, field)}
-                                    />
-                                    <label htmlFor={`${field}_replace`} className="cursor-pointer">
-                                        <Upload className="h-12 w-12 rounded-full bg-blue-500 p-3 text-white" />
-                                    </label>
-                                </div>
-                            )}
-                        </div>
+
                         <div className="absolute right-0 bottom-0 left-0 bg-gradient-to-t from-black/60 to-transparent p-3">
                             <p className="truncate text-sm font-medium text-white">
                                 {label}
@@ -245,7 +244,7 @@ export default function Sekretariat() {
                                         <Button
                                             type="submit"
                                             disabled={processing}
-                                            className="w-full rounded-xl bg-blue-600 py-3 font-medium text-lg p-5 text-white hover:bg-blue-700"
+                                            className="w-full rounded-xl bg-blue-600 p-5 py-3 text-lg font-medium text-white hover:bg-blue-700"
                                         >
                                             {processing ? (
                                                 <>
@@ -263,6 +262,8 @@ export default function Sekretariat() {
                     </motion.div>
                 </div>
             </div>
+            {/* Footer section */}
+            <FooterInfo />
         </AppLayout>
     );
 }

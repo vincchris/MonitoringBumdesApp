@@ -41,7 +41,7 @@ export default function NavMainAdmin() {
                     <NavLink href={`/profil/data-umum`} icon={Home} label="Data Umum" />
                     <NavLink href={`/profil/sekretariat`} icon={Building} label="Sekretariat" />
                     <NavLink href={`/profil/tentang`} icon={FileText} label="Tentang BUMDes" />
-                    <NavLink href={`/profil/struktur`} icon={Users} label="Struktur Organisasi" />
+                    <NavLink href={`/profil/pengurus-bumdes`} icon={Users} label="Pengurus BUMDes" />
                     <NavLink href={`/profil/legalitas`} icon={FolderOpen} label="Dokumen Legalitas" />
                 </div>
             </div>

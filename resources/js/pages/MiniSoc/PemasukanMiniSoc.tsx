@@ -150,11 +150,9 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
     };
 
     const handleDelete = (id: number) => {
-        console.log(`Deleting: /unit/${unit_id}/pemasukan-minisoc/${id}`);
         if (confirm('Yakin ingin menghapus data ini?')) {
             router.delete(`/unit/${unit_id}/pemasukan-minisoc/${id}`);
         }
-        console.log('Unit ID:', unit_id);
     };
 
     // Menggunakan data tarifs yang dikirim dari backend
