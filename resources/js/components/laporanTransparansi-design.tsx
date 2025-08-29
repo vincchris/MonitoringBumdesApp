@@ -1,5 +1,6 @@
 import MainLayout from '@/components/layout_compro/MainLayout';
 import { usePage } from '@inertiajs/react';
+import { motion } from 'framer-motion';
 import { BarChart3, FileDown, Loader2 } from 'lucide-react';
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
@@ -64,19 +65,31 @@ const Laporan: React.FC = () => {
             {/* Hero Section */}
             <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 py-24 text-center text-white">
                 <div className="absolute inset-0 bg-black/10" />
-                <div className="relative mx-auto max-w-4xl px-6">
+                <motion.div
+                    initial={{ opacity: 0, y: -50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8 }}
+                    viewport={{ once: true }}
+                    className="relative mx-auto max-w-4xl px-6"
+                >
                     <h1 className="mb-6 text-5xl font-bold tracking-tight md:text-6xl lg:text-7xl">
                         Laporan & <span className="text-blue-200">Transparansi</span>
                     </h1>
                     <p className="mx-auto max-w-3xl text-xl leading-relaxed text-blue-100 md:text-2xl">
                         Laporan keuangan BUMDes Bagja Waluya yang disusun secara transparan dan akuntabel.
                     </p>
-                </div>
+                </motion.div>
             </section>
 
             {/* Ringkasan Keuangan */}
             <section className="bg-white py-16">
-                <div className="mx-auto max-w-6xl px-6">
+                <motion.div
+                    initial={{ opacity: 0, y: -50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 1 }}
+                    viewport={{ once: true }}
+                    className="mx-auto max-w-6xl px-6"
+                >
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
                         <div className="rounded-xl bg-blue-100 p-6 text-center">
                             <p className="text-sm font-medium text-blue-600">Total Pemasukan</p>
@@ -95,12 +108,18 @@ const Laporan: React.FC = () => {
                             <p className="mt-2 text-2xl font-bold text-blue-800">Rp{Math.round(ringkasan.saldo_akhir).toLocaleString('id-ID')}</p>
                         </div>
                     </div>
-                </div>
+                </motion.div>
             </section>
 
             {/* Grafik Keuangan */}
             <section className="bg-blue-50 py-20">
-                <div className="mx-auto max-w-6xl px-6">
+                <motion.div
+                    initial={{ opacity: 0, x: -50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.8 }}
+                    viewport={{ once: true }}
+                    className="mx-auto max-w-6xl px-6"
+                >
                     <div className="mb-12 text-center">
                         <h2 className="mb-4 text-3xl font-bold text-blue-800">Grafik Keuangan {new Date().getFullYear()}</h2>
                         <p className="mx-auto max-w-2xl text-blue-700">
@@ -125,12 +144,18 @@ const Laporan: React.FC = () => {
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
+                </motion.div>
             </section>
 
             {/* Unduh Laporan */}
             <section className="bg-white py-20">
-                <div className="mx-auto max-w-4xl px-6 text-center">
+                <motion.div
+                    initial={{ opacity: 0, x: -50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.8 }}
+                    viewport={{ once: true }}
+                    className="mx-auto max-w-4xl px-6 text-center"
+                >
                     <h2 className="mb-4 text-3xl font-bold text-blue-800">Unduh Laporan Resmi</h2>
                     <p className="mb-8 text-blue-700">
                         Anda dapat mengunduh laporan lengkap dalam format PDF untuk tahun {new Date().getFullYear()}.
@@ -152,19 +177,25 @@ const Laporan: React.FC = () => {
                             </>
                         )}
                     </button>
-                </div>
+                </motion.div>
             </section>
 
             {/* Pernyataan Transparansi */}
             <section className="bg-blue-50 py-20">
-                <div className="mx-auto max-w-3xl px-6 text-center">
+                <motion.div
+                    initial={{ opacity: 0, y: -50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8 }}
+                    viewport={{ once: true }}
+                    className="mx-auto max-w-3xl px-6 text-center"
+                >
                     <h2 className="mb-4 text-2xl font-bold text-blue-800">Komitmen Transparansi</h2>
                     <p className="leading-relaxed text-blue-700">
                         Kami berkomitmen untuk mengelola dana BUMDes secara <strong>transparan</strong>, <strong>akuntabel</strong>, dan{' '}
                         <strong>terbuka</strong> kepada seluruh warga Desa Bagja Waluya. Seluruh laporan keuangan dapat diakses kapan saja dan akan
                         terus diperbarui secara berkala.
                     </p>
-                </div>
+                </motion.div>
             </section>
         </MainLayout>
     );

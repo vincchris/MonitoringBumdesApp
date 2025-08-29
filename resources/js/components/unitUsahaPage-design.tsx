@@ -1,4 +1,5 @@
 import MainLayout from '@/components/layout_compro/MainLayout';
+import { motion } from 'framer-motion';
 import { Building2, Clock, Globe, LucideIcon, MapPin, ShoppingBag, Volleyball, Waves, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import DatePicker from 'react-datepicker';
@@ -459,18 +460,36 @@ const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
             <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 py-24 text-center text-white">
                 <div className="absolute inset-0 bg-black/10"></div>
                 <div className="relative mx-auto max-w-4xl px-6">
-                    <h1 className="mb-6 text-5xl font-bold tracking-tight md:text-6xl lg:text-7xl">
+                    <motion.h1
+                        initial={{ opacity: 0, y: -50 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8 }}
+                        viewport={{ once: true }}
+                        className="mb-6 text-5xl font-bold tracking-tight md:text-6xl lg:text-7xl"
+                    >
                         Unit Usaha <span className="text-blue-200">BUMDes</span>
-                    </h1>
-                    <p className="mx-auto max-w-3xl text-xl leading-relaxed text-blue-100 md:text-2xl">
+                    </motion.h1>
+                    <motion.p
+                        initial={{ opacity: 0, y: -50 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8 }}
+                        viewport={{ once: true }}
+                        className="mx-auto max-w-3xl text-xl leading-relaxed text-blue-100 md:text-2xl"
+                    >
                         Jelajahi berbagai layanan dan potensi usaha yang dikelola oleh BUMDes Bagja Waluya
-                    </p>
+                    </motion.p>
                 </div>
             </section>
 
             {/* Business Units Grid */}
             <section className="bg-gray-50 py-24">
-                <div className="mx-auto max-w-7xl px-6">
+                <motion.div
+                    initial={{ opacity: 0, y: -50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8 }}
+                    viewport={{ once: true }}
+                    className="mx-auto max-w-7xl px-6"
+                >
                     <div className="mb-16 text-center">
                         <h2 className="mb-4 text-4xl font-bold text-gray-900">Layanan Kami</h2>
                         <p className="mx-auto max-w-2xl text-lg text-gray-600">
@@ -555,12 +574,18 @@ const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
                             );
                         })}
                     </div>
-                </div>
+                </motion.div>
             </section>
 
             {/* FAQ */}
             <section className="bg-white py-20">
-                <div className="mx-auto max-w-4xl px-6">
+                <motion.div
+                    initial={{ opacity: 0, y: -50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8 }}
+                    viewport={{ once: true }}
+                    className="mx-auto max-w-4xl px-6"
+                >
                     <div className="mb-12 text-center">
                         <h2 className="mb-4 text-3xl font-bold text-gray-900">Pertanyaan Umum</h2>
                         <p className="text-gray-600">Temukan jawaban untuk pertanyaan yang sering diajukan</p>
@@ -585,7 +610,7 @@ const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
                             </div>
                         ))}
                     </div>
-                </div>
+                </motion.div>
             </section>
 
             {/* MODAL */}

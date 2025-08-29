@@ -1,4 +1,5 @@
 import MainLayout from '@/components/layout_compro/MainLayout';
+import { motion } from 'framer-motion';
 import { LucideIcon, Mail, MapPin, Phone } from 'lucide-react';
 import React from 'react';
 
@@ -31,17 +32,29 @@ const Kontak: React.FC = () => {
         <MainLayout title="Kontak BUMDes">
             {/* Hero */}
             <section className="bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 py-20 text-center text-white">
-                <div className="mx-auto max-w-3xl px-4">
+                <motion.div
+                    initial={{ opacity: 0, y: -50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8 }}
+                    viewport={{ once: true }}
+                    className="mx-auto max-w-3xl px-4"
+                >
                     <h1 className="mb-4 text-4xl font-bold md:text-5xl">Hubungi Kami</h1>
                     <p className="text-lg text-blue-100">
                         Silakan hubungi BUMDes Bagja Waluya untuk pertanyaan, kerja sama, atau informasi lebih lanjut.
                     </p>
-                </div>
+                </motion.div>
             </section>
 
             {/* Informasi Kontak */}
             <section className="bg-white py-20">
-                <div className="mx-auto max-w-4xl px-6">
+                <motion.div
+                    initial={{ opacity: 0, y: -50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8 }}
+                    viewport={{ once: true }}
+                    className="mx-auto max-w-4xl px-6"
+                >
                     <div className="mb-12 text-center">
                         <h2 className="mb-4 text-3xl font-bold text-gray-800">Informasi Kontak</h2>
                         <p className="text-gray-600">Kami siap membantu Anda pada hari kerja Senin–Jumat, pukul 08.00–16.00 WIB.</p>
@@ -56,12 +69,18 @@ const Kontak: React.FC = () => {
                             </div>
                         ))}
                     </div>
-                </div>
+                </motion.div>
             </section>
 
             {/* Google Maps Embed */}
             <section className="bg-gray-50 py-12">
-                <div className="mx-auto max-w-6xl px-4">
+                <motion.div
+                    initial={{ opacity: 0, y: -50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8 }}
+                    viewport={{ once: true }}
+                    className="mx-auto max-w-6xl px-4"
+                >
                     <h3 className="mb-6 text-center text-2xl font-bold text-gray-800">Lokasi Kantor</h3>
                     <div className="aspect-w-16 aspect-h-9 overflow-hidden rounded-xl border shadow-md">
                         <iframe
@@ -74,7 +93,7 @@ const Kontak: React.FC = () => {
                             referrerPolicy="no-referrer-when-downgrade"
                         ></iframe>
                     </div>
-                </div>
+                </motion.div>
             </section>
         </MainLayout>
     );
