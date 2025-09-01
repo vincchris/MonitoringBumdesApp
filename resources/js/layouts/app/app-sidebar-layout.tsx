@@ -22,7 +22,7 @@ export default function AppSidebarLayout({ children }: { children: React.ReactNo
     const toggleSidebar = () => setSidebarOpen((prev) => !prev);
 
     const getNavComponent = () => {
-        console.log('Getting nav component for:', { roles: user?.roles, unitId });
+       
 
         if (user?.roles === 'admin') {
             return <NavMainAdminn />;

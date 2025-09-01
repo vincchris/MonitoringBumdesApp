@@ -1,3 +1,4 @@
+import { FooterInfo } from '@/components/footer-dashboard';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { CheckCircle, RefreshCw, Trash2, TriangleAlert } from 'lucide-react';
@@ -712,6 +713,8 @@ export default function PengurusBumdes() {
                     </div>
                 </div>
             )}
+
+            <FooterInfo />
         </AppLayout>
     );
 }
