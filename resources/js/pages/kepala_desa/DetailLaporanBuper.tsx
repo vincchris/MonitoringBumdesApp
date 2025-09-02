@@ -507,13 +507,13 @@ export default function DetailLaporanMiniSoccer() {
                     )}
 
                     {/* Transaction Table */}
-                    <Card className="shadow-sm">
-                        <CardHeader>
+                    <Card className="shadow-sm p-4">
+                        <CardHeader className='px-6 py-2'>
                             <CardTitle className="flex items-center gap-2">
                                 <FileText className="h-5 w-5" />
                                 Rincian Transaksi Harian - {bulan}
                             </CardTitle>
-                            <p className="text-sm text-gray-500">Menampilkan semua transaksi yang terjadi pada bulan {bulan}</p>
+                            <p className="text-sm text-gray-500 mt-2">Menampilkan semua transaksi yang terjadi pada bulan {bulan}</p>
                         </CardHeader>
                         <CardContent className="p-0">
                             {detailLaporan.length > 0 ? (
@@ -595,8 +595,8 @@ export default function DetailLaporanMiniSoccer() {
                     {detailLaporan.length > 0 && (
                         <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
                             {/* Summary Info */}
-                            <Card>
-                                <CardHeader>
+                            <Card className='p-4'>
+                                <CardHeader className='px-6 py-2'>
                                     <CardTitle className="text-base">Informasi Laporan</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
@@ -628,8 +628,8 @@ export default function DetailLaporanMiniSoccer() {
                             </Card>
 
                             {/* Cash Flow Info */}
-                            <Card>
-                                <CardHeader>
+                            <Card className='p-4'>
+                                <CardHeader className='px-6 py-2'>
                                     <CardTitle className="text-base">Aliran Kas</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">

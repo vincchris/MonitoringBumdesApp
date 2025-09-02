@@ -261,8 +261,8 @@ export default function DetailLaporanAirWeslik() {
                     )}
 
                     {/* Transaction Table */}
-                    <Card className="shadow-sm">
-                        <CardHeader>
+                    <Card className="shadow-sm p-2">
+                        <CardHeader className='px-6 py-2'>
                             <CardTitle className="flex items-center gap-2">
                                 <FileText className="h-5 w-5" />
                                 Rincian Transaksi Harian - {bulan}
@@ -349,8 +349,8 @@ export default function DetailLaporanAirWeslik() {
                     {detailLaporan.length > 0 && (
                         <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
                             {/* Summary Info */}
-                            <Card>
-                                <CardHeader>
+                            <Card className='p-2'>
+                                <CardHeader className='px-6 py-2'>
                                     <CardTitle className="text-base">Informasi Laporan</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
@@ -382,8 +382,8 @@ export default function DetailLaporanAirWeslik() {
                             </Card>
 
                             {/* Cash Flow Info */}
-                            <Card>
-                                <CardHeader>
+                            <Card className='p-2'>
+                                <CardHeader className='px-6 py-2'>
                                     <CardTitle className="text-base">Aliran Kas</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">

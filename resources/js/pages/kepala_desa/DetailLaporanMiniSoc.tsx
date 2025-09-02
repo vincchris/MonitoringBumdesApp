@@ -507,9 +507,9 @@ export default function DetailLaporanMiniSoccer() {
                     )}
 
                     {/* Transaction Table */}
-                    <Card className="shadow-sm">
+                    <Card className="shadow-sm p-4">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
+                            <CardTitle className="flex items-center gap-2 py-2">
                                 <FileText className="h-5 w-5" />
                                 Rincian Transaksi Harian - {bulan}
                             </CardTitle>
@@ -595,8 +595,8 @@ export default function DetailLaporanMiniSoccer() {
                     {detailLaporan.length > 0 && (
                         <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
                             {/* Summary Info */}
-                            <Card>
-                                <CardHeader>
+                            <Card className='p-2'>
+                                <CardHeader className='px-6 py-2'>
                                     <CardTitle className="text-base">Informasi Laporan</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
@@ -628,8 +628,8 @@ export default function DetailLaporanMiniSoccer() {
                             </Card>
 
                             {/* Cash Flow Info */}
-                            <Card>
-                                <CardHeader>
+                            <Card className='p-2'>
+                                <CardHeader className='px-6 py-2'>
                                     <CardTitle className="text-base">Aliran Kas</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
