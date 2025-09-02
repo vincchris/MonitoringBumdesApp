@@ -45,6 +45,13 @@ interface LaporanKeuangan {
     };
 }
 
+interface Pagination {
+    total: number;
+    per_page: number;
+    current_page: number;
+    last_page: number;
+}
+
 interface FlashInfo {
     message?: string;
     method?: string;
@@ -623,7 +630,8 @@ export default function MiniSoc() {
         tarif,
         allTarifs = [],
         currentMonthSummary,
-    } = usePage().props as unknown as PageProps;
+        pagination,
+    } = usePage().props as unknown as PageProps & { pagination: Pagination };
 
     // Flash message handling
     const { message: flashMessage, method: flashMethod, color: flashColor } = useFlashMessage(flash?.info);
@@ -857,6 +865,47 @@ export default function MiniSoc() {
                     </div>
 
                     <TransactionTable data={laporanKeuangan} />
+                    {pagination && (
+                        <div className="mb-4">
+                            {/* Pagination Controls */}
+                            {pagination && pagination.last_page > 1 && (
+                                <div className="mt-4 flex items-center justify-center gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={pagination.current_page === 1}
+                                        onClick={() =>
+                                            router.get(route('MiniSoccer.index'), { page: pagination.current_page - 1 }, { preserveState: true })
+                                        }
+                                    >
+                                        Sebelumnya
+                                    </Button>
+
+                                    {Array.from({ length: pagination.last_page }, (_, i) => (
+                                        <Button
+                                            key={i}
+                                            variant={pagination.current_page === i + 1 ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => router.get(route('MiniSoccer.index'), { page: i + 1 }, { preserveState: true })}
+                                        >
+                                            {i + 1}
+                                        </Button>
+                                    ))}
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={pagination.current_page === pagination.last_page}
+                                        onClick={() =>
+                                            router.get(route('MiniSoccer.index'), { page: pagination.current_page + 1 }, { preserveState: true })
+                                        }
+                                    >
+                                        Selanjutnya
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </section>
             </div>
 

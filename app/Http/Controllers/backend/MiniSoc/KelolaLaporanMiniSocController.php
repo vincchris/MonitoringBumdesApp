@@ -20,162 +20,273 @@ use Inertia\Inertia;
 
 class KelolaLaporanMiniSocController extends Controller
 {
+    /**
+     * Display laporan keuangan
+     * Menerima parameter unitId dari route dan request untuk pagination/filter
+     */
+    public function index(Request $request, $unitId = null)
+    {
+        $user = Auth::user()->load('units');
+
+        // Jika ada unitId dari parameter route, gunakan itu
+        if ($unitId) {
+            $unit = Unit::findOrFail($unitId);
+            // Pastikan user memiliki akses ke unit ini
+            if (!$user->units->contains('id_units', $unit->id_units)) {
+                abort(403, 'Anda tidak memiliki akses ke unit ini.');
+            }
+        } else {
+            // Jika tidak ada unitId, ambil unit pertama user
+            $unit = $user->units()->first();
+            if (!$unit) {
+                abort(403, 'Anda tidak memiliki unit yang dapat diakses.');
+            }
+        }
+
+        $tanggalDipilih = $request->get('tanggal');
+        $page = $request->get('page', 1);
+        $perPage = 10;
+
+        // Cek apakah menggunakan BalanceHistory atau data manual
+        if ($this->hasBalanceHistory($unit->id_units)) {
+            $laporanKeuangan = $this->getLaporanFromBalanceHistory($unit->id_units, $tanggalDipilih, $page, $perPage);
+        } else {
+            $laporanKeuangan = $this->getLaporanManual($unit->id_units, $tanggalDipilih, $page, $perPage);
+        }
+
+        return Inertia::render('MiniSoc/KelolaLaporanMiniSoc', [
+            'auth' => [
+                'user' => $user->only(['id_users', 'name', 'roles', 'image']),
+            ],
+            'unit_id' => $unit->id_units,
+            'laporanKeuangan' => $laporanKeuangan['data'],
+            'tanggal_dipilih' => $tanggalDipilih,
+            'initial_balance' => InitialBalance::where('unit_id', $unit->id_units)->value('nominal') ?? 0,
+            'pagination' => $laporanKeuangan['pagination']
+        ]);
+    }
+
     public function exportPDF($unitId)
     {
         $unit = Unit::findOrFail($unitId);
-        $laporan = $this->getLaporanData();
 
-        // Tambahkan perhitungan selisih (pendapatan = +, pengeluaran = -)
-        $saldo = 0;
-        $laporanDenganSelisih = $laporan->map(function ($item) use (&$saldo) {
-            $selisih = $item['jenis'] === 'Pendapatan'
-                ? $item['nominal']
-                : -$item['nominal'];
+        // Pastikan user memiliki akses
+        $user = Auth::user();
+        if (!$user->units->contains('id_units', $unit->id_units)) {
+            abort(403, 'Anda tidak memiliki akses ke unit ini.');
+        }
 
+        $laporan = $this->getLaporanDataForExport($unit->id_units);
+
+        $pdf = PDF::loadView('exports.laporan_pdf', [
+            'laporan' => $laporan,
+            'unitName' => $unit->unit_name,
+        ]);
+
+        return $pdf->download("laporan_keuangan_{$unit->unit_name}.pdf");
+    }
+
+    public function exportExcel($unitId)
+    {
+        $unit = Unit::findOrFail($unitId);
+
+        // Pastikan user memiliki akses
+        $user = Auth::user();
+        if (!$user->units->contains('id_units', $unit->id_units)) {
+            abort(403, 'Anda tidak memiliki akses ke unit ini.');
+        }
+
+        $laporan = $this->getLaporanDataForExport($unit->id_units);
+
+        return Excel::download(
+            new LaporanExport($laporan),
+            "laporan_keuangan_{$unit->unit_name}.xlsx"
+        );
+    }
+
+    /**
+     * Cek apakah unit memiliki data BalanceHistory
+     */
+    private function hasBalanceHistory($unitId)
+    {
+        return BalanceHistory::where('unit_id', $unitId)->exists();
+    }
+
+    /**
+     * Ambil laporan dari BalanceHistory (jika ada)
+     */
+    private function getLaporanFromBalanceHistory($unitId, $tanggalDipilih, $page, $perPage)
+    {
+        $historiesQuery = BalanceHistory::where('unit_id', $unitId)
+            ->when($tanggalDipilih, function ($query) use ($tanggalDipilih) {
+                $query->whereDate('updated_at', $tanggalDipilih);
+            })
+            ->orderByDesc('updated_at');
+
+        $histories = $historiesQuery->paginate($perPage, ['*'], 'page', $page);
+
+        $laporanKeuangan = $histories->getCollection()->map(function ($item) {
+            $description = $this->getTransactionDescription($item);
+
+            return [
+                'tanggal' => optional($item->updated_at)->format('Y-m-d'),
+                'keterangan' => $description,
+                'jenis' => $item->jenis,
+                'selisih' => $item->jenis === 'Pendapatan'
+                    ? $item->saldo_sekarang - $item->saldo_sebelum
+                    : $item->saldo_sebelum - $item->saldo_sekarang,
+                'saldo' => $item->saldo_sekarang,
+            ];
+        });
+
+        return [
+            'data' => $laporanKeuangan,
+            'pagination' => [
+                'total' => $histories->total(),
+                'per_page' => $histories->perPage(),
+                'current_page' => $histories->currentPage(),
+                'last_page' => $histories->lastPage(),
+            ]
+        ];
+    }
+
+    /**
+     * Ambil laporan manual dari Income dan Expense (jika tidak ada BalanceHistory)
+     */
+    private function getLaporanManual($unitId, $tanggalDipilih, $page, $perPage)
+    {
+        // Ambil data income
+        $incomesQuery = Income::whereHas('rent.tarif.unit', function ($query) use ($unitId) {
+            $query->where('id_units', $unitId);
+        })
+            ->when($tanggalDipilih, function ($query) use ($tanggalDipilih) {
+                $query->whereDate('created_at', $tanggalDipilih);
+            })
+            ->with(['rent']);
+
+        // Ambil data expense
+        $expensesQuery = Expense::where('unit_id', $unitId)
+            ->when($tanggalDipilih, function ($query) use ($tanggalDipilih) {
+                $query->whereDate('created_at', $tanggalDipilih);
+            });
+
+        // Gabungkan queries menggunakan Union (lebih efisien untuk pagination)
+        $incomes = $incomesQuery->get()->map(function ($item) {
+            return [
+                'tanggal' => optional($item->created_at)->format('Y-m-d'),
+                'keterangan' => $item->rent->description ?? 'Pemasukan',
+                'jenis' => 'Pendapatan',
+                'nominal' => (int) ($item->rent->total_bayar ?? 0),
+                'created_at' => $item->created_at,
+            ];
+        });
+
+        $expenses = $expensesQuery->get()->map(function ($item) {
+            return [
+                'tanggal' => optional($item->created_at)->format('Y-m-d'),
+                'keterangan' => $item->description ?? 'Pengeluaran',
+                'jenis' => 'Pengeluaran',
+                'nominal' => (int) $item->nominal,
+                'created_at' => $item->created_at,
+            ];
+        });
+
+        // Gabungkan dan urutkan
+        $merged = $incomes->concat($expenses)
+            ->sortByDesc('created_at')
+            ->values();
+
+        // Hitung saldo berjalan
+        $initialBalance = InitialBalance::where('unit_id', $unitId)->value('nominal') ?? 0;
+        $saldo = $initialBalance;
+
+        $finalLaporan = $merged->map(function ($item) use (&$saldo) {
+            $selisih = $item['jenis'] === 'Pendapatan' ? $item['nominal'] : -$item['nominal'];
             $saldo += $selisih;
 
             return [
-                ...$item,
+                'tanggal' => $item['tanggal'],
+                'keterangan' => $item['keterangan'],
+                'jenis' => $item['jenis'],
                 'selisih' => $selisih,
                 'saldo' => $saldo,
             ];
         });
 
-        $pdf = PDF::loadView('exports.laporan_pdf',
-        [
-            'laporan' => $laporanDenganSelisih,
-            'unitName' => $unit->unit_name,
-        ]);
+        // Manual pagination
+        $total = $finalLaporan->count();
+        $paged = $finalLaporan->forPage($page, $perPage)->values();
 
-        return $pdf->download('laporan_keuangan.pdf');
+        return [
+            'data' => $paged,
+            'pagination' => [
+                'total' => $total,
+                'per_page' => $perPage,
+                'current_page' => (int) $page,
+                'last_page' => ceil($total / $perPage),
+            ]
+        ];
     }
 
-    public function exportExcel()
+    /**
+     * Method untuk mendapatkan description transaksi dari BalanceHistory
+     */
+    private function getTransactionDescription($balanceHistory)
     {
-        $laporan = $this->getLaporanData();
-        return Excel::download(new LaporanExport($laporan), 'laporan_keuangan.xlsx');
-    }
+        $tanggalAwal = Carbon::parse($balanceHistory->updated_at)->startOfDay();
+        $tanggalAkhir = Carbon::parse($balanceHistory->updated_at)->endOfDay();
 
-    // Refactor Data agar tidak duplikat
-    private function getLaporanData()
-    {
-        $user = auth()->user();
-        $unit = $user->units()->first();
+        if ($balanceHistory->jenis === 'Pendapatan') {
+            $income = Income::whereHas('rent.tarif.unit', function ($q) use ($balanceHistory) {
+                $q->where('id_units', $balanceHistory->unit_id);
+            })
+                ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
+                ->with(['rent' => function($query) {
+                    $query->select('id_rent', 'description', 'total_bayar');
+                }])
+                ->orderBy('updated_at', 'desc')
+                ->first();
 
-        $incomes = Income::whereHas('rent.tarif.unit', function ($query) use ($unit) {
-            $query->where('id_units', $unit->id_units);
-        })
-            ->with(['rent'])
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'tanggal' => optional($item->created_at)->format('Y-m-d'),
-                    'keterangan' => $item->rent->description ?? 'Pemasukan',
-                    'jenis' => 'Pendapatan',
-                    'nominal' => (int) $item->rent->total_bayar ?? 0,
-                ];
-            });
+            if ($income && $income->rent) {
+                return $income->rent->description ?? 'Pemasukan dari sewa';
+            }
 
-        $expenses = Expense::where('unit_id', $unit->id_units)
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'tanggal' => optional($item->created_at)->format('Y-m-d'),
-                    'keterangan' => $item->description ?? 'Pengeluaran',
-                    'jenis' => 'Pengeluaran',
-                    'nominal' => (int) $item->nominal,
-                ];
-            });
+            // Fallback: cari rent transaction
+            $rent = RentTransaction::whereHas('tarif.unit', function ($q) use ($balanceHistory) {
+                $q->where('id_units', $balanceHistory->unit_id);
+            })
+                ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
+                ->orderBy('updated_at', 'desc')
+                ->first();
 
-        $merged = $incomes->concat($expenses)->sortByDesc('tanggal')->values();
-
-        $saldo = 0;
-        $finalLaporan = $merged->map(function ($item) use (&$saldo) {
-            $saldo += $item['jenis'] === 'Pendapatan' ? $item['nominal'] : -$item['nominal'];
-            return [
-                ...$item,
-                'saldo' => $saldo,
-            ];
-        });
-
-        return $finalLaporan;
-    }
-
-    public function index(Request $request)
-    {
-        $user = Auth::user()->load('units');
-        $unit = $user->units()->first();
-
-        if (!$unit) {
-            abort(403, 'Anda tidak memiliki unit yang dapat diakses.');
+            return $rent ? ($rent->description ?? 'Pemasukan dari sewa') : 'Pemasukan';
         }
 
-        $tanggalDipilih = $request->get('tanggal');
+        if ($balanceHistory->jenis === 'Pengeluaran') {
+            $expense = Expense::where('unit_id', $balanceHistory->unit_id)
+                ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
+                ->orderBy('updated_at', 'desc')
+                ->first();
 
-        // Ambil histori saldo berdasarkan unit
-        $histories = BalanceHistory::where('unit_id', $unit->id_units)
-            ->when($tanggalDipilih, function ($query) use ($tanggalDipilih) {
-                $query->whereDate('updated_at', $tanggalDipilih);
-            })
-            ->orderByDesc('updated_at')
-            ->get()
-            ->map(function ($item) {
-                $tanggalAwal = Carbon::parse($item->updated_at)->startOfDay();
-                $tanggalAkhir = Carbon::parse($item->updated_at)->endOfDay();
+            return $expense ? ($expense->description ?? 'Pengeluaran operasional') : 'Pengeluaran';
+        }
 
-                // Perbaikan untuk mendapatkan description
-                $description = '-';
+        return '-';
+    }
 
-                if ($item->jenis === 'Pendapatan') {
-                    // Cari income berdasarkan tanggal dan unit
-                    $income = Income::whereHas('rent.tarif.unit', function ($q) use ($item) {
-                        $q->where('id_units', $item->unit_id);
-                    })
-                        ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
-                        ->with(['rent' => function($query) {
-                            $query->select('id_rent', 'description', 'total_bayar');
-                        }])
-                        ->orderBy('updated_at', 'desc')
-                        ->first();
+    /**
+     * Method untuk export (mengambil semua data)
+     */
+    private function getLaporanDataForExport($unitId)
+    {
+        if ($this->hasBalanceHistory($unitId)) {
+            // Gunakan BalanceHistory
+            $histories = BalanceHistory::where('unit_id', $unitId)
+                ->orderByDesc('updated_at')
+                ->get();
 
-                    if ($income && $income->rent) {
-                        $description = $income->rent->description ?? 'Pemasukan dari sewa';
-                    } else {
-                        // Fallback: cari rent transaction langsung
-                        $rent = RentTransaction::whereHas('tarif.unit', function ($q) use ($item) {
-                            $q->where('id_units', $item->unit_id);
-                        })
-                            ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
-                            ->orderBy('updated_at', 'desc')
-                            ->first();
-
-                        $description = $rent ? ($rent->description ?? 'Pemasukan dari sewa') : 'Pemasukan';
-                    }
-
-                    Log::info('Income Description Debug:', [
-                        'unit_id' => $item->unit_id,
-                        'tanggal' => $item->updated_at->format('Y-m-d H:i:s'),
-                        'income_found' => $income ? 'Yes' : 'No',
-                        'rent_data' => $income ? $income->rent : null,
-                        'final_description' => $description,
-                    ]);
-                }
-
-                if ($item->jenis === 'Pengeluaran') {
-                    $expense = Expense::where('unit_id', $item->unit_id)
-                        ->whereBetween('updated_at', [$tanggalAwal, $tanggalAkhir])
-                        ->orderBy('updated_at', 'desc')
-                        ->first();
-
-                    $description = $expense ? ($expense->description ?? 'Pengeluaran operasional') : 'Pengeluaran';
-
-                    Log::info('Expense Description Debug:', [
-                        'unit_id' => $item->unit_id,
-                        'tanggal' => $item->updated_at->format('Y-m-d H:i:s'),
-                        'expense_found' => $expense ? 'Yes' : 'No',
-                        'final_description' => $description,
-                    ]);
-                }
+            return $histories->map(function ($item) {
+                $description = $this->getTransactionDescription($item);
 
                 return [
                     'tanggal' => optional($item->updated_at)->format('Y-m-d'),
@@ -184,31 +295,12 @@ class KelolaLaporanMiniSocController extends Controller
                     'selisih' => $item->jenis === 'Pendapatan'
                         ? $item->saldo_sekarang - $item->saldo_sebelum
                         : $item->saldo_sebelum - $item->saldo_sekarang,
-                    'saldo' => number_format($item->saldo_sekarang, 0, '', ','),
-                    'updated_at' => $item->updated_at,
+                    'saldo' => $item->saldo_sekarang,
                 ];
             });
-
-        // Pagination manual
-        $page = $request->get('page', 1);
-        $perPage = 10;
-        $paged = $histories->forPage($page, $perPage)->values();
-        $totalItems = $histories->count();
-
-        return Inertia::render('MiniSoc/KelolaLaporanMiniSoc', [
-            'auth' => [
-                'user' => $user->only(['name', 'role', 'image']),
-            ],
-            'unit_id' => $unit->id_units,
-            'laporanKeuangan' => $paged,
-            'tanggal_dipilih' => $tanggalDipilih,
-            'initial_balance' => InitialBalance::where('unit_id', $unit->id_units)->value('nominal') ?? 0,
-            'pagination' => [
-                'total' => $totalItems,
-                'per_page' => $perPage,
-                'current_page' => (int) $page,
-                'last_page' => ceil($totalItems / $perPage),
-            ]
-        ]);
+        } else {
+            // Gunakan data manual
+            return $this->getLaporanManual($unitId, null, 1, 999999)['data'];
+        }
     }
 }

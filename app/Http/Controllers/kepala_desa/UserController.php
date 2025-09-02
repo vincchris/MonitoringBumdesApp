@@ -23,10 +23,10 @@ class UserController extends Controller
             abort(403);
         }
 
-        // Pagination: ambil 10 user per halaman
+        // Pagination: ubah menjadi 5 user per halaman (minimal 5)
         $users = User::with('units')
             ->latest('updated_at')
-            ->paginate(10)
+            ->paginate(5) // Ubah dari 10 menjadi 5
             ->through(function ($user) {
                 return [
                     'id_users' => $user->id_users,
@@ -37,7 +37,7 @@ class UserController extends Controller
                     'updated_at' => optional($user->updated_at)->format('Y-m-d H:i:s'),
                     'units' => $user->units->map(fn($unit) => [
                         'id' => $unit->id_units,
-                        'name' => $unit->unit_name ?? 'Unit tidak diketahui', // Ubah ini
+                        'name' => $unit->unit_name ?? 'Unit tidak diketahui',
                     ]),
                 ];
             });
@@ -45,8 +45,53 @@ class UserController extends Controller
         return Inertia::render('kepala_desa/User', [
             'user' => $currentUser->only(['id_users', 'name', 'email', 'roles']),
             'users' => $users,
-            'units' => Unit::all(['id_units as id', 'unit_name as name']) // Ubah ini
+            'units' => Unit::all(['id_units as id', 'unit_name as name'])
         ]);
+    }
+
+    public function store(Request $request)
+    {
+        $currentUser = Auth::user();
+
+        if (!in_array($currentUser->roles, ['kepala_desa', 'kepala_bumdes'])) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'password' => 'required|string|min:8',
+            'roles' => 'required|in:kepala_desa,pengelola,kepala_bumdes',
+            'unit_id' => 'nullable|exists:units,id_units',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $userData = [
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'roles' => $validated['roles'],
+            ];
+
+            $user = User::create($userData);
+
+            // Assign unit jika role adalah pengelola dan unit_id ada
+            if ($validated['roles'] === 'pengelola' && !empty($validated['unit_id'])) {
+                $user->units()->sync([$validated['unit_id']]);
+            }
+
+            DB::commit();
+
+            return back()->with('info', [
+                'message' => 'User berhasil ditambahkan',
+                'method' => 'store',
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Gagal menambah user: ' . $e->getMessage()]);
+        }
     }
 
     public function update(Request $request, string $id)
@@ -68,8 +113,8 @@ class UserController extends Controller
                 Rule::unique('users', 'email')->ignore($user->id_users, 'id_users'),
             ],
             'password' => 'nullable|string|min:8',
-            'roles' => 'required|in:kepala_desa,pengelola',
-            'unit_id' => 'nullable|exists:units,id_units', // konsisten dengan store
+            'roles' => 'required|in:kepala_desa,pengelola,kepala_bumdes',
+            'unit_id' => 'nullable|exists:units,id_units',
         ]);
 
         try {
@@ -105,7 +150,6 @@ class UserController extends Controller
             return back()->withErrors(['error' => 'Gagal mengubah user: ' . $e->getMessage()]);
         }
     }
-
 
     public function destroy(string $id)
     {
@@ -157,7 +201,7 @@ class UserController extends Controller
             'email_verified_at' => $user->email_verified_at,
             'created_at' => optional($user->created_at)->format('Y-m-d H:i:s'),
             'updated_at' => optional($user->updated_at)->format('Y-m-d H:i:s'),
-            'unit_id' => $user->units->first()->id_units ?? null, // ambil satu unit saja
+            'unit_id' => $user->units->first()->id_units ?? null,
             'unit_name' => $user->units->first()->name ?? null,
         ];
 

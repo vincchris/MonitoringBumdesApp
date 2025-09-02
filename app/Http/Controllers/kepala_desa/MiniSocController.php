@@ -14,6 +14,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\DetailLaporanExport;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 
 
@@ -35,19 +36,34 @@ class MiniSocController extends Controller
 
         $page = (int) $request->get('page', 1);
         $perPage = self::DEFAULT_PER_PAGE;
-        $paged = $histories->forPage($page, $perPage)->values();
+        $paginator = new LengthAwarePaginator(
+            $histories->forPage($page, $perPage)->values(),
+            $histories->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+        
 
         return Inertia::render('kepala_desa/MiniSoccer', [
             // PERBAIKAN: Pastikan struktur data sesuai dengan yang diharapkan AppSidebarLayout
             'auth' => [
                 'user' => [
                     'name' => Auth::user()->name,
-                    'roles' => Auth::user()->role ?? 'kepala_desa', 
+                    'roles' => Auth::user()->role ?? 'kepala_desa',
                     'image' => Auth::user()->image,
                 ],
             ],
             'unit_id' => $unitId, // TAMBAHAN: Kirim unit_id
-            'laporanKeuangan' => $paged,
+            'laporanKeuangan' => $paginator->items(),
+            'pagination' => [
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'prev_page_url' => $paginator->previousPageUrl(),
+                'next_page_url' => $paginator->nextPageUrl(),
+            ],
             'initial_balance' => $this->getInitialBalance($unitId),
             'tanggal_diubah' => $this->getInitialBalanceTanggal($unitId),
             'currentMonthSummary' => $currentMonthSummary,
@@ -58,122 +74,539 @@ class MiniSocController extends Controller
                 'name' => $unit->name,
                 'type' => $unit->type,
             ],
-            'pagination' => [
-                'total' => $histories->count(),
-                'per_page' => $perPage,
-                'current_page' => $page,
-                'last_page' => ceil($histories->count() / $perPage),
-            ]
         ]);
     }
+
+
+    // PERBAIKAN LENGKAP untuk downloadPdfDetail method di MiniSocController.php
+
     public function downloadPdfDetail($bulan)
+    {
+        try {
+            // PERBAIKAN 1: Enhanced logging dan error tracking
+            Log::info('PDF Download Request Started', [
+                'bulan_param' => $bulan,
+                'user_id' => Auth::id(),
+                'timestamp' => now(),
+                'memory_usage' => memory_get_usage(true),
+                'memory_limit' => ini_get('memory_limit')
+            ]);
+
+            $unitId = self::UNIT_ID;
+
+            // PERBAIKAN 2: Set optimal environment untuk PDF generation
+            ini_set('memory_limit', '1G'); // Increase memory limit
+            ini_set('max_execution_time', 300); // 5 minutes
+            set_time_limit(300);
+
+            // PERBAIKAN 3: Robust month parameter parsing
+            $year = null;
+            $month = null;
+            $bulan = urldecode($bulan); // Handle URL encoding
+
+            // Try different formats
+            if (preg_match('/^(\d{4})-(\d{2})$/', $bulan, $matches)) {
+                // Format: YYYY-MM
+                $year = (int)$matches[1];
+                $month = $matches[2];
+            } elseif (preg_match('/^(\d{4})(\d{2})$/', $bulan, $matches)) {
+                // Format: YYYYMM
+                $year = (int)$matches[1];
+                $month = $matches[2];
+            } elseif (strpos($bulan, ' ') !== false) {
+                // Format: "Month YYYY"
+                $parts = explode(' ', $bulan);
+                if (count($parts) >= 2) {
+                    $monthName = $parts[0];
+                    $year = (int)end($parts);
+
+                    $monthMapping = [
+                        'January' => '01',
+                        'February' => '02',
+                        'March' => '03',
+                        'April' => '04',
+                        'May' => '05',
+                        'June' => '06',
+                        'July' => '07',
+                        'August' => '08',
+                        'September' => '09',
+                        'October' => '10',
+                        'November' => '11',
+                        'December' => '12',
+                        'Januari' => '01',
+                        'Februari' => '02',
+                        'Maret' => '03',
+                        'April' => '04',
+                        'Mei' => '05',
+                        'Juni' => '06',
+                        'Juli' => '07',
+                        'Agustus' => '08',
+                        'September' => '09',
+                        'Oktober' => '10',
+                        'November' => '11',
+                        'Desember' => '12'
+                    ];
+
+                    $month = $monthMapping[$monthName] ?? null;
+                }
+            }
+
+            // PERBAIKAN 4: Enhanced validation
+            if (!$year || !$month) {
+                Log::error('Failed to parse month parameter', [
+                    'original' => $bulan,
+                    'parsed_year' => $year,
+                    'parsed_month' => $month
+                ]);
+                return response()->json([
+                    'error' => 'Format bulan tidak valid. Gunakan format YYYY-MM atau "Month YYYY"',
+                    'received' => $bulan,
+                    'expected_formats' => ['YYYY-MM', 'Month YYYY']
+                ], 400);
+            }
+
+            // Additional validations
+            $currentYear = (int)date('Y');
+            if ($year < 2020 || $year > $currentYear + 1) {
+                return response()->json(['error' => "Tahun tidak valid: {$year}"], 400);
+            }
+
+            $monthNum = (int)$month;
+            if ($monthNum < 1 || $monthNum > 12) {
+                return response()->json(['error' => "Bulan tidak valid: {$month}"], 400);
+            }
+
+            // Ensure proper format
+            $month = str_pad($monthNum, 2, '0', STR_PAD_LEFT);
+
+            // PERBAIKAN 5: Enhanced unit retrieval with validation
+            $unit = Unit::find($unitId);
+            if (!$unit) {
+                Log::error('Unit not found', ['unit_id' => $unitId]);
+                return response()->json([
+                    'error' => 'Unit tidak ditemukan',
+                    'unit_id' => $unitId
+                ], 404);
+            }
+
+            // PERBAIKAN 6: Enhanced data retrieval with performance optimization
+            try {
+                $histories = $this->getDetailLaporan($unitId, $year, $month);
+
+                Log::info('Data retrieved successfully', [
+                    'unit_id' => $unitId,
+                    'year' => $year,
+                    'month' => $month,
+                    'histories_count' => $histories->count(),
+                    'memory_after_data' => memory_get_usage(true)
+                ]);
+            } catch (\Exception $dataError) {
+                Log::error('Failed to retrieve data', [
+                    'error' => $dataError->getMessage(),
+                    'unit_id' => $unitId,
+                    'year' => $year,
+                    'month' => $month
+                ]);
+                return response()->json([
+                    'error' => 'Gagal mengambil data laporan: ' . $dataError->getMessage(),
+                    'type' => 'data_retrieval_error'
+                ], 500);
+            }
+
+            // Check if data exists
+            if ($histories->isEmpty()) {
+                Log::info('No data found for the specified period', [
+                    'unit_id' => $unitId,
+                    'year' => $year,
+                    'month' => $month
+                ]);
+                return response()->json([
+                    'error' => 'Tidak ada data untuk periode yang diminta',
+                    'period' => "{$year}-{$month}",
+                    'unit' => $unit->unit_name ?? $unit->name
+                ], 404);
+            }
+
+            // PERBAIKAN 7: Enhanced summary calculation with error handling
+            try {
+                $summary = [
+                    'totalPendapatan' => $histories->where('jenis', 'Pendapatan')->sum('selisih'),
+                    'totalPengeluaran' => $histories->where('jenis', 'Pengeluaran')->sum('selisih'),
+                    'jumlahTransaksi' => $histories->count(),
+                ];
+                $summary['selisih'] = $summary['totalPendapatan'] - $summary['totalPengeluaran'];
+            } catch (\Exception $summaryError) {
+                Log::error('Failed to calculate summary', [
+                    'error' => $summaryError->getMessage(),
+                    'histories_count' => $histories->count()
+                ]);
+                // Continue with default values
+                $summary = [
+                    'totalPendapatan' => 0,
+                    'totalPengeluaran' => 0,
+                    'selisih' => 0,
+                    'jumlahTransaksi' => 0,
+                ];
+            }
+
+            // PERBAIKAN 8: Enhanced PDF data preparation
+            $monthName = Carbon::createFromDate($year, $month, 1)->translatedFormat('F Y');
+
+            $data = [
+                'detailLaporan' => $histories->sortByDesc('updated_at')->values(),
+                'bulan' => $monthName,
+                'unit' => [
+                    'id' => $unit->id_units ?? $unit->id,
+                    'name' => $unit->unit_name ?? $unit->name,
+                    'type' => $unit->type ?? 'Mini Soccer'
+                ],
+                // TAMBAHAN: Variabel individual untuk kompatibilitas template
+                'unitName' => $unit->unit_name ?? $unit->name ?? 'Mini Soccer',
+                'unitId' => $unit->id_units ?? $unit->id,
+                'unitType' => $unit->type ?? 'Mini Soccer',
+                'summary' => $summary,
+                'generated_at' => now()->translatedFormat('l, d F Y H:i') . ' WIB',
+                'generated_by' => Auth::user()->name,
+                'year' => $year,
+                'month' => $month,
+                'period' => "{$year}-{$month}",
+            ];
+
+            // PERBAIKAN 9: Enhanced view validation
+            $viewPath = 'exports.laporan_bumdes_pdf';
+            if (!view()->exists($viewPath)) {
+                Log::error('PDF View template not found', [
+                    'view_path' => $viewPath,
+                    'available_views' => array_keys(view()->getFinder()->getViews())
+                ]);
+                return response()->json([
+                    'error' => 'Template PDF tidak ditemukan: ' . $viewPath,
+                    'type' => 'template_not_found'
+                ], 500);
+            }
+
+            // PERBAIKAN 10: Enhanced PDF generation dengan comprehensive error handling
+            try {
+                Log::info('Starting PDF generation', [
+                    'view_path' => $viewPath,
+                    'data_summary' => [
+                        'laporan_count' => $data['detailLaporan']->count(),
+                        'bulan' => $data['bulan'],
+                        'unit_name' => $data['unit']['name']
+                    ],
+                    'memory_before_pdf' => memory_get_usage(true)
+                ]);
+
+                // Initialize PDF with optimized settings
+                $pdf = PDF::loadView($viewPath, $data);
+                $pdf->setPaper('A4', 'landscape');
+
+                // Set comprehensive options
+                $pdf->setOptions([
+                    'isHtml5ParserEnabled' => true,
+                    'isPhpEnabled' => false,
+                    'isRemoteEnabled' => false, // Security: disable remote resources
+                    'debugPng' => false,
+                    'debugKeepTemp' => false,
+                    'debugCss' => false,
+                    'debugLayout' => false,
+                    'debugLayoutLines' => false,
+                    'debugLayoutBlocks' => false,
+                    'debugLayoutInline' => false,
+                    'debugLayoutPaddingBox' => false,
+                    'defaultFont' => 'DejaVu Sans',
+                    'defaultPaperSize' => 'A4',
+                    'dpi' => 150,
+                    'fontSubsetting' => true,
+                    'isFontSubsettingEnabled' => true,
+                    'isJavascriptEnabled' => false,
+                ]);
+
+                // Generate PDF output
+                $output = $pdf->output();
+
+                if (!$output || strlen($output) === 0) {
+                    throw new \Exception('PDF output is empty or null');
+                }
+
+                Log::info('PDF generation successful', [
+                    'output_size' => strlen($output),
+                    'memory_after_pdf' => memory_get_usage(true),
+                    'peak_memory' => memory_get_peak_usage(true)
+                ]);
+
+                // PERBAIKAN 11: Proper filename generation
+                $filename = "Detail-Transaksi-Mini-Soccer-{$year}-{$month}.pdf";
+
+                // PERBAIKAN 12: Enhanced response headers
+                $headers = [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                    'Content-Length' => strlen($output),
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate, private',
+                    'Pragma' => 'no-cache',
+                    'Expires' => '0',
+                    'X-Accel-Buffering' => 'no',
+                    'Accept-Ranges' => 'bytes',
+                ];
+
+                Log::info('PDF download successful', [
+                    'filename' => $filename,
+                    'file_size' => strlen($output),
+                    'user_id' => Auth::id(),
+                    'unit_id' => $unitId,
+                    'period' => "{$year}-{$month}"
+                ]);
+
+                return response($output, 200, $headers);
+            } catch (\Dompdf\Exception $pdfError) {
+                Log::error('DomPDF specific error', [
+                    'error' => $pdfError->getMessage(),
+                    'line' => $pdfError->getLine(),
+                    'file' => basename($pdfError->getFile()),
+                    'trace' => $pdfError->getTraceAsString(),
+                    'data_summary' => [
+                        'laporan_count' => $data['detailLaporan']->count(),
+                        'unit_name' => $data['unit']['name'] ?? 'Unknown'
+                    ]
+                ]);
+
+                return response()->json([
+                    'error' => 'Gagal generate PDF (DomPDF Error): ' . $pdfError->getMessage(),
+                    'type' => 'dompdf_error',
+                    'details' => config('app.debug') ? [
+                        'line' => $pdfError->getLine(),
+                        'file' => basename($pdfError->getFile())
+                    ] : null
+                ], 500);
+            } catch (\Exception $pdfError) {
+                Log::error('PDF Generation general error', [
+                    'error' => $pdfError->getMessage(),
+                    'line' => $pdfError->getLine(),
+                    'file' => basename($pdfError->getFile()),
+                    'trace' => $pdfError->getTraceAsString()
+                ]);
+
+                return response()->json([
+                    'error' => 'Gagal generate PDF: ' . $pdfError->getMessage(),
+                    'type' => 'pdf_generation_error',
+                    'details' => config('app.debug') ? [
+                        'line' => $pdfError->getLine(),
+                        'file' => basename($pdfError->getFile())
+                    ] : null
+                ], 500);
+            }
+        } catch (\Exception $e) {
+            Log::error('PDF Download controller error', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => basename($e->getFile()),
+                'trace' => $e->getTraceAsString(),
+                'input_params' => [
+                    'bulan' => $bulan,
+                    'user_id' => Auth::id()
+                ],
+                'memory_usage' => memory_get_usage(true),
+                'peak_memory' => memory_get_peak_usage(true)
+            ]);
+
+            return response()->json([
+                'error' => 'Terjadi kesalahan sistem saat generate PDF',
+                'message' => $e->getMessage(),
+                'type' => 'system_error',
+                'debug_info' => config('app.debug') ? [
+                    'line' => $e->getLine(),
+                    'file' => basename($e->getFile()),
+                    'memory_usage' => memory_get_usage(true) . ' bytes',
+                    'memory_limit' => ini_get('memory_limit')
+                ] : null
+            ], 500);
+        } finally {
+            // PERBAIKAN 13: Cleanup memory
+            if (isset($pdf)) {
+                unset($pdf);
+            }
+            if (isset($data)) {
+                unset($data);
+            }
+            gc_collect_cycles(); // Force garbage collection
+
+            Log::info('PDF Download process completed', [
+                'final_memory_usage' => memory_get_usage(true),
+                'peak_memory_usage' => memory_get_peak_usage(true)
+            ]);
+        }
+    }
+
+    // PERBAIKAN 14: Method tambahan untuk debugging dan validasi data
+    public function testPdfGeneration($bulan = '2024-01')
     {
         try {
             $unitId = self::UNIT_ID;
 
-            // Validasi dan parsing parameter bulan
-            $year = null;
-            $month = null;
-
-            if (strpos($bulan, '-') !== false) {
-                // Format: YYYY-MM
-                [$year, $month] = explode('-', $bulan);
-            } elseif (strlen($bulan) === 6 && is_numeric($bulan)) {
-                // Format: YYYYMM
-                $year = substr($bulan, 0, 4);
-                $month = substr($bulan, 4, 2);
-            } else {
-                // Coba parse sebagai string bulan
-                try {
-                    $date = Carbon::parse($bulan);
-                    $year = $date->year;
-                    $month = $date->month;
-                } catch (\Exception $e) {
-                    return back()->withErrors(['error' => 'Format bulan tidak valid: ' . $bulan]);
-                }
-            }
-
-            // Validasi year dan month
-            if (!$year || !$month || !is_numeric($year) || !is_numeric($month)) {
-                return back()->withErrors(['error' => 'Parameter bulan tidak valid']);
-            }
-
-            // Pastikan month dalam format 2 digit
-            $month = str_pad($month, 2, '0', STR_PAD_LEFT);
-
-            $unit = Unit::findOrFail($unitId);
-            $histories = $this->getDetailLaporan($unitId, $year, $month);
-
-            // Debugging: Log data yang akan digunakan
-            Log::info('PDF Data Debug', [
-                'unitId' => $unitId,
-                'year' => $year,
-                'month' => $month,
-                'histories_count' => $histories->count(),
-                'unit' => $unit->toArray()
-            ]);
-
-            $summary = [
-                'totalPendapatan' => $histories->where('jenis', 'Pendapatan')->sum('selisih'),
-                'totalPengeluaran' => $histories->where('jenis', 'Pengeluaran')->sum('selisih'),
-                'selisih' => $histories->where('jenis', 'Pendapatan')->sum('selisih')
-                    - $histories->where('jenis', 'Pengeluaran')->sum('selisih'),
-                'jumlahTransaksi' => $histories->count(),
+            // Test basic components
+            $tests = [
+                'unit_exists' => Unit::find($unitId) !== null,
+                'view_exists' => view()->exists('exports.laporan_pdf'),
+                'dompdf_loaded' => class_exists('\Barryvdh\DomPDF\PDF'),
+                'memory_limit' => ini_get('memory_limit'),
+                'max_execution_time' => ini_get('max_execution_time'),
             ];
 
-            $data = [
-                'detailLaporan' => $histories->sortByDesc('updated_at')->values(),
-                'bulan' => Carbon::createFromDate($year, $month, 1)->translatedFormat('F Y'),
-                'unit' => $unit,
-                'summary' => $summary,
-                'generated_at' => now()->translatedFormat('l, d F Y H:i') . ' WIB',
-                'generated_by' => Auth::user()->name,
-            ];
+            // Test unit data
+            $unit = Unit::find($unitId);
+            $tests['unit_data'] = $unit ? [
+                'id' => $unit->id_units ?? $unit->id,
+                'name' => $unit->unit_name ?? $unit->name,
+                'available_fields' => array_keys($unit->getAttributes())
+            ] : 'Unit not found';
 
-            // Debugging: Log data sebelum generate PDF
-            Log::info('PDF Generation Data', [
-                'bulan' => $data['bulan'],
-                'summary' => $summary,
-                'laporan_count' => $data['detailLaporan']->count()
-            ]);
-
-            // Pastikan view ada dan dapat diakses
-            if (!view()->exists('exports.laporan_pdf')) {
-                Log::error('PDF View not found: exports.laporan_pdf');
-                return back()->withErrors(['error' => 'Template PDF tidak ditemukan']);
-            }
-
+            // Test data retrieval
             try {
-                $pdf = PDF::loadView('exports.laporan_pdf', $data);
-                $pdf->setPaper('A4', 'landscape');
+                [$year, $month] = explode('-', $bulan);
+                $histories = $this->getDetailLaporan($unitId, $year, $month);
+                $tests['data_retrieval'] = 'success - ' . $histories->count() . ' records';
 
-                // Set timeout untuk PDF generation
-                $pdf->setTimeout(300);
-
-                $filename = "Detail-Transaksi-Mini-Soccer-{$year}-{$month}.pdf";
-
-                // Log sebelum download
-                Log::info('PDF Download attempt', ['filename' => $filename]);
-
-                // Gunakan stream untuk debugging
-                // return $pdf->stream($filename); // Untuk test di browser
-
-                // Untuk download langsung
-                return $pdf->download($filename);
-            } catch (\Exception $pdfError) {
-                Log::error('PDF Generation Error', [
-                    'error' => $pdfError->getMessage(),
-                    'trace' => $pdfError->getTraceAsString()
-                ]);
-                return back()->withErrors(['error' => 'Gagal generate PDF: ' . $pdfError->getMessage()]);
+                // Test data structure
+                if ($histories->count() > 0) {
+                    $sampleData = $histories->first();
+                    $tests['sample_data_structure'] = array_keys($sampleData);
+                }
+            } catch (\Exception $e) {
+                $tests['data_retrieval'] = 'failed - ' . $e->getMessage();
             }
-        } catch (\Exception $e) {
-            Log::error('Error downloading PDF: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString(),
-                'bulan' => $bulan
+
+            // Test PDF with actual data structure
+            try {
+                $testUnit = Unit::find($unitId);
+                $testData = [
+                    'detailLaporan' => collect([]),
+                    'bulan' => 'Test ' . Carbon::now()->format('F Y'),
+                    'unit' => [
+                        'id' => $testUnit->id_units ?? $testUnit->id,
+                        'name' => $testUnit->unit_name ?? $testUnit->name ?? 'Test Unit',
+                        'type' => $testUnit->type ?? 'Mini Soccer'
+                    ],
+                    'unitName' => $testUnit->unit_name ?? $testUnit->name ?? 'Test Unit',
+                    'unitId' => $testUnit->id_units ?? $testUnit->id,
+                    'unitType' => $testUnit->type ?? 'Mini Soccer',
+                    'summary' => [
+                        'totalPendapatan' => 0,
+                        'totalPengeluaran' => 0,
+                        'selisih' => 0,
+                        'jumlahTransaksi' => 0
+                    ],
+                    'generated_at' => now()->format('d/m/Y H:i'),
+                    'generated_by' => 'Test User',
+                    'year' => date('Y'),
+                    'month' => date('m'),
+                    'period' => date('Y-m')
+                ];
+
+                $pdf = PDF::loadView('exports.laporan_pdf', $testData);
+                $output = $pdf->output();
+                $tests['pdf_generation'] = 'success - ' . strlen($output) . ' bytes';
+                $tests['test_data_sent'] = array_keys($testData);
+            } catch (\Exception $e) {
+                $tests['pdf_generation'] = 'failed - ' . $e->getMessage();
+                $tests['pdf_error_line'] = $e->getLine();
+                $tests['pdf_error_file'] = basename($e->getFile());
+            }
+
+            return response()->json([
+                'success' => true,
+                'tests' => $tests,
+                'recommendations' => $this->getPdfOptimizationRecommendations(),
+                'template_variables_expected' => [
+                    'detailLaporan' => 'Collection of transaction data',
+                    'bulan' => 'Month name (e.g., "Januari 2024")',
+                    'unit' => 'Array with id, name, type',
+                    'unitName' => 'String - unit name',
+                    'unitId' => 'Integer - unit ID',
+                    'unitType' => 'String - unit type',
+                    'summary' => 'Array with totalPendapatan, totalPengeluaran, selisih, jumlahTransaksi',
+                    'generated_at' => 'String - generation timestamp',
+                    'generated_by' => 'String - user name',
+                    'year' => 'String - year',
+                    'month' => 'String - month',
+                    'period' => 'String - year-month'
+                ]
             ]);
-            return back()->withErrors(['error' => 'Terjadi kesalahan saat mendownload PDF: ' . $e->getMessage()]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => basename($e->getFile()),
+                'tests' => $tests ?? []
+            ], 500);
         }
+    }
+
+    // PERBAIKAN 15: Method untuk validasi template variables
+    public function validatePdfTemplate()
+    {
+        try {
+            $viewPath = 'exports.laporan_pdf';
+
+            if (!view()->exists($viewPath)) {
+                return response()->json([
+                    'error' => 'Template tidak ditemukan: ' . $viewPath
+                ], 404);
+            }
+
+            // Get template content
+            $viewFile = resource_path('views/exports/laporan_pdf.blade.php');
+
+            if (file_exists($viewFile)) {
+                $content = file_get_contents($viewFile);
+
+                // Extract variables used in template
+                preg_match_all('/\$(\w+)/', $content, $matches);
+                $templateVariables = array_unique($matches[1]);
+
+                // Check for common problematic patterns
+                $issues = [];
+
+                if (strpos($content, '$unitName') !== false && strpos($content, '??') === false) {
+                    $issues[] = '$unitName is used without null coalescing operator';
+                }
+
+                if (strpos($content, '$unit[') !== false && strpos($content, '??') === false) {
+                    $issues[] = '$unit array access without null coalescing operator';
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'template_path' => $viewPath,
+                    'file_exists' => true,
+                    'template_variables_found' => $templateVariables,
+                    'potential_issues' => $issues,
+                    'template_size' => strlen($content) . ' characters'
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Template file tidak dapat dibaca'
+            ], 500);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function getPdfOptimizationRecommendations()
+    {
+        return [
+            'memory_limit' => 'Set memory_limit to at least 512M for complex reports',
+            'execution_time' => 'Set max_execution_time to at least 300 seconds',
+            'php_version' => 'Use PHP 8.1+ for better performance',
+            'dompdf_version' => 'Keep DomPDF updated to latest stable version',
+            'template_optimization' => 'Minimize complex CSS and avoid large images in PDF templates'
+        ];
     }
 
     public function downloadExcelDetail($bulan)
@@ -254,7 +687,7 @@ class MiniSocController extends Controller
             'jumlahTransaksi' => $histories->count(),
         ];
 
-        return Inertia::render('kepala_desa/DetailLaporan', [
+        return Inertia::render('kepala_desa/DetailLaporanMiniSoc', [
             'auth' => [
                 'user' => Auth::user()->only(['name', 'roles', 'image']),
             ],

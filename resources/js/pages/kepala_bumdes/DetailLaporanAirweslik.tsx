@@ -49,7 +49,7 @@ interface PageProps {
     };
 }
 
-export default function DetailLaporanMiniSoccer() {
+export default function DetailLaporanAirWeslik() {
     const { detailLaporan, bulan, unit, summary, auth } = usePage().props as unknown as PageProps;
     const [isDownloading, setIsDownloading] = useState({ pdf: false, excel: false });
 
@@ -102,7 +102,7 @@ export default function DetailLaporanMiniSoccer() {
             }
 
             // Langsung redirect ke URL download - lebih reliable daripada create element
-            window.location.href = route('minisoc.downloadPdfDetail', { bulan: bulanParam });
+            window.location.href = route('airweslik.downloadPdfDetail', { bulan: bulanParam });
         } catch (error) {
             alert('Terjadi kesalahan saat mendownload PDF. Silakan coba lagi.');
             setIsDownloading((prev) => ({ ...prev, pdf: false }));
@@ -133,7 +133,7 @@ export default function DetailLaporanMiniSoccer() {
             }
 
             // Langsung redirect ke URL download - lebih reliable daripada create element
-            window.location.href = route('minisoc.downloadExcelDetail', { bulan: bulanParam });
+            window.location.href = route('airweslik.downloadExcelDetail', { bulan: bulanParam });
         } catch (error) {
             alert('Terjadi kesalahan saat mendownload Excel. Silakan coba lagi.');
             setIsDownloading((prev) => ({ ...prev, excel: false }));
@@ -155,7 +155,7 @@ export default function DetailLaporanMiniSoccer() {
                     <div className="mb-8">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <Button onClick={handleBack} variant="outline" className="flex items-center gap-2 hover:bg-gray-100">
+                                <Button onClick={handleBack} variant="outline" className="flex items-center gap-2 hover:bg-gray-100 ">
                                     <ArrowLeft className="h-4 w-4" />
                                     Kembali
                                 </Button>

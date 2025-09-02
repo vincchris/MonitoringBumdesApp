@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 
 // ================== TYPES ==================
@@ -57,6 +57,9 @@ interface UserModalProps {
 }
 
 const UserModal = ({ isOpen, onClose, editingUser, units, onSubmit, data, setData, processing }: UserModalProps) => {
+    const [showPassword, setShowPassword] = useState(false);
+    const [showPasswordEdit, setShowPasswordEdit] = useState(false);
+
     if (!isOpen) return null;
 
     return (
@@ -72,7 +75,7 @@ const UserModal = ({ isOpen, onClose, editingUser, units, onSubmit, data, setDat
                     </button>
                 </div>
 
-                <form onSubmit={onSubmit} className="space-y-4">
+                <form onSubmit={onSubmit} className="space-y-4 text-black">
                     <div>
                         <label className="mb-1 block text-sm font-medium">Nama</label>
                         <input
@@ -95,16 +98,71 @@ const UserModal = ({ isOpen, onClose, editingUser, units, onSubmit, data, setDat
                         />
                     </div>
 
+                    {/* Password field for new user */}
                     {!editingUser && (
                         <div>
                             <label className="mb-1 block text-sm font-medium">Password</label>
-                            <input
-                                type="password"
-                                value={data.password || ''}
-                                onChange={(e) => setData('password', e.target.value)}
-                                className="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-                                required
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    value={data.password || ''}
+                                    onChange={(e) => setData('password', e.target.value)}
+                                    className="w-full rounded border border-gray-300 px-3 py-2 pr-10 focus:border-blue-500 focus:outline-none"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Password field for editing user */}
+                    {editingUser && (
+                        <div>
+                            <div className="mb-2 flex items-center justify-between">
+                                <label className="block text-sm font-medium">Password</label>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowPasswordEdit(!showPasswordEdit);
+                                        if (!showPasswordEdit) {
+                                            setData('password', '');
+                                        }
+                                    }}
+                                    className="text-xs text-blue-600 hover:text-blue-800"
+                                >
+                                    {showPasswordEdit ? 'Batal ubah password' : 'Ubah password'}
+                                </button>
+                            </div>
+
+                            {showPasswordEdit ? (
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={data.password || ''}
+                                        onChange={(e) => setData('password', e.target.value)}
+                                        placeholder="Masukkan password baru"
+                                        className="w-full rounded border border-gray-300 px-3 py-2 pr-10 focus:border-blue-500 focus:outline-none"
+                                        minLength={8}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    >
+                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
+                                    Password tidak akan diubah
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -152,7 +210,7 @@ const UserModal = ({ isOpen, onClose, editingUser, units, onSubmit, data, setDat
                     )}
 
                     <div className="flex gap-2 pt-4">
-                        <Button type="submit" disabled={processing} className="flex-1">
+                        <Button type="submit" disabled={processing} className="flex-1 text-black">
                             {processing ? 'Menyimpan...' : editingUser ? 'Update' : 'Tambah'}
                         </Button>
                         <Button type="button" variant="outline" onClick={onClose} disabled={processing}>
@@ -195,7 +253,7 @@ export default function UserList({ users, units }: Props) {
         setData({
             name: user.name,
             email: user.email,
-            password: '',
+            password: '', // Reset password field saat edit
             roles: user.roles,
             unit_id: user.units && user.units.length > 0 ? user.units[0].id : '',
         });
@@ -215,10 +273,16 @@ export default function UserList({ users, units }: Props) {
 
         const submitData: any = { ...data };
 
+        // Jika role bukan pengelola, hapus unit_id
         if (submitData.roles !== 'pengelola') {
             delete submitData.unit_id;
         } else {
             submitData.unit_id = submitData.unit_id ? Number(submitData.unit_id) : null;
+        }
+
+        // Jika editing dan password kosong, hapus password dari data yang dikirim
+        if (editingUser && !submitData.password) {
+            delete submitData.password;
         }
 
         if (editingUser) {
@@ -256,8 +320,8 @@ export default function UserList({ users, units }: Props) {
 
             <div className="mx-auto max-w-6xl space-y-6">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold">Manajemen User</h1>
-                    <Button onClick={handleAddUser} className="flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-black">Manajemen User</h1>
+                    <Button onClick={handleAddUser} className="flex items-center gap-2 text-black">
                         <Plus className="h-4 w-4" />
                         Tambah User
                     </Button>
@@ -321,7 +385,7 @@ export default function UserList({ users, units }: Props) {
                                                     size="sm"
                                                     variant="outline"
                                                     onClick={() => handleEdit(user)}
-                                                    className="flex items-center gap-1"
+                                                    className="flex items-center gap-1 text-black"
                                                 >
                                                     <Pencil className="h-4 w-4" />
                                                     Edit

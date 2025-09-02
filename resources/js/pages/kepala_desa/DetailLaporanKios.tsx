@@ -88,32 +88,278 @@ export default function DetailLaporanMiniSoccer() {
         try {
             setIsDownloading((prev) => ({ ...prev, pdf: true }));
 
-            // Pastikan format bulan benar untuk parameter route
+            // PERBAIKAN 1: Format parameter bulan yang lebih robust
             let bulanParam = bulan;
+            console.log('Original bulan:', bulan);
 
-            // Jika bulan dalam format "January 2024", konversi ke "2024-01"
+            // Konversi format bulan ke YYYY-MM
             if (bulan.includes(' ')) {
                 const [monthName, year] = bulan.split(' ');
-                // Gunakan dayjs untuk konversi nama bulan Indonesia ke angka
-                const monthIndex = dayjs().locale('id').localeData().months().indexOf(monthName);
-                if (monthIndex !== -1) {
-                    bulanParam = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+                const monthMap = {
+                    // Indonesian months
+                    Januari: '01',
+                    Februari: '02',
+                    Maret: '03',
+                    April: '04',
+                    Mei: '05',
+                    Juni: '06',
+                    Juli: '07',
+                    Agustus: '08',
+                    September: '09',
+                    Oktober: '10',
+                    November: '11',
+                    Desember: '12',
+                    // English months
+                    January: '01',
+                    February: '02',
+                    March: '03',
+                    April: '04',
+                    May: '05',
+                    June: '06',
+                    July: '07',
+                    August: '08',
+                    September: '09',
+                    October: '10',
+                    November: '11',
+                    December: '12',
+                };
+
+                const monthNumber = monthMap[monthName];
+                if (monthNumber && year) {
+                    bulanParam = `${year}-${monthNumber}`;
+                    console.log('Converted to:', bulanParam);
+                } else {
+                    throw new Error(`Format bulan tidak dapat dikonversi: ${monthName} ${year}`);
                 }
             }
 
-            // Langsung redirect ke URL download - lebih reliable daripada create element
-            window.location.href = route('minisoc.downloadPdfDetail', { bulan: bulanParam });
+            // PERBAIKAN 2: Validasi format parameter
+            const formatRegex = /^\d{4}-\d{2}$/;
+            if (!formatRegex.test(bulanParam)) {
+                throw new Error(`Format bulan tidak valid: ${bulanParam}. Format yang benar: YYYY-MM`);
+            }
+
+            // PERBAIKAN 3: Show loading toast dengan proper cleanup
+            const showLoadingToast = () => {
+                const loadingToast = document.createElement('div');
+                loadingToast.id = 'pdf-loading-toast';
+                loadingToast.innerHTML = `
+                <div style="position: fixed; top: 20px; right: 20px; background: #3b82f6; color: white; padding: 12px 20px; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 16px; height: 16px; border: 2px solid #ffffff40; border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <span>Memproses PDF...</span>
+                    </div>
+                </div>
+                <style>
+                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                </style>
+            `;
+                document.body.appendChild(loadingToast);
+                return loadingToast;
+            };
+
+            const loadingToast = showLoadingToast();
+
+            try {
+                // PERBAIKAN 4: Gunakan window.open sebagai fallback untuk menghindari permission issues
+                const downloadUrl = route('Kios.downloadPdfDetail', { bulan: encodeURIComponent(bulanParam) });
+                console.log('Download URL:', downloadUrl);
+
+                // PERBAIKAN 5: Coba dengan fetch terlebih dahulu untuk error handling yang lebih baik
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+                const response = await fetch(downloadUrl, {
+                    method: 'GET',
+                    headers: {
+                        Accept: 'application/pdf',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                    credentials: 'same-origin',
+                    signal: controller.signal,
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    let errorMessage = 'Gagal mendownload PDF';
+
+                    try {
+                        const contentType = response.headers.get('Content-Type');
+                        if (contentType?.includes('application/json')) {
+                            const errorData = await response.json();
+                            errorMessage = errorData.error || errorMessage;
+                            console.error('Server error response:', errorData);
+                        }
+                    } catch (parseError) {
+                        console.error('Error parsing response:', parseError);
+                    }
+
+                    // Specific error messages
+                    switch (response.status) {
+                        case 404:
+                            errorMessage = 'Data tidak ditemukan untuk periode tersebut';
+                            break;
+                        case 500:
+                            errorMessage = 'Terjadi kesalahan server saat generate PDF';
+                            break;
+                        case 422:
+                            errorMessage = 'Parameter tidak valid atau format bulan salah';
+                            break;
+                        case 403:
+                            errorMessage = 'Anda tidak memiliki akses untuk download laporan ini';
+                            break;
+                    }
+
+                    throw new Error(`${errorMessage} (Status: ${response.status})`);
+                }
+
+                // PERBAIKAN 6: Check content type
+                const contentType = response.headers.get('Content-Type');
+                console.log('Response Content-Type:', contentType);
+
+                if (contentType?.includes('application/json')) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Server mengembalikan error JSON instead of PDF');
+                }
+
+                // PERBAIKAN 7: Download dengan blob
+                const blob = await response.blob();
+                console.log('Blob size:', blob.size, 'bytes');
+
+                if (blob.size === 0) {
+                    throw new Error('File PDF kosong atau tidak dapat diproses');
+                }
+
+                // PERBAIKAN 8: Create download
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.style.display = 'none'; // Hide the link
+
+                // Get filename from response header or use default
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = `Detail-Transaksi-Mini-Soccer-${bulanParam}.pdf`;
+
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1].replace(/['"]/g, '');
+                    }
+                }
+
+                link.download = filename;
+
+                // PERBAIKAN 9: Trigger download dengan proper cleanup
+                document.body.appendChild(link);
+                link.click();
+
+                // Cleanup dengan delay
+                setTimeout(() => {
+                    if (document.body.contains(link)) {
+                        document.body.removeChild(link);
+                    }
+                    window.URL.revokeObjectURL(url);
+                }, 100);
+
+                console.log('PDF download successful:', filename);
+
+                // Show success message
+                const showSuccessToast = () => {
+                    const successToast = document.createElement('div');
+                    successToast.innerHTML = `
+                    <div style="position: fixed; top: 20px; right: 20px; background: #10b981; color: white; padding: 12px 20px; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span>✓</span>
+                            <span>PDF berhasil didownload!</span>
+                        </div>
+                    </div>
+                `;
+                    document.body.appendChild(successToast);
+                    setTimeout(() => {
+                        if (document.body.contains(successToast)) {
+                            document.body.removeChild(successToast);
+                        }
+                    }, 3000);
+                };
+
+                showSuccessToast();
+            } catch (fetchError) {
+                // PERBAIKAN 10: Fallback to window.open if fetch fails
+                if (fetchError.name === 'AbortError') {
+                    throw new Error('Download timeout. Silakan coba lagi.');
+                }
+
+                console.warn('Fetch failed, trying window.open fallback:', fetchError.message);
+
+                // Fallback: Direct window.open
+                const downloadUrl = route('Kios.downloadPdfDetail', { bulan: encodeURIComponent(bulanParam) });
+                const newWindow = window.open(downloadUrl, '_blank');
+
+                if (!newWindow) {
+                    throw new Error('Popup diblokir browser. Silakan allow popup untuk situs ini.');
+                }
+
+                // Check if window closed (indicates download started)
+                const checkWindow = setInterval(() => {
+                    if (newWindow.closed) {
+                        clearInterval(checkWindow);
+                        console.log('Download window closed, assuming success');
+                    }
+                }, 1000);
+
+                // Auto close check window after 30 seconds
+                setTimeout(() => {
+                    clearInterval(checkWindow);
+                    if (!newWindow.closed) {
+                        console.log('Download window still open after 30 seconds');
+                    }
+                }, 30000);
+            }
+
+            // Remove loading toast
+            if (loadingToast && document.body.contains(loadingToast)) {
+                document.body.removeChild(loadingToast);
+            }
         } catch (error) {
-            alert('Terjadi kesalahan saat mendownload PDF. Silakan coba lagi.');
+            console.error('PDF Download Error:', error);
+
+            // Remove any existing loading toasts
+            const existingToast = document.getElementById('pdf-loading-toast');
+            if (existingToast && document.body.contains(existingToast)) {
+                document.body.removeChild(existingToast);
+            }
+
+            const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat mendownload PDF';
+
+            // Show error toast
+            const showErrorToast = (message) => {
+                const errorToast = document.createElement('div');
+                errorToast.innerHTML = `
+                <div style="position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; padding: 12px 20px; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 400px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>⚠</span>
+                        <div>
+                            <div style="font-weight: 600;">Download PDF Gagal</div>
+                            <div style="font-size: 12px; margin-top: 2px;">${message}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+                document.body.appendChild(errorToast);
+                setTimeout(() => {
+                    if (document.body.contains(errorToast)) {
+                        document.body.removeChild(errorToast);
+                    }
+                }, 5000);
+            };
+
+            showErrorToast(errorMessage);
+        } finally {
             setIsDownloading((prev) => ({ ...prev, pdf: false }));
         }
-
-        // Reset loading state setelah delay (karena window.location.href tidak trigger onload)
-        setTimeout(() => {
-            setIsDownloading((prev) => ({ ...prev, pdf: false }));
-        }, 3000);
     };
-
     // Handler untuk download Excel - DIPERBAIKI
     const handleExportExcel = async () => {
         try {
@@ -133,7 +379,7 @@ export default function DetailLaporanMiniSoccer() {
             }
 
             // Langsung redirect ke URL download - lebih reliable daripada create element
-            window.location.href = route('minisoc.downloadExcelDetail', { bulan: bulanParam });
+            window.location.href = route('Kios.downloadExcelDetail', { bulan: bulanParam });
         } catch (error) {
             alert('Terjadi kesalahan saat mendownload Excel. Silakan coba lagi.');
             setIsDownloading((prev) => ({ ...prev, excel: false }));
@@ -155,7 +401,7 @@ export default function DetailLaporanMiniSoccer() {
                     <div className="mb-8">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <Button onClick={handleBack} variant="outline" className="flex items-center gap-2 hover:bg-gray-100 ">
+                                <Button onClick={handleBack} variant="outline" className="flex items-center gap-2 hover:bg-gray-100">
                                     <ArrowLeft className="h-4 w-4" />
                                     Kembali
                                 </Button>

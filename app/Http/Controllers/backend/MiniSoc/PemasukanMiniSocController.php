@@ -66,15 +66,15 @@ class PemasukanMiniSocController extends Controller
 
         // Pagination
         $page = $request->get('page', 1);
-        $perPage = 10;
+        $perPage = 5; // Diubah dari 10 menjadi 5
 
-        $paged = $incomes->forPage($page, $perPage)->values();
-        $totalItems = $incomes->count();
+        $paged = $formatted->forPage($page, $perPage)->values();
+        $totalItems = $formatted->count();
 
         return Inertia::render('MiniSoc/PemasukanMiniSoc', [
             'unit_id' => $unitId,
             'user' => $user->only(['id_users', 'name', 'email', 'roles', 'image']),
-            'pemasukan' => $formatted,
+            'pemasukan' => $paged, // Gunakan data yang sudah dipaginasi
             'tarifs' => $tarifs, // Kirim data tarif ke frontend
             'pagination' => [
                 'total' => $totalItems,

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BalanceHistory;
 use App\Models\Expense;
 use App\Models\InitialBalance;
+use App\Models\Tarif;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -22,11 +23,22 @@ class PengeluaranMiniSocController extends Controller
             abort(403, 'Anda tidak memiliki akses ke unit ini');
         }
 
+        // Ambil semua tarif yang tersedia untuk unit ini
+        $tarifs = Tarif::where('unit_id', $unitId)
+            ->select('category_name', 'harga_per_unit')
+            ->get()
+            ->map(function ($tarif) {
+                return [
+                    'tipe' => $tarif->category_name,
+                    'tarif' => (int) $tarif->harga_per_unit
+                ];
+            });
+
         $expenses = Expense::where('unit_id', $unitId)
             ->orderByDesc('created_at')
             ->get();
 
-        // Fix: Gunakan primary key yang benar sesuai model
+        // Format data pengeluaran
         $formatted = $expenses->map(fn($item) => [
             'id' => $item->id_expense, // Primary key adalah id_expense
             'tanggal' => optional($item->created_at)->format('Y-m-d'),
@@ -35,17 +47,18 @@ class PengeluaranMiniSocController extends Controller
             'biaya' => (int) $item->nominal,
         ]);
 
-        // Pagination
+        // Pagination - 5 per halaman
         $page = $request->get('page', 1);
-        $perPage = 10;
+        $perPage = 5;
 
-        $paged = $expenses->forPage($page, $perPage)->values();
-        $totalItems = $expenses->count();
+        $paged = $formatted->forPage($page, $perPage)->values();
+        $totalItems = $formatted->count();
 
         return Inertia::render('MiniSoc/PengeluaranMiniSoc', [
             'unit_id' => $unitId,
             'user' => $user->only(['id_users', 'name', 'email', 'roles', 'image']),
-            'pengeluaran' => $formatted,
+            'pengeluaran' => $paged, // Ubah dari 'pemasukan' menjadi 'pengeluaran'
+            'tarifs' => $tarifs,
             'pagination' => [
                 'total' => $totalItems,
                 'per_page' => $perPage,
@@ -57,7 +70,7 @@ class PengeluaranMiniSocController extends Controller
 
     public function store(Request $request, $unitId)
     {
-       $user = Auth::user()->load('units');
+        $user = Auth::user()->load('units');
 
         if (!$user->units->contains('id_units', $unitId)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
@@ -83,6 +96,7 @@ class PengeluaranMiniSocController extends Controller
             } else {
                 $initialBalanceId = null;
             }
+
             Expense::create([
                 'unit_id' => $unitId,
                 'category_expense' => $validated['kategori'],
@@ -91,6 +105,7 @@ class PengeluaranMiniSocController extends Controller
                 'created_at' => $waktuTransaksi,
                 'updated_at' => $waktuTransaksi,
             ]);
+
             BalanceHistory::create([
                 'unit_id' => $unitId,
                 'initial_balance_id' => $initialBalanceId,
@@ -100,6 +115,7 @@ class PengeluaranMiniSocController extends Controller
                 'created_at' => $waktuTransaksi,
                 'updated_at' => $waktuTransaksi,
             ]);
+
             DB::commit();
 
             return back()->with('info', [
@@ -146,12 +162,14 @@ class PengeluaranMiniSocController extends Controller
                 'updated_at' => $waktuUpdate,
             ]);
 
+            // Update balance history terkait pengeluaran ini
             $lastHistory = BalanceHistory::where('unit_id', $unitId)
                 ->where('jenis', 'Pengeluaran')
                 ->latest()
                 ->first();
 
             if ($lastHistory) {
+                // Kurangi selisih dari saldo (karena pengeluaran mengurangi saldo)
                 $lastHistory->update([
                     'saldo_sekarang' => $lastHistory->saldo_sekarang - $selisih,
                     'updated_at' => $waktuUpdate,
@@ -193,7 +211,7 @@ class PengeluaranMiniSocController extends Controller
                 // Cari histori pengeluaran yang sesuai untuk dihapus
                 $history = BalanceHistory::where('unit_id', $unitId)
                     ->where('jenis', 'Pengeluaran')
-                    ->where('saldo_sebelum', '>=', $jumlah) // bantu filter aman
+                    ->where('saldo_sebelum', '>=', $jumlah)
                     ->where('saldo_sekarang', DB::raw('saldo_sebelum - ' . $jumlah))
                     ->orderByDesc('created_at')
                     ->first();
@@ -212,7 +230,7 @@ class PengeluaranMiniSocController extends Controller
                 'method' => 'delete',
             ]);
         } catch (\Throwable $e) {
-            return back()->withErrors(['error' => 'Gagal menghapus data.']);
+            return back()->withErrors(['error' => 'Gagal menghapus data: ' . $e->getMessage()]);
         }
     }
 }

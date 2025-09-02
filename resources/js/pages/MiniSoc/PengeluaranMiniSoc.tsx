@@ -138,6 +138,15 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran, paginat
         console.log('Unit ID:', unit_id);
     };
 
+     // Function to handle pagination navigation
+    const handlePageChange = (page: number) => {
+        router.get(`/unit/${unit_id}/pengeluaran-minisoc`, { page }, {
+            preserveState: true,
+            preserveScroll: true
+        });
+    };
+
+
     return (
         <AppLayout>
             <Head title="Pengeluaran Mini Soccer" />
@@ -280,45 +289,65 @@ export default function PengeluaranMiniSoc({ user, unit_id, pengeluaran, paginat
                             ))}
                         </tbody>
                     </table>
-                    <div className="mt-4 flex items-center justify-end gap-2">
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            disabled={pagination.current_page === 1}
-                            onClick={() => {
-                                if (pagination.current_page > 1) {
-                                    router.get(route().current()!, { page: pagination.current_page - 1 }, { preserveState: true });
-                                }
-                            }}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
 
-                        {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => (
-                            <Button
-                                key={page}
-                                variant={page === pagination.current_page ? 'default' : 'outline'}
-                                onClick={() => {
-                                    router.get(route().current()!, { page }, { preserveState: true });
-                                }}
-                            >
-                                {page}
-                            </Button>
-                        ))}
+                    {/* Fixed Pagination */}
+                    {pagination.last_page > 1 && (
+                        <div className="mt-4 flex items-center justify-between border-t px-4 py-3">
+                            <div className="text-sm text-gray-700">
+                                Menampilkan {(pagination.current_page - 1) * pagination.per_page + 1} -{' '}
+                                {Math.min(pagination.current_page * pagination.per_page, pagination.total)} dari {pagination.total} data
+                            </div>
 
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            disabled={pagination.current_page === pagination.last_page}
-                            onClick={() => {
-                                if (pagination.current_page < pagination.last_page) {
-                                    router.get(route().current()!, { page: pagination.current_page + 1 }, { preserveState: true });
-                                }
-                            }}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
+                            <div className="flex items-center gap-2 text-black">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={pagination.current_page === 1}
+                                    onClick={() => handlePageChange(pagination.current_page - 1)}
+                                    className="flex items-center gap-1"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                    Previous
+                                </Button>
+
+                                {Array.from({ length: Math.min(5, pagination.last_page) }, (_, i) => {
+                                    let page;
+                                    if (pagination.last_page <= 5) {
+                                        page = i + 1;
+                                    } else if (pagination.current_page <= 3) {
+                                        page = i + 1;
+                                    } else if (pagination.current_page >= pagination.last_page - 2) {
+                                        page = pagination.last_page - 4 + i;
+                                    } else {
+                                        page = pagination.current_page - 2 + i;
+                                    }
+
+                                    return (
+                                        <Button
+                                            key={page}
+                                            variant={page === pagination.current_page ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => handlePageChange(page)}
+                                            className={page === pagination.current_page ? 'bg-blue-700 text-white' : ''}
+                                        >
+                                            {page}
+                                        </Button>
+                                    );
+                                })}
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={pagination.current_page === pagination.last_page}
+                                    onClick={() => handlePageChange(pagination.current_page + 1)}
+                                    className="flex items-center gap-1"
+                                >
+                                    Next
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </AppLayout>

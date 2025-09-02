@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { CheckCircle, Pencil, RefreshCw, Trash2 } from 'lucide-react';
+import { CheckCircle, Pencil, RefreshCw, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react';
 
 interface PemasukanItem {
@@ -29,15 +29,20 @@ interface Props {
         roles: string;
         image?: string;
     };
+    pagination: {
+        total: number;
+        per_page: number;
+        current_page: number;
+        last_page: number;
+    };
     pemasukan: PemasukanItem[];
     tarifs: Tarif[];
 }
 
-export default function PemasukanAirweslik({ user, unit_id, pemasukan, tarifs }: Props) {
-
+export default function PemasukanAirweslik({ user, unit_id, pemasukan, tarifs, pagination }: Props) {
     console.log('Data pemasukan dari backend:', pemasukan);
     console.log('Data tarifs:', tarifs);
-    
+
     const { flash, errors } = usePage().props as unknown as {
         flash: { info?: { message?: string; method?: string } };
         errors: Record<string, string>;
@@ -124,9 +129,7 @@ export default function PemasukanAirweslik({ user, unit_id, pemasukan, tarifs }:
         e.preventDefault();
 
         const method = editing === null ? post : put;
-        const url = editing === null
-            ? `/unit/${unit_id}/pemasukan-airweslik`
-            : `/unit/${unit_id}/pemasukan-airweslik/${editing}`;
+        const url = editing === null ? `/unit/${unit_id}/pemasukan-airweslik` : `/unit/${unit_id}/pemasukan-airweslik/${editing}`;
 
         method(url, {
             preserveScroll: true,
@@ -136,8 +139,8 @@ export default function PemasukanAirweslik({ user, unit_id, pemasukan, tarifs }:
                 setEditing(null);
             },
             onError: (err) => {
-                console.log("Validation Errors:", err);
-            }
+                console.log('Validation Errors:', err);
+            },
         });
     };
 
@@ -158,6 +161,18 @@ export default function PemasukanAirweslik({ user, unit_id, pemasukan, tarifs }:
         if (confirm('Yakin ingin menghapus data ini?')) {
             router.delete(`/unit/${unit_id}/pemasukan-airweslik/${id}`);
         }
+    };
+
+    // Function to handle pagination navigation
+    const handlePageChange = (page: number) => {
+        router.get(
+            `/unit/${unit_id}/pemasukan-airweslik`,
+            { page },
+            {
+                preserveState: true,
+                preserveScroll: true,
+            },
+        );
     };
 
     const handleCloseModal = () => {
@@ -182,16 +197,9 @@ export default function PemasukanAirweslik({ user, unit_id, pemasukan, tarifs }:
 
             <div className="flex items-center justify-between px-6 pt-6 pb-8 text-black">
                 <h1 className="text-lg font-semibold text-black">Selamat datang, Pengelola Air Weslik</h1>
-                <div className="flex items-center gap-3">
-                    <img src={user.image || '/assets/images/avatar.png'} alt="User Avatar" className="h-9 w-9 rounded-full object-cover" />
-                    <div className="text-right">
-                        <p className="text-sm font-semibold text-black">{user.name}</p>
-                        <p className="mr-3 text-xs text-black">{user.roles}</p>
-                    </div>
-                </div>
             </div>
 
-            <div className='bg-white px-2 py-4 rounded-2xl'>
+            <div className="rounded-2xl bg-white px-2 py-4">
                 <div className="mt-3 mb-4 flex items-center justify-between px-6">
                     <h2 className="text-xl font-semibold text-gray-800">Pemasukan - Air Weslik</h2>
                     <Button onClick={() => setShowModal(true)} className="bg-blue-700 text-white hover:bg-blue-500">
@@ -203,19 +211,14 @@ export default function PemasukanAirweslik({ user, unit_id, pemasukan, tarifs }:
                 {showModal && (
                     <div className="bg-opacity-30 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-[4px]">
                         <div className="relative w-full max-w-md rounded-xl bg-white p-6 text-black shadow-lg">
-                            <button
-                                onClick={handleCloseModal}
-                                className="absolute top-4 right-4 text-gray-500 hover:text-black"
-                            >
+                            <button onClick={handleCloseModal} className="absolute top-4 right-4 text-gray-500 hover:text-black">
                                 ✕
                             </button>
-                            <h2 className="mb-4 text-lg font-semibold">
-                                {editing ? 'Edit Pemasukan' : 'Tambah Pemasukan'} Sewa Kios
-                            </h2>
+                            <h2 className="mb-4 text-lg font-semibold">{editing ? 'Edit Pemasukan' : 'Tambah Pemasukan'} Sewa Kios</h2>
 
                             {/* Display errors */}
                             {Object.keys(formErrors).length > 0 && (
-                                <div className="mb-4 p-3 bg-red-100 border border-red-400 rounded text-red-700">
+                                <div className="mb-4 rounded border border-red-400 bg-red-100 p-3 text-red-700">
                                     <ul>
                                         {Object.entries(formErrors).map(([key, value]) => (
                                             <li key={key}>{value}</li>
@@ -256,7 +259,7 @@ export default function PemasukanAirweslik({ user, unit_id, pemasukan, tarifs }:
                                         onChange={(e) => {
                                             const selected = e.target.value;
                                             setData('kategori', selected);
-                                            const tarif = tarifs.find(t => t.category_name === selected);
+                                            const tarif = tarifs.find((t) => t.category_name === selected);
                                             if (tarif) setData('tarif', tarif.harga_per_unit);
                                         }}
                                         required
@@ -299,14 +302,13 @@ export default function PemasukanAirweslik({ user, unit_id, pemasukan, tarifs }:
 
                                 <div className="flex justify-end gap-2 pt-2">
                                     <Button type="submit" disabled={processing} className="bg-blue-700 text-white hover:bg-blue-500">
-                                        {processing ? 'Memproses...' : (editing ? 'Update' : 'Tambah')}
+                                        {processing ? 'Memproses...' : editing ? 'Update' : 'Tambah'}
                                     </Button>
                                     <Button type="button" className="bg-gray-300 text-black" onClick={handleCloseModal}>
                                         Batal
                                     </Button>
                                 </div>
                             </form>
-
                         </div>
                     </div>
                 )}
@@ -339,10 +341,16 @@ export default function PemasukanAirweslik({ user, unit_id, pemasukan, tarifs }:
                                         <td className="px-4 py-3 text-center">Rp. {item.total.toLocaleString('id-ID')}</td>
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex justify-center gap-2">
-                                                <button onClick={() => handleEdit(item)} className="rounded bg-yellow-500 px-2 py-1 text-white hover:bg-yellow-600">
+                                                <button
+                                                    onClick={() => handleEdit(item)}
+                                                    className="rounded bg-yellow-500 px-2 py-1 text-white hover:bg-yellow-600"
+                                                >
                                                     <Pencil size={16} />
                                                 </button>
-                                                <button onClick={() => handleDelete(item.id)} className="rounded bg-red-600 px-2 py-1 text-white hover:bg-red-700">
+                                                <button
+                                                    onClick={() => handleDelete(item.id)}
+                                                    className="rounded bg-red-600 px-2 py-1 text-white hover:bg-red-700"
+                                                >
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
@@ -358,6 +366,65 @@ export default function PemasukanAirweslik({ user, unit_id, pemasukan, tarifs }:
                             )}
                         </tbody>
                     </table>
+
+                    {/* Fixed Pagination */}
+                    {pagination.last_page > 1 && (
+                        <div className="mt-4 flex items-center justify-between border-t px-4 py-3">
+                            <div className="text-sm text-gray-700">
+                                Menampilkan {(pagination.current_page - 1) * pagination.per_page + 1} -{' '}
+                                {Math.min(pagination.current_page * pagination.per_page, pagination.total)} dari {pagination.total} data
+                            </div>
+
+                            <div className="flex items-center gap-2 text-black">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={pagination.current_page === 1}
+                                    onClick={() => handlePageChange(pagination.current_page - 1)}
+                                    className="flex items-center gap-1"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                    Previous
+                                </Button>
+
+                                {Array.from({ length: Math.min(5, pagination.last_page) }, (_, i) => {
+                                    let page;
+                                    if (pagination.last_page <= 5) {
+                                        page = i + 1;
+                                    } else if (pagination.current_page <= 3) {
+                                        page = i + 1;
+                                    } else if (pagination.current_page >= pagination.last_page - 2) {
+                                        page = pagination.last_page - 4 + i;
+                                    } else {
+                                        page = pagination.current_page - 2 + i;
+                                    }
+
+                                    return (
+                                        <Button
+                                            key={page}
+                                            variant={page === pagination.current_page ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => handlePageChange(page)}
+                                            className={page === pagination.current_page ? 'bg-blue-700 text-white' : ''}
+                                        >
+                                            {page}
+                                        </Button>
+                                    );
+                                })}
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={pagination.current_page === pagination.last_page}
+                                    onClick={() => handlePageChange(pagination.current_page + 1)}
+                                    className="flex items-center gap-1"
+                                >
+                                    Next
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </AppLayout>

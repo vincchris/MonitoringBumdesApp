@@ -124,7 +124,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('MiniSoccer', MiniSocController::class);
     Route::prefix('MiniSoccer')->name('minisoc.')->controller(MiniSocController::class)->group(function () {
-        Route::get('/download-pdf/{bulan}', 'downloadPdfDetail')->name('downloadPdfDetail');
+        Route::get('/download-pdf/{bulan}', 'downloadPdfDetail')->name('downloadPdfDetail')->where('bulan', '[0-9]{4}-[0-9]{2}|[0-9]{6}|[A-Za-z]+\s[0-9]{4}');
         Route::get('/download-excel/{bulan}', 'downloadExcelDetail')->name('downloadExcelDetail');
     });
 
@@ -149,6 +149,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // =============================
 
     Route::resource('Buper', BuperController::class);
+    Route::prefix('Buper')->name('buper.')->controller(BuperController::class)->group(function () {
+        Route::get('/download-pdf/{bulan}', 'downloadPdfDetail')->name('downloadPdfDetail')->where('bulan', '[0-9]{4}-[0-9]{2}|[0-9]{6}|[A-Za-z]+\s[0-9]{4}');
+        Route::get('/download-excel/{bulan}', 'downloadExcelDetail')->name('downloadExcelDetail');
+    });
+
     Route::prefix('unit/{unitId}/buper')
         ->as('buper.')
         ->controller(BuperController::class)
@@ -169,6 +174,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Route kepala_desa Kios
     // =============================
     Route::resource('Kios', KiosController::class);
+    Route::prefix('Kios')->name('Kios.')->controller(KiosController::class)->group(function () {
+        Route::get('/download-pdf/{bulan}', 'downloadPdfDetail')->name('downloadPdfDetail')->where('bulan', '[0-9]{4}-[0-9]{2}|[0-9]{6}|[A-Za-z]+\s[0-9]{4}');
+        Route::get('/download-excel/{bulan}', 'downloadExcelDetail')->name('downloadExcelDetail');
+    });
     Route::prefix('unit/{unitId}/kios')
         ->as('Kios.')
         ->controller(KiosController::class)
@@ -189,6 +198,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Route Kepala bumdes Air Weslik
     // =============================
     Route::resource('airweslik', AirWeslikController::class);
+    Route::prefix('airweslik')->name('airweslik.')->controller(AirWeslikController::class)->group(function () {
+        Route::get('/download-pdf/{bulan}', 'downloadPdfDetail')->name('downloadPdfDetail')->where('bulan', '[0-9]{4}-[0-9]{2}|[0-9]{6}|[A-Za-z]+\s[0-9]{4}');
+        Route::get('/download-excel/{bulan}', 'downloadExcelDetail')->name('downloadExcelDetail');
+    });
     Route::prefix('unit/{unitId}/airweslik')
         ->as('airweslik.')
         ->controller(AirWeslikController::class)
@@ -208,6 +221,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Route Kepala bumdes Internet Desa
     // =============================
     Route::resource('InterDesa', InternetDesaController::class);
+    Route::prefix('interdesa')->name('interdesa.')->controller(InternetDesaController::class)->group(function () {
+        Route::get('/download-pdf/{bulan}', 'downloadPdfDetail')->name('downloadPdfDetail')->where('bulan', '[0-9]{4}-[0-9]{2}|[0-9]{6}|[A-Za-z]+\s[0-9]{4}');
+        Route::get('/download-excel/{bulan}', 'downloadExcelDetail')->name('downloadExcelDetail');
+    });
     Route::prefix('unit/{unitId}/interdesa')
         ->as('interdesa.')
         ->controller(InternetDesaController::class)

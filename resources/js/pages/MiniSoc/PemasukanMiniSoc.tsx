@@ -155,6 +155,14 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
         }
     };
 
+    // Function to handle pagination navigation
+    const handlePageChange = (page: number) => {
+        router.get(`/unit/${unit_id}/pemasukan-minisoc`, { page }, {
+            preserveState: true,
+            preserveScroll: true
+        });
+    };
+
     // Menggunakan data tarifs yang dikirim dari backend
     const tipeOptions = tarifs || [];
 
@@ -437,7 +445,7 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
                         </tbody>
                     </table>
 
-                    {/* Pagination */}
+                    {/* Fixed Pagination */}
                     {pagination.last_page > 1 && (
                         <div className="mt-4 flex items-center justify-between border-t px-4 py-3">
                             <div className="text-sm text-gray-700">
@@ -445,18 +453,16 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
                                 {Math.min(pagination.current_page * pagination.per_page, pagination.total)} dari {pagination.total} data
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 text-black">
                                 <Button
                                     variant="outline"
-                                    size="icon"
+                                    size="sm"
                                     disabled={pagination.current_page === 1}
-                                    onClick={() => {
-                                        if (pagination.current_page > 1) {
-                                            router.get(route().current()!, { page: pagination.current_page - 1 }, { preserveState: true });
-                                        }
-                                    }}
+                                    onClick={() => handlePageChange(pagination.current_page - 1)}
+                                    className="flex items-center gap-1"
                                 >
                                     <ChevronLeft className="h-4 w-4" />
+                                    Previous
                                 </Button>
 
                                 {Array.from({ length: Math.min(5, pagination.last_page) }, (_, i) => {
@@ -475,9 +481,9 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
                                         <Button
                                             key={page}
                                             variant={page === pagination.current_page ? 'default' : 'outline'}
-                                            onClick={() => {
-                                                router.get(route().current()!, { page }, { preserveState: true });
-                                            }}
+                                            size="sm"
+                                            onClick={() => handlePageChange(page)}
+                                            className={page === pagination.current_page ? 'bg-blue-700 text-white' : ''}
                                         >
                                             {page}
                                         </Button>
@@ -486,14 +492,12 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
 
                                 <Button
                                     variant="outline"
-                                    size="icon"
+                                    size="sm"
                                     disabled={pagination.current_page === pagination.last_page}
-                                    onClick={() => {
-                                        if (pagination.current_page < pagination.last_page) {
-                                            router.get(route().current()!, { page: pagination.current_page + 1 }, { preserveState: true });
-                                        }
-                                    }}
+                                    onClick={() => handlePageChange(pagination.current_page + 1)}
+                                    className="flex items-center gap-1"
                                 >
+                                    Next
                                     <ChevronRight className="h-4 w-4" />
                                 </Button>
                             </div>

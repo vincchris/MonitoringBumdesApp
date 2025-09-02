@@ -55,11 +55,24 @@ class PemasukanAirweslikController extends Controller
             ->where('satuan', 'm3')
             ->get(['id_tarif', 'category_name', 'harga_per_unit']);
 
+        // Pagination
+        $page = $request->get('page', 1);
+        $perPage = 5; // Diubah dari 10 menjadi 5
+
+        $paged = $formatted->forPage($page, $perPage)->values();
+        $totalItems = $formatted->count();
+
         return Inertia::render('Airweslik/PemasukanAirweslik', [
             'unit_id' => $unitId,
             'user' => $user->only(['id_users', 'name', 'email', 'roles', 'image']),
             'pemasukan' => $formatted,
             'tarifs' => $tarifs,
+            'pagination' => [
+                'total' => $totalItems,
+                'per_page' => $perPage,
+                'current_page' => (int) $page,
+                'last_page' => ceil($totalItems / $perPage),
+            ]
         ]);
     }
 

@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { CheckCircle, Pencil, RefreshCw, Trash2 } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Pencil, RefreshCw, Trash2 } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react';
 
 interface ExpenseItem {
@@ -21,6 +21,12 @@ interface Props {
         roles: string;
         image?: string;
     };
+    pagination: {
+        total: number;
+        per_page: number;
+        current_page: number;
+        last_page: number;
+    };
     pengeluaran: ExpenseItem[];
 }
 
@@ -29,7 +35,7 @@ interface FlashInfo {
     method?: 'create' | 'update' | 'delete';
 }
 
-export default function PengeluaranAirweslik({ user, unit_id, pengeluaran }: Props) {
+export default function PengeluaranAirweslik({ user, unit_id, pengeluaran, pagination }: Props) {
     const { flash } = usePage().props as unknown as {
         flash: { info?: { message?: string; method?: string } };
     };
@@ -120,6 +126,18 @@ export default function PengeluaranAirweslik({ user, unit_id, pengeluaran }: Pro
         }
     };
 
+    // Function to handle pagination navigation
+    const handlePageChange = (page: number) => {
+        router.get(
+            `/unit/${unit_id}/pengeluaran-airweslik`,
+            { page },
+            {
+                preserveState: true,
+                preserveScroll: true,
+            },
+        );
+    };
+
     return (
         <AppLayout>
             <Head title="Pengeluaran Air Weslik" />
@@ -134,13 +152,6 @@ export default function PengeluaranAirweslik({ user, unit_id, pengeluaran }: Pro
 
             <div className="flex items-center justify-between px-6 pt-6 pb-8 text-black">
                 <h1 className="text-lg font-semibold text-black">Selamat datang, Pengelola Air Weslik</h1>
-                <div className="flex items-center gap-3">
-                    <img src={user.image || '/assets/images/avatar.png'} alt="User Avatar" className="h-9 w-9 rounded-full object-cover" />
-                    <div className="text-right">
-                        <p className="text-sm font-semibold text-black">{user.name}</p>
-                        <p className="mr-3 text-xs text-black">{user.roles}</p>
-                    </div>
-                </div>
             </div>
 
             <div className="rounded-2xl bg-white px-2 py-4">
@@ -269,6 +280,65 @@ export default function PengeluaranAirweslik({ user, unit_id, pengeluaran }: Pro
                             ))}
                         </tbody>
                     </table>
+
+                    {/* Fixed Pagination */}
+                    {pagination.last_page > 1 && (
+                        <div className="mt-4 flex items-center justify-between border-t px-4 py-3">
+                            <div className="text-sm text-gray-700">
+                                Menampilkan {(pagination.current_page - 1) * pagination.per_page + 1} -{' '}
+                                {Math.min(pagination.current_page * pagination.per_page, pagination.total)} dari {pagination.total} data
+                            </div>
+
+                            <div className="flex items-center gap-2 text-black">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={pagination.current_page === 1}
+                                    onClick={() => handlePageChange(pagination.current_page - 1)}
+                                    className="flex items-center gap-1"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                    Previous
+                                </Button>
+
+                                {Array.from({ length: Math.min(5, pagination.last_page) }, (_, i) => {
+                                    let page;
+                                    if (pagination.last_page <= 5) {
+                                        page = i + 1;
+                                    } else if (pagination.current_page <= 3) {
+                                        page = i + 1;
+                                    } else if (pagination.current_page >= pagination.last_page - 2) {
+                                        page = pagination.last_page - 4 + i;
+                                    } else {
+                                        page = pagination.current_page - 2 + i;
+                                    }
+
+                                    return (
+                                        <Button
+                                            key={page}
+                                            variant={page === pagination.current_page ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => handlePageChange(page)}
+                                            className={page === pagination.current_page ? 'bg-blue-700 text-white' : ''}
+                                        >
+                                            {page}
+                                        </Button>
+                                    );
+                                })}
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={pagination.current_page === pagination.last_page}
+                                    onClick={() => handlePageChange(pagination.current_page + 1)}
+                                    className="flex items-center gap-1"
+                                >
+                                    Next
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </AppLayout>
