@@ -30,11 +30,11 @@ const Footer: React.FC = () => {
     ];
 
     const unitUsaha: FooterLink[] = [
-        { name: 'Mini Soccer', href: '/unit-usaha/mini-soccer' },
-        { name: 'Balai Pertemuan', href: '/unit-usaha/balai-pertemuan' },
-        { name: 'Kios Usaha', href: '/unit-usaha/kios-usaha' },
-        { name: 'Air Bersih (PDAM)', href: '/unit-usaha/air-bersih' },
-        { name: 'Internet Desa', href: '/unit-usaha/internet-desa' },
+        { name: 'Mini Soccer', href: '/unit-usaha' },
+        { name: 'Bumi perkemahan', href: '/unit-usaha' },
+        { name: 'Kios Usaha', href: '/unit-usaha' },
+        { name: 'Air Bersih (PDAM)', href: '/unit-usaha' },
+        { name: 'Internet Desa', href: '/unit-usaha' },
     ];
 
     const socialLinks: SocialLink[] = [
