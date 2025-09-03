@@ -15,7 +15,7 @@ export interface UserItem {
     id_users: number;
     name: string;
     email: string;
-    roles: 'kepala_desa' | 'pengelola' | 'kepala_bumdes';
+    roles: 'kepala_desa' | 'pengelola' | 'kepala_bumdes' | 'admin';
     image?: string;
     units?: UnitItem[];
 }
@@ -34,7 +34,7 @@ export interface UserFormData {
     name: string;
     email: string;
     password?: string;
-    roles: 'kepala_desa' | 'pengelola' | 'kepala_bumdes' | '';
+    roles: 'kepala_desa' | 'pengelola' | 'kepala_bumdes' | 'admin' | '';
     unit_id?: number | '';
     [key: string]: any;
 }
@@ -171,7 +171,7 @@ const UserModal = ({ isOpen, onClose, editingUser, units, onSubmit, data, setDat
                         <select
                             value={data.roles}
                             onChange={(e) => {
-                                const role = e.target.value as 'kepala_desa' | 'pengelola' | 'kepala_bumdes' | '';
+                                const role = e.target.value as 'kepala_desa' | 'pengelola' | 'kepala_bumdes' | 'admin' |  '';
                                 setData('roles', role);
                                 // Reset unit_id ketika role berubah
                                 if (role !== 'pengelola') {
@@ -184,6 +184,7 @@ const UserModal = ({ isOpen, onClose, editingUser, units, onSubmit, data, setDat
                             <option value="">-- Pilih Role --</option>
                             <option value="kepala_desa">Kepala Desa</option>
                             <option value="kepala_bumdes">Kepala Bumdes</option>
+                            <option value="admin">admin</option>
                             <option value="pengelola">Pengelola</option>
                         </select>
                     </div>

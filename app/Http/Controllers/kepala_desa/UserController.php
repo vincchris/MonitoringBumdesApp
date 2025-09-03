@@ -19,7 +19,7 @@ class UserController extends Controller
     {
         $currentUser = Auth::user();
 
-        if (!in_array($currentUser->roles, ['pengelola', 'kepala_desa', 'kepala_bumdes'])) {
+        if (!in_array($currentUser->roles, ['pengelola', 'kepala_desa', 'kepala_bumdes', 'admin'])) {
             abort(403);
         }
 
