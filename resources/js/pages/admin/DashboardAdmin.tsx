@@ -2,8 +2,8 @@ import { FooterInfo } from '@/components/footer-dashboard';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { AlertCircle, Building2, CheckCircle, FileText, PieChart, Users, XCircle, TrendingUp, Activity, DollarSign } from 'lucide-react';
-import { Cell, Pie, PieChart as RechartsPieChart, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
+import { AlertCircle, Building2, CheckCircle, FileText, PieChart, Users, XCircle } from 'lucide-react';
+import { Cell, Pie, PieChart as RechartsPieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 function formatRupiah(value: number): string {
     return new Intl.NumberFormat('id-ID', {
@@ -112,19 +112,19 @@ export default function DashboardAdmin({ data }: Props) {
             status: 'incomplete' as const,
             completion_percentage: 0,
             missing_documents: [],
-            total_documents: 0
+            total_documents: 0,
         },
         profile_summary: data?.profile_summary || {
             status: 'incomplete' as const,
             completion_percentage: 0,
             missing_fields: [],
-            data: null
+            data: null,
         },
         profile_desa_summary: data?.profile_desa_summary || {
             status: 'incomplete' as const,
             completion_percentage: 0,
             missing_fields: [],
-            data: null
+            data: null,
         },
         pengurus_summary: data?.pengurus_summary || {
             total_pengurus: 0,
@@ -132,7 +132,7 @@ export default function DashboardAdmin({ data }: Props) {
             jabatan_kosong: [],
             existing_jabatan: [],
             completion_percentage: 0,
-            recent_changes: []
+            recent_changes: [],
         },
         recent_activities: data?.recent_activities || [],
         data_completeness: data?.data_completeness || {
@@ -142,15 +142,15 @@ export default function DashboardAdmin({ data }: Props) {
                 legalitas: 0,
                 profile: 0,
                 profile_desa: 0,
-                pengurus: 0
-            }
+                pengurus: 0,
+            },
         },
         monthly_unit_growth: data?.monthly_unit_growth || [],
         legalitas_chart: data?.legalitas_chart || {
             complete: 0,
-            incomplete: 100
+            incomplete: 100,
         },
-        last_updated: data?.last_updated || 'Tidak tersedia'
+        last_updated: data?.last_updated || 'Tidak tersedia',
     };
 
     const getStatusIcon = (status: 'complete' | 'incomplete' | 'success' | 'warning' | 'danger') => {
@@ -196,12 +196,10 @@ export default function DashboardAdmin({ data }: Props) {
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="mb-2 text-2xl font-bold">Dashboard BUMDes</h1>
-                            <p className="text-blue-100">
-                                {safeData.profile_summary.data?.nama_bumdes || 'Sistem Manajemen BUMDes'}
-                            </p>
+                            <p className="text-blue-100">{safeData.profile_summary.data?.nama_bumdes || 'Sistem Manajemen BUMDes'}</p>
                         </div>
                         <div className="text-right">
-                            <Building2 size={48} className="text-blue-200 mb-2" />
+                            <Building2 size={48} className="mb-2 text-blue-200" />
                             <p className="text-sm text-blue-200">Update: {safeData.last_updated}</p>
                         </div>
                     </div>
@@ -214,35 +212,25 @@ export default function DashboardAdmin({ data }: Props) {
                             {getStatusIcon(safeData.data_completeness.status)}
                             <h2 className="text-lg font-semibold">Kelengkapan Data Organisasi</h2>
                         </div>
-                        <span className="text-2xl font-bold">
-                            {formatPercentage(safeData.data_completeness.overall_completion)}
-                        </span>
+                        <span className="text-2xl font-bold">{formatPercentage(safeData.data_completeness.overall_completion)}</span>
                     </div>
 
                     <div className="grid grid-cols-4 gap-4">
                         <div className="text-center">
                             <p className="text-sm text-gray-600">Legalitas</p>
-                            <p className="text-lg font-semibold">
-                                {formatPercentage(safeData.data_completeness.components.legalitas)}
-                            </p>
+                            <p className="text-lg font-semibold">{formatPercentage(safeData.data_completeness.components.legalitas)}</p>
                         </div>
                         <div className="text-center">
                             <p className="text-sm text-gray-600">Profil BUMDes</p>
-                            <p className="text-lg font-semibold">
-                                {formatPercentage(safeData.data_completeness.components.profile)}
-                            </p>
+                            <p className="text-lg font-semibold">{formatPercentage(safeData.data_completeness.components.profile)}</p>
                         </div>
                         <div className="text-center">
                             <p className="text-sm text-gray-600">Profil Desa</p>
-                            <p className="text-lg font-semibold">
-                                {formatPercentage(safeData.data_completeness.components.profile_desa)}
-                            </p>
+                            <p className="text-lg font-semibold">{formatPercentage(safeData.data_completeness.components.profile_desa)}</p>
                         </div>
                         <div className="text-center">
                             <p className="text-sm text-gray-600">Pengurus</p>
-                            <p className="text-lg font-semibold">
-                                {formatPercentage(safeData.data_completeness.components.pengurus)}
-                            </p>
+                            <p className="text-lg font-semibold">{formatPercentage(safeData.data_completeness.components.pengurus)}</p>
                         </div>
                     </div>
                 </div>
@@ -256,18 +244,14 @@ export default function DashboardAdmin({ data }: Props) {
                             {getStatusIcon(safeData.legalitas_summary.status)}
                         </div>
                         <p className="text-sm text-blue-600">Status Legalitas</p>
-                        <p className="mb-1 text-xl font-bold">
-                            {formatPercentage(safeData.legalitas_summary.completion_percentage)}
-                        </p>
+                        <p className="mb-1 text-xl font-bold">{formatPercentage(safeData.legalitas_summary.completion_percentage)}</p>
                         <p className="text-xs text-gray-500">
-                            {safeData.legalitas_summary.total_documents ?
-                                `${safeData.legalitas_summary.total_documents} dokumen total` :
-                                'Belum ada dokumen'}
+                            {safeData.legalitas_summary.total_documents
+                                ? `${safeData.legalitas_summary.total_documents} dokumen total`
+                                : 'Belum ada dokumen'}
                         </p>
                         {safeData.legalitas_summary.last_updated && (
-                            <p className="mt-1 text-xs text-gray-400">
-                                Update: {safeData.legalitas_summary.last_updated}
-                            </p>
+                            <p className="mt-1 text-xs text-gray-400">Update: {safeData.legalitas_summary.last_updated}</p>
                         )}
                     </div>
 
@@ -278,18 +262,14 @@ export default function DashboardAdmin({ data }: Props) {
                             {getStatusIcon(safeData.profile_summary.status)}
                         </div>
                         <p className="text-sm text-green-600">Profil BUMDes</p>
-                        <p className="mb-1 text-xl font-bold">
-                            {formatPercentage(safeData.profile_summary.completion_percentage)}
-                        </p>
+                        <p className="mb-1 text-xl font-bold">{formatPercentage(safeData.profile_summary.completion_percentage)}</p>
                         <p className="text-xs text-gray-500">
-                            {safeData.profile_summary.missing_fields && safeData.profile_summary.missing_fields.length > 0 ?
-                                `${safeData.profile_summary.missing_fields.length} field belum diisi` :
-                                'Data profil lengkap'}
+                            {safeData.profile_summary.missing_fields && safeData.profile_summary.missing_fields.length > 0
+                                ? `${safeData.profile_summary.missing_fields.length} field belum diisi`
+                                : 'Data profil lengkap'}
                         </p>
                         {safeData.profile_summary.last_updated && (
-                            <p className="mt-1 text-xs text-gray-400">
-                                Update: {safeData.profile_summary.last_updated}
-                            </p>
+                            <p className="mt-1 text-xs text-gray-400">Update: {safeData.profile_summary.last_updated}</p>
                         )}
                     </div>
 
@@ -300,43 +280,40 @@ export default function DashboardAdmin({ data }: Props) {
                             {getStatusIcon(safeData.profile_desa_summary.status)}
                         </div>
                         <p className="text-sm text-orange-600">Profil Desa</p>
-                        <p className="mb-1 text-xl font-bold">
-                            {formatPercentage(safeData.profile_desa_summary.completion_percentage)}
-                        </p>
+                        <p className="mb-1 text-xl font-bold">{formatPercentage(safeData.profile_desa_summary.completion_percentage)}</p>
                         <p className="text-xs text-gray-500">
-                            {safeData.profile_desa_summary.missing_fields && safeData.profile_desa_summary.missing_fields.length > 0 ?
-                                `${safeData.profile_desa_summary.missing_fields.length} field belum diisi` :
-                                'Data profil lengkap'}
+                            {safeData.profile_desa_summary.missing_fields && safeData.profile_desa_summary.missing_fields.length > 0
+                                ? `${safeData.profile_desa_summary.missing_fields.length} field belum diisi`
+                                : 'Data profil lengkap'}
                         </p>
                         {safeData.profile_desa_summary.last_updated && (
-                            <p className="mt-1 text-xs text-gray-400">
-                                Update: {safeData.profile_desa_summary.last_updated}
-                            </p>
+                            <p className="mt-1 text-xs text-gray-400">Update: {safeData.profile_desa_summary.last_updated}</p>
                         )}
                     </div>
 
                     {/* Pengurus */}
-                    <div className={`rounded-xl border p-4 ${getStatusColor(safeData.pengurus_summary.completion_percentage >= 80 ? 'success' : safeData.pengurus_summary.completion_percentage >= 60 ? 'warning' : 'danger')}`}>
+                    <div
+                        className={`rounded-xl border p-4 ${getStatusColor(safeData.pengurus_summary.completion_percentage >= 80 ? 'success' : safeData.pengurus_summary.completion_percentage >= 60 ? 'warning' : 'danger')}`}
+                    >
                         <div className="mb-2 flex items-center justify-between">
                             <Users className="text-purple-600" size={24} />
-                            {getStatusIcon(safeData.pengurus_summary.completion_percentage >= 80 ? 'success' : safeData.pengurus_summary.completion_percentage >= 60 ? 'warning' : 'danger')}
+                            {getStatusIcon(
+                                safeData.pengurus_summary.completion_percentage >= 80
+                                    ? 'success'
+                                    : safeData.pengurus_summary.completion_percentage >= 60
+                                      ? 'warning'
+                                      : 'danger',
+                            )}
                         </div>
                         <p className="text-sm text-purple-600">Pengurus BUMDes</p>
-                        <p className="mb-1 text-xl font-bold">
-                            {safeData.pengurus_summary.total_pengurus} Orang
-                        </p>
-                        <p className="text-xs text-gray-500">
-                            {safeData.pengurus_summary.jabatan_terisi} jabatan terisi
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400">
-                            {formatPercentage(safeData.pengurus_summary.completion_percentage)} lengkap
-                        </p>
+                        <p className="mb-1 text-xl font-bold">{safeData.pengurus_summary.total_pengurus} Orang</p>
+                        <p className="text-xs text-gray-500">{safeData.pengurus_summary.jabatan_terisi} jabatan terisi</p>
+                        <p className="mt-1 text-xs text-gray-400">{formatPercentage(safeData.pengurus_summary.completion_percentage)} lengkap</p>
                     </div>
                 </div>
 
                 {/* Statistik Unit dan Keuangan */}
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-
                     {/* Chart Legalitas */}
                     <div className="rounded-xl border bg-white p-6">
                         <div className="mb-4 flex items-center gap-3">
@@ -347,30 +324,30 @@ export default function DashboardAdmin({ data }: Props) {
                         <div className="h-48">
                             <ResponsiveContainer width="100%" height="100%">
                                 <RechartsPieChart>
-                                    <Pie
-                                        data={pieData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={40}
-                                        outerRadius={80}
-                                        dataKey="value"
-                                    >
+                                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={80} dataKey="value">
                                         {pieData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={entry.color} />
                                         ))}
                                     </Pie>
-                                    <Tooltip formatter={(value) => [`${value.toFixed(1)}%`, '']} />
+                                    <Tooltip
+                                        formatter={(value: string | number) => {
+                                            if (typeof value === 'number') {
+                                                return [`${value.toFixed(1)}%`, ''];
+                                            }
+                                            return [value, ''];
+                                        }}
+                                    />
                                 </RechartsPieChart>
                             </ResponsiveContainer>
                         </div>
 
-                        <div className="flex justify-center gap-4 mt-2">
+                        <div className="mt-2 flex justify-center gap-4">
                             <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-green-500" />
+                                <div className="h-3 w-3 rounded-full bg-green-500" />
                                 <span className="text-xs">Lengkap</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-red-500" />
+                                <div className="h-3 w-3 rounded-full bg-red-500" />
                                 <span className="text-xs">Belum Lengkap</span>
                             </div>
                         </div>
@@ -387,8 +364,8 @@ export default function DashboardAdmin({ data }: Props) {
                             {/* Legalitas Missing */}
                             {safeData.legalitas_summary.missing_documents && safeData.legalitas_summary.missing_documents.length > 0 && (
                                 <div>
-                                    <h4 className="font-medium text-red-600 mb-2">Dokumen Legalitas:</h4>
-                                    <ul className="text-sm text-gray-600 space-y-1">
+                                    <h4 className="mb-2 font-medium text-red-600">Dokumen Legalitas:</h4>
+                                    <ul className="space-y-1 text-sm text-gray-600">
                                         {safeData.legalitas_summary.missing_documents.map((doc, index) => (
                                             <li key={index} className="flex items-center gap-2">
                                                 <XCircle size={14} className="text-red-500" />
@@ -402,8 +379,8 @@ export default function DashboardAdmin({ data }: Props) {
                             {/* Profile Missing */}
                             {safeData.profile_summary.missing_fields && safeData.profile_summary.missing_fields.length > 0 && (
                                 <div>
-                                    <h4 className="font-medium text-red-600 mb-2">Profil BUMDes:</h4>
-                                    <ul className="text-sm text-gray-600 space-y-1">
+                                    <h4 className="mb-2 font-medium text-red-600">Profil BUMDes:</h4>
+                                    <ul className="space-y-1 text-sm text-gray-600">
                                         {safeData.profile_summary.missing_fields.map((field, index) => (
                                             <li key={index} className="flex items-center gap-2">
                                                 <XCircle size={14} className="text-red-500" />
@@ -417,8 +394,8 @@ export default function DashboardAdmin({ data }: Props) {
                             {/* Profile Desa Missing */}
                             {safeData.profile_desa_summary.missing_fields && safeData.profile_desa_summary.missing_fields.length > 0 && (
                                 <div>
-                                    <h4 className="font-medium text-red-600 mb-2">Profil Desa:</h4>
-                                    <ul className="text-sm text-gray-600 space-y-1">
+                                    <h4 className="mb-2 font-medium text-red-600">Profil Desa:</h4>
+                                    <ul className="space-y-1 text-sm text-gray-600">
                                         {safeData.profile_desa_summary.missing_fields.map((field, index) => (
                                             <li key={index} className="flex items-center gap-2">
                                                 <XCircle size={14} className="text-red-500" />
@@ -432,8 +409,8 @@ export default function DashboardAdmin({ data }: Props) {
                             {/* Pengurus Missing */}
                             {safeData.pengurus_summary.jabatan_kosong && safeData.pengurus_summary.jabatan_kosong.length > 0 && (
                                 <div>
-                                    <h4 className="font-medium text-red-600 mb-2">Jabatan Pengurus Kosong:</h4>
-                                    <ul className="text-sm text-gray-600 space-y-1">
+                                    <h4 className="mb-2 font-medium text-red-600">Jabatan Pengurus Kosong:</h4>
+                                    <ul className="space-y-1 text-sm text-gray-600">
                                         {safeData.pengurus_summary.jabatan_kosong.map((jabatan, index) => (
                                             <li key={index} className="flex items-center gap-2">
                                                 <XCircle size={14} className="text-red-500" />
@@ -446,18 +423,17 @@ export default function DashboardAdmin({ data }: Props) {
 
                             {/* All Complete */}
                             {(!safeData.legalitas_summary.missing_documents || safeData.legalitas_summary.missing_documents.length === 0) &&
-                             (!safeData.profile_summary.missing_fields || safeData.profile_summary.missing_fields.length === 0) &&
-                             (!safeData.profile_desa_summary.missing_fields || safeData.profile_desa_summary.missing_fields.length === 0) &&
-                             (!safeData.pengurus_summary.jabatan_kosong || safeData.pengurus_summary.jabatan_kosong.length === 0) && (
-                                <div className="text-center py-8">
-                                    <CheckCircle className="mx-auto mb-2 text-green-600" size={32} />
-                                    <p className="text-green-600 font-medium">Semua data sudah lengkap!</p>
-                                    <p className="text-sm text-gray-500">Organisasi BUMDes siap beroperasi</p>
-                                </div>
-                            )}
+                                (!safeData.profile_summary.missing_fields || safeData.profile_summary.missing_fields.length === 0) &&
+                                (!safeData.profile_desa_summary.missing_fields || safeData.profile_desa_summary.missing_fields.length === 0) &&
+                                (!safeData.pengurus_summary.jabatan_kosong || safeData.pengurus_summary.jabatan_kosong.length === 0) && (
+                                    <div className="py-8 text-center">
+                                        <CheckCircle className="mx-auto mb-2 text-green-600" size={32} />
+                                        <p className="font-medium text-green-600">Semua data sudah lengkap!</p>
+                                        <p className="text-sm text-gray-500">Organisasi BUMDes siap beroperasi</p>
+                                    </div>
+                                )}
                         </div>
                     </div>
-
                 </div>
 
                 {/* Footer */}
