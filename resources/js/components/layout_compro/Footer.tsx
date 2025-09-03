@@ -24,7 +24,7 @@ const Footer: React.FC = () => {
     const quickLinks: FooterLink[] = [
         { name: 'Tentang Kami', href: '/profil/tentang-kami' },
         { name: 'Unit Usaha', href: '/unit-usaha' },
-        { name: 'Legalitas', href: '/profil/legalitas' },
+        { name: 'Legalitas', href: '/profil/dokumen-legalitas' },
         { name: 'Laporan Keuangan', href: '/laporan-transparansi' },
         { name: 'Kontak', href: '/kontak' },
     ];
