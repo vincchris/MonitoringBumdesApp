@@ -5,16 +5,16 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Models\ProfileDesa;
-use App\Models\ProfileBumdes;
+use App\Models\profileDesa;
+use App\Models\profileBumdes;
 use Illuminate\Support\Facades\DB;
 
 class DataUmumController extends Controller
 {
     public function index()
     {
-        $desa = ProfileDesa::first();
-        $bumdes = ProfileBumdes::first();
+        $desa = profileDesa::first();
+        $bumdes = profileBumdes::first();
 
         return Inertia::render('admin/EditDataUmum', [
             'desa' => $desa,
@@ -46,7 +46,7 @@ class DataUmumController extends Controller
 
         try {
             // Create or update Desa data
-            $desa = ProfileDesa::create([
+            $desa = profileDesa::create([
                 'nama_desa' => $validated['nama_desa'],
                 'alamat' => $validated['alamat_desa'],
                 'kepala_desa' => $validated['kepala_desa'],
@@ -57,7 +57,7 @@ class DataUmumController extends Controller
             ]);
 
             // Create or update Bumdes data
-            ProfileBumdes::create([
+            profileBumdes::create([
                 'desa_id' => $desa->id,
                 'nama_bumdes' => $validated['nama_bumdes'],
                 'kepala_bumdes' => $validated['kepala_bumdes'],
@@ -102,7 +102,7 @@ class DataUmumController extends Controller
 
         try {
             // Update Desa data
-            $desa = ProfileDesa::findOrFail($id);
+            $desa = profileDesa::findOrFail($id);
             $desa->update([
                 'nama_desa' => $validated['nama_desa'],
                 'alamat' => $validated['alamat_desa'],
@@ -114,7 +114,7 @@ class DataUmumController extends Controller
             ]);
 
             // Update or create Bumdes data
-            $bumdes = ProfileBumdes::where('desa_id', $desa->id)->first();
+            $bumdes = profileBumdes::where('desa_id', $desa->id)->first();
 
             if ($bumdes) {
                 $bumdes->update([
@@ -125,7 +125,7 @@ class DataUmumController extends Controller
                     'telepon' => $validated['telepon_bumdes'],
                 ]);
             } else {
-                ProfileBumdes::create([
+                profileBumdes::create([
                     'desa_id' => $desa->id,
                     'nama_bumdes' => $validated['nama_bumdes'],
                     'kepala_bumdes' => $validated['kepala_bumdes'],
@@ -149,8 +149,8 @@ class DataUmumController extends Controller
 
     public function show($id)
     {
-        $desa = ProfileDesa::findOrFail($id);
-        $bumdes = ProfileBumdes::where('desa_id', $desa->id)->first();
+        $desa = profileDesa::findOrFail($id);
+        $bumdes = profileBumdes::where('desa_id', $desa->id)->first();
 
         return response()->json([
             'desa' => $desa,
