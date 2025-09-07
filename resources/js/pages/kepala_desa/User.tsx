@@ -2,13 +2,14 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 
 // ================== TYPES ==================
 export interface UnitItem {
     id: number;
     name: string;
-    unit_name?: string; // Support untuk data dari backend
+    unit_name?: string;
 }
 
 export interface UserItem {
@@ -43,6 +44,49 @@ interface Props {
     users: PaginatedUserData;
     units: UnitItem[];
 }
+
+// ================== CONFIRM MODAL COMPONENT ==================
+interface ConfirmModalProps {
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: 'default' | 'destructive';
+}
+
+const ConfirmModal = ({
+    open,
+    title,
+    description,
+    onConfirm,
+    onCancel,
+    confirmText = 'Hapus',
+    cancelText = 'Batal',
+    variant = 'destructive',
+}: ConfirmModalProps) => {
+    if (!open) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onCancel}>
+            <div className="w-full max-w-sm rounded-lg border bg-white p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
+                <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+                <p className="mt-2 text-sm text-gray-600">{description}</p>
+
+                <div className="mt-4 flex justify-end gap-2">
+                    <Button variant="outline" onClick={onCancel}>
+                        {cancelText}
+                    </Button>
+                    <Button variant={variant} onClick={onConfirm}>
+                        {confirmText}
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // ================== MODAL COMPONENT ==================
 interface UserModalProps {
@@ -104,7 +148,7 @@ const UserModal = ({ isOpen, onClose, editingUser, units, onSubmit, data, setDat
                             <label className="mb-1 block text-sm font-medium">Password</label>
                             <div className="relative">
                                 <input
-                                    type={showPassword ? "text" : "password"}
+                                    type={showPassword ? 'text' : 'password'}
                                     value={data.password || ''}
                                     onChange={(e) => setData('password', e.target.value)}
                                     className="w-full rounded border border-gray-300 px-3 py-2 pr-10 focus:border-blue-500 focus:outline-none"
@@ -113,7 +157,7 @@ const UserModal = ({ isOpen, onClose, editingUser, units, onSubmit, data, setDat
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                                 >
                                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
@@ -143,7 +187,7 @@ const UserModal = ({ isOpen, onClose, editingUser, units, onSubmit, data, setDat
                             {showPasswordEdit ? (
                                 <div className="relative">
                                     <input
-                                        type={showPassword ? "text" : "password"}
+                                        type={showPassword ? 'text' : 'password'}
                                         value={data.password || ''}
                                         onChange={(e) => setData('password', e.target.value)}
                                         placeholder="Masukkan password baru"
@@ -153,7 +197,7 @@ const UserModal = ({ isOpen, onClose, editingUser, units, onSubmit, data, setDat
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                                     >
                                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </button>
@@ -171,7 +215,7 @@ const UserModal = ({ isOpen, onClose, editingUser, units, onSubmit, data, setDat
                         <select
                             value={data.roles}
                             onChange={(e) => {
-                                const role = e.target.value as 'kepala_desa' | 'pengelola' | 'kepala_bumdes' | 'admin' |  '';
+                                const role = e.target.value as 'kepala_desa' | 'pengelola' | 'kepala_bumdes' | 'admin' | '';
                                 setData('roles', role);
                                 // Reset unit_id ketika role berubah
                                 if (role !== 'pengelola') {
@@ -233,6 +277,11 @@ export default function UserList({ users, units }: Props) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<UserItem | null>(null);
 
+    const [confirmDelete, setConfirmDelete] = useState<{
+        open: boolean;
+        user: UserItem | null;
+    }>({ open: false, user: null });
+
     const { data, setData, post, put, processing, reset, errors } = useForm<UserFormData>({
         name: '',
         email: '',
@@ -240,6 +289,7 @@ export default function UserList({ users, units }: Props) {
         roles: '',
         unit_id: '',
     });
+
 
     // Fungsi untuk membuka modal tambah user
     const handleAddUser = () => {
@@ -274,6 +324,44 @@ export default function UserList({ users, units }: Props) {
 
         const submitData: any = { ...data };
 
+        // === VALIDASI ROLE UNIK ===
+        if (!editingUser) {
+            if (submitData.roles === 'kepala_desa') {
+                const sudahAdaKepalaDesa = users.data.some((u) => u.roles === 'kepala_desa');
+                if (sudahAdaKepalaDesa) {
+                    toast.error('Hanya boleh ada 1 user dengan role Kepala Desa', {
+                        duration: 4000,
+                        position: 'top-right',
+                    });
+                    return;
+                }
+            }
+
+            if (submitData.roles === 'kepala_bumdes') {
+                const sudahAdaKepalaBumdes = users.data.some((u) => u.roles === 'kepala_bumdes');
+                if (sudahAdaKepalaBumdes) {
+                    toast.error('Hanya boleh ada 1 user dengan role Kepala Bumdes', {
+                        duration: 4000,
+                        position: 'top-right',
+                    });
+                    return;
+                }
+            }
+
+            if (submitData.roles === 'pengelola') {
+                const sudahAdaPengelolaUnit = users.data.some(
+                    (u) => u.roles === 'pengelola' && u.units && u.units[0]?.id === Number(submitData.unit_id),
+                );
+                if (sudahAdaPengelolaUnit) {
+                    toast.error('Setiap unit usaha hanya boleh memiliki 1 user dengan role Pengelola', {
+                        duration: 4000,
+                        position: 'top-right',
+                    });
+                    return;
+                }
+            }
+        }
+
         // Jika role bukan pengelola, hapus unit_id
         if (submitData.roles !== 'pengelola') {
             delete submitData.unit_id;
@@ -281,7 +369,6 @@ export default function UserList({ users, units }: Props) {
             submitData.unit_id = submitData.unit_id ? Number(submitData.unit_id) : null;
         }
 
-        // Jika editing dan password kosong, hapus password dari data yang dikirim
         if (editingUser && !submitData.password) {
             delete submitData.password;
         }
@@ -289,51 +376,119 @@ export default function UserList({ users, units }: Props) {
         if (editingUser) {
             put(route('users.update', editingUser.id_users), {
                 ...submitData,
-                onSuccess: handleCloseModal,
-                onError: (errors) => console.log('Update errors:', errors),
+                onSuccess: () => {
+                    handleCloseModal();
+                    toast.success('User berhasil diperbarui', {
+                        duration: 4000,
+                        position: 'top-right',
+                    });
+                },
+                onError: () => {
+                    toast.error('Gagal memperbarui user. Silakan coba lagi.', {
+                        duration: 4000,
+                        position: 'top-right',
+                    });
+                },
             });
         } else {
             post(route('users.store'), {
                 ...submitData,
-                onSuccess: handleCloseModal,
-                onError: (errors) => console.log('Create errors:', errors),
+                onSuccess: () => {
+                    handleCloseModal();
+                    toast.success('User berhasil ditambahkan', {
+                        duration: 4000,
+                        position: 'top-right',
+                    });
+                },
+                onError: () => {
+                    toast.error('Gagal menambahkan user. Silakan coba lagi.', {
+                        duration: 4000,
+                        position: 'top-right',
+                    });
+                },
             });
         }
     };
 
-    // Fungsi untuk menghapus user
+    // === HANDLE DELETE (buka modal) ===
     const handleDelete = (user: UserItem) => {
-        if (confirm(`Apakah Anda yakin ingin menghapus user "${user.name}"?`)) {
-            router.delete(route('users.destroy', user.id_users), {
-                onSuccess: () => {
-                    // Optional: show success message
-                },
-                onError: (errors) => {
-                    console.log('Delete errors:', errors);
-                },
-            });
-        }
+        setConfirmDelete({ open: true, user });
+    };
+
+    // === KONFIRMASI DELETE ===
+    const confirmDeleteUser = () => {
+        if (!confirmDelete.user) return;
+
+        router.delete(route('users.destroy', confirmDelete.user.id_users), {
+            onSuccess: () => {
+                setConfirmDelete({ open: false, user: null });
+                toast.success(`User "${confirmDelete.user?.name}" berhasil dihapus`, {
+                    duration: 4000,
+                    position: 'top-right',
+                });
+            },
+            onError: (errors) => {
+                console.error('Delete errors:', errors);
+                setConfirmDelete({ open: false, user: null });
+                toast.error('Gagal menghapus user. Silakan coba lagi.', {
+                    duration: 4000,
+                    position: 'top-right',
+                });
+            },
+        });
     };
 
     return (
         <AppLayout>
             <Head title="Manajemen User" />
 
+            {/* React Hot Toast Container */}
+            <Toaster
+                position="top-right"
+                reverseOrder={false}
+                gutter={8}
+                containerClassName=""
+                containerStyle={{}}
+                toastOptions={{
+                    className: '',
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10b981',
+                            color: '#fff',
+                        },
+                        iconTheme: {
+                            primary: '#fff',
+                            secondary: '#10b981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#ef4444',
+                            color: '#fff',
+                        },
+                        iconTheme: {
+                            primary: '#fff',
+                            secondary: '#ef4444',
+                        },
+                    },
+                }}
+            />
+
             <div className="mx-auto max-w-6xl space-y-6">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-black">Manajemen User</h1>
-                    <Button onClick={handleAddUser} className="flex items-center gap-2 text-black">
+                    <Button onClick={handleAddUser} className="flex items-center gap-2 text-white">
                         <Plus className="h-4 w-4" />
                         Tambah User
                     </Button>
                 </div>
-
-                {/* Flash Message */}
-                {flash?.info?.message && (
-                    <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-                        <p className="text-green-800">{flash.info.message}</p>
-                    </div>
-                )}
 
                 {/* Tabel User */}
                 <div className="overflow-x-auto rounded-lg border shadow">
@@ -360,14 +515,18 @@ export default function UserList({ users, units }: Props) {
                                                         ? 'bg-green-100 text-green-800'
                                                         : user.roles === 'kepala_bumdes'
                                                           ? 'bg-blue-100 text-blue-800'
-                                                          : 'bg-yellow-100 text-yellow-800'
+                                                          : user.roles === 'admin'
+                                                            ? 'bg-red-100 text-red-800'
+                                                            : 'bg-yellow-100 text-yellow-800'
                                                 }`}
                                             >
                                                 {user.roles === 'kepala_desa'
                                                     ? 'Kepala Desa'
                                                     : user.roles === 'kepala_bumdes'
                                                       ? 'Kepala Bumdes'
-                                                      : 'Pengelola'}
+                                                      : user.roles === 'admin'
+                                                        ? 'Admin'
+                                                        : 'Pengelola'}
                                             </span>
                                         </td>
 
@@ -459,6 +618,15 @@ export default function UserList({ users, units }: Props) {
                     data={data}
                     setData={setData}
                     processing={processing}
+                />
+
+                {/* Modal Konfirmasi Hapus */}
+                <ConfirmModal
+                    open={confirmDelete.open}
+                    title="Konfirmasi Hapus"
+                    description={`Apakah Anda yakin ingin menghapus user "${confirmDelete.user?.name}"?`}
+                    onConfirm={confirmDeleteUser}
+                    onCancel={() => setConfirmDelete({ open: false, user: null })}
                 />
             </div>
         </AppLayout>

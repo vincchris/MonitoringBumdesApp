@@ -1,6 +1,6 @@
 import MainLayout from '@/components/layout_compro/MainLayout';
 import { motion } from 'framer-motion';
-import { Building2, Clock, Globe, LucideIcon, MapPin, ShoppingBag, Volleyball, Waves, X } from 'lucide-react';
+import { Building2, Clock, Globe, LucideIcon, MapPin, MessageCircleMore, ShoppingBag, Volleyball, Waves, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -181,11 +181,11 @@ const createBusinessUnits = (tarifs: Record<string, Tarif[]>): BusinessUnit[] =>
         imageUrl: 'assets/images/lapang_minisoc.jpg',
         highlights: ['Fasilitas: Lapangan rumput sintetis', 'Bonus: Air mineral gelas 1 dus', 'Parkir luas tersedia'],
         pricing: tarifs['1'] || [],
-        operatingHours: '08:00 - 22:00 WIB',
+        operatingHours: '24 jam (dengan koordinasi)',
         contact: '0813-2403-0282',
-        whatsapp: '081324030282',
+        whatsapp: '+6281324030282',
         location: 'Jl.Raya Cihaurbeuti No. 440',
-        terms: ['Booking minimal 2 jam sebelumnya', 'DP 50% untuk konfirmasi booking', 'Pembayaran cash/transfer'],
+        terms: ['Booking minimal 2 jam sebelumnya', 'DP Rp.50,0000 untuk konfirmasi booking', 'Booking dibatalkan DP hangus', 'Pembayaran cash/transfer', 'Paket reguler hanya berlaku untuk pertandingan dengan tim masyarakat Desa Sumberjaya.'],
         calculationType: 'duration',
         unit: 'jam',
     },
@@ -197,7 +197,7 @@ const createBusinessUnits = (tarifs: Record<string, Tarif[]>): BusinessUnit[] =>
         pricing: tarifs['2'] || [],
         operatingHours: '24 Jam (dengan koordinasi)',
         contact: '0813-2403-0282',
-        whatsapp: '081324030282',
+        whatsapp: '+6287797689348',
         location: 'Area Perkemahan Desa, Bagja Waluya',
         terms: ['Booking minimal 1 minggu sebelumnya', 'DP 30% untuk konfirmasi', 'Termasuk fasilitas dasar'],
         calculationType: 'none',
@@ -567,6 +567,20 @@ const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
                                                 className="w-full transform rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-blue-700 hover:to-blue-800 focus:ring-4 focus:ring-blue-300 focus:outline-none"
                                             >
                                                 Lihat detail & booking
+                                            </button>
+                                        </div>
+                                        <div className="mt-2 space-y-3">
+                                            <button
+                                                onClick={() => {
+                                                    const message = `Halo, saya tertarik dengan layanan ${unit.title}. Bisa dibantu dengan informasi lebih lanjut?`;
+                                                    const encodedMessage = encodeURIComponent(message);
+                                                    const whatsappURL = `https://wa.me/${unit.whatsapp}?text=${encodedMessage}`;
+                                                    window.open(whatsappURL, '_blank');
+                                                }}
+                                                className="flex w-full transform items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-green-600 to-green-700 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-green-700 hover:to-green-800 focus:ring-4 focus:ring-green-300 focus:outline-none"
+                                            >
+                                                <MessageCircleMore className="h-5 w-5" />
+                                                Ngobrol di WhatsApp
                                             </button>
                                         </div>
                                     </div>

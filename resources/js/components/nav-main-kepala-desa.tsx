@@ -1,6 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import clsx from 'clsx';
-import { LayoutDashboard, LogOut, MapPinHouse, Tent, User, Volleyball } from 'lucide-react';
+import { Droplet, LayoutDashboard, LogOut, MapPinHouse, Tent, User, Volleyball } from 'lucide-react';
 
 const NavLink = ({ href, icon: Icon, label }: any) => {
     const { url } = usePage();
@@ -45,6 +45,7 @@ export default function NavMain() {
                     <NavLink href={`/MiniSoccer`} icon={Volleyball} label="Mini Soccer" />
                     <NavLink href={`/Buper`} icon={Tent} label="Buper" />
                     <NavLink href={`/Kios`} icon={MapPinHouse} label="Kios" />
+                    <NavLink href={`/airweslik`} icon={Droplet} label="Air Weslik" />
                 </div>
             </div>
 
