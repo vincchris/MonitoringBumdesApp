@@ -4,31 +4,8 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpenCheck, LayoutGrid, LogOut } from 'lucide-react';
 import AppLogo from '../app-logo';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: '/dashboard-KepalaDesa',
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Unit Usaha Air Weslik',
-        href: '/Airweslik',
-        icon: BookOpenCheck,
-    },
-    {
-        title: 'Unit Usaha Internet Desa',
-        href: '/InternetDesa',
-        icon: BookOpenCheck,
-    },
-    {
-        title: 'Keluar',
-        href: '/Login',
-        icon: LogOut,
-    },
-];
 
 const footerNavItems: NavItem[] = [];
 

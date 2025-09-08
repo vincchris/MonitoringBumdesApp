@@ -19,7 +19,7 @@ class UserController extends Controller
     {
         $currentUser = Auth::user();
 
-        if (!in_array($currentUser->roles, ['pengelola', 'kepala_desa', 'kepala_bumdes'])) {
+        if (!in_array($currentUser->roles, ['pengelola', 'kepala_desa', 'kepala_bumdes', 'admin'])) {
             abort(403);
         }
 
@@ -61,23 +61,39 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:8',
-            'roles' => 'required|in:kepala_desa,pengelola,kepala_bumdes',
+            'roles' => 'required|in:kepala_desa,pengelola,kepala_bumdes,admin',
             'unit_id' => 'nullable|exists:units,id_units',
         ]);
+
+        // 🔒 Cek unik role sebelum create
+        if ($validated['roles'] === 'kepala_desa' && User::where('roles', 'kepala_desa')->exists()) {
+            return back()->withErrors(['error' => 'Hanya boleh ada 1 user dengan role Kepala Desa']);
+        }
+
+        if ($validated['roles'] === 'kepala_bumdes' && User::where('roles', 'kepala_bumdes')->exists()) {
+            return back()->withErrors(['error' => 'Hanya boleh ada 1 user dengan role Kepala Bumdes']);
+        }
+
+        if ($validated['roles'] === 'pengelola' && !empty($validated['unit_id'])) {
+            $sudahAda = User::where('roles', 'pengelola')
+                ->whereHas('units', fn($q) => $q->where('id_units', $validated['unit_id']))
+                ->exists();
+
+            if ($sudahAda) {
+                return back()->withErrors(['error' => 'Setiap unit usaha hanya boleh memiliki 1 Pengelola']);
+            }
+        }
 
         try {
             DB::beginTransaction();
 
-            $userData = [
+            $user = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
                 'roles' => $validated['roles'],
-            ];
+            ]);
 
-            $user = User::create($userData);
-
-            // Assign unit jika role adalah pengelola dan unit_id ada
             if ($validated['roles'] === 'pengelola' && !empty($validated['unit_id'])) {
                 $user->units()->sync([$validated['unit_id']]);
             }
@@ -93,6 +109,7 @@ class UserController extends Controller
             return back()->withErrors(['error' => 'Gagal menambah user: ' . $e->getMessage()]);
         }
     }
+
 
     public function update(Request $request, string $id)
     {
@@ -113,9 +130,35 @@ class UserController extends Controller
                 Rule::unique('users', 'email')->ignore($user->id_users, 'id_users'),
             ],
             'password' => 'nullable|string|min:8',
-            'roles' => 'required|in:kepala_desa,pengelola,kepala_bumdes',
+            'roles' => 'required|in:kepala_desa,pengelola,kepala_bumdes,admin',
             'unit_id' => 'nullable|exists:units,id_units',
         ]);
+
+        // 🔒 Validasi unik role (abaikan user yg sedang diupdate)
+        if (
+            $validated['roles'] === 'kepala_desa' &&
+            User::where('roles', 'kepala_desa')->where('id_users', '!=', $user->id_users)->exists()
+        ) {
+            return back()->withErrors(['error' => 'Hanya boleh ada 1 user dengan role Kepala Desa']);
+        }
+
+        if (
+            $validated['roles'] === 'kepala_bumdes' &&
+            User::where('roles', 'kepala_bumdes')->where('id_users', '!=', $user->id_users)->exists()
+        ) {
+            return back()->withErrors(['error' => 'Hanya boleh ada 1 user dengan role Kepala Bumdes']);
+        }
+
+        if ($validated['roles'] === 'pengelola' && !empty($validated['unit_id'])) {
+            $sudahAda = User::where('roles', 'pengelola')
+                ->where('id_users', '!=', $user->id_users)
+                ->whereHas('units', fn($q) => $q->where('id_units', $validated['unit_id']))
+                ->exists();
+
+            if ($sudahAda) {
+                return back()->withErrors(['error' => 'Setiap unit usaha hanya boleh memiliki 1 Pengelola']);
+            }
+        }
 
         try {
             DB::beginTransaction();
@@ -132,7 +175,6 @@ class UserController extends Controller
 
             $user->update($userData);
 
-            // update relasi unit
             if ($validated['roles'] === 'pengelola' && !empty($validated['unit_id'])) {
                 $user->units()->sync([$validated['unit_id']]);
             } else {
@@ -150,6 +192,7 @@ class UserController extends Controller
             return back()->withErrors(['error' => 'Gagal mengubah user: ' . $e->getMessage()]);
         }
     }
+
 
     public function destroy(string $id)
     {

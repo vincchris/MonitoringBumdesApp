@@ -1,7 +1,9 @@
 import MainLayout from '@/components/layout_compro/MainLayout';
 import { motion } from 'framer-motion';
-import { Building2, Clock, Globe, LucideIcon, MapPin, ShoppingBag, Volleyball, Waves, X } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import { Building2, Clock, Globe, LucideIcon, MapPin, MessageCircleMore, ShoppingBag, Volleyball, Waves, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import toast from 'react-hot-toast';
@@ -80,7 +82,7 @@ const FAQS: FAQ[] = [
     },
     {
         question: 'Bagaimana jika ingin membatalkan booking?',
-        answer: 'Pembatalan dapat dilakukan maksimal 24 jam sebelumnya. DP yang sudah dibayarkan dapat dikembalikan 80% atau dialihkan ke jadwal lain.',
+        answer: 'Pembatalan dapat dilakukan maksimal 24 jam sebelumnya. DP yang sudah dibayarkan tidak dapat dikembalikan.',
     },
     {
         question: 'Apakah tersedia paket khusus untuk event besar?',
@@ -181,11 +183,17 @@ const createBusinessUnits = (tarifs: Record<string, Tarif[]>): BusinessUnit[] =>
         imageUrl: 'assets/images/lapang_minisoc.jpg',
         highlights: ['Fasilitas: Lapangan rumput sintetis', 'Bonus: Air mineral gelas 1 dus', 'Parkir luas tersedia'],
         pricing: tarifs['1'] || [],
-        operatingHours: '08:00 - 22:00 WIB',
+        operatingHours: '24 jam (dengan koordinasi)',
         contact: '0813-2403-0282',
-        whatsapp: '081324030282',
+        whatsapp: '+6281324030282',
         location: 'Jl.Raya Cihaurbeuti No. 440',
-        terms: ['Booking minimal 2 jam sebelumnya', 'DP 50% untuk konfirmasi booking', 'Pembayaran cash/transfer'],
+        terms: [
+            'Booking minimal 2 jam sebelumnya',
+            'DP Rp.50,000 untuk konfirmasi booking',
+            'Booking dibatalkan DP hangus',
+            'Pembayaran cash/transfer',
+            'Paket reguler hanya berlaku untuk pertandingan dengan tim masyarakat Desa Sumberjaya.',
+        ],
         calculationType: 'duration',
         unit: 'jam',
     },
@@ -197,7 +205,7 @@ const createBusinessUnits = (tarifs: Record<string, Tarif[]>): BusinessUnit[] =>
         pricing: tarifs['2'] || [],
         operatingHours: '24 Jam (dengan koordinasi)',
         contact: '0813-2403-0282',
-        whatsapp: '081324030282',
+        whatsapp: '+6287797689348',
         location: 'Area Perkemahan Desa, Bagja Waluya',
         terms: ['Booking minimal 1 minggu sebelumnya', 'DP 30% untuk konfirmasi', 'Termasuk fasilitas dasar'],
         calculationType: 'none',
@@ -246,6 +254,53 @@ const createBusinessUnits = (tarifs: Record<string, Tarif[]>): BusinessUnit[] =>
         unit: 'bulan',
     },
 ];
+
+// ============ PDF COLOR FIX UTILITIES ============
+const addColorOverrides = (): HTMLStyleElement => {
+    const style = document.createElement('style');
+    style.id = 'pdf-color-overrides';
+    style.textContent = `
+        .pdf-safe * {
+            color: rgb(0, 0, 0) !important;
+            background-color: rgb(255, 255, 255) !important;
+            border-color: rgb(229, 231, 235) !important;
+        }
+        .pdf-safe .text-blue-600,
+        .pdf-safe [style*="color: #1E40AF"] { 
+            color: rgb(30, 64, 175) !important; 
+        }
+        .pdf-safe .text-blue-700,
+        .pdf-safe [style*="color: #1D4ED8"] { 
+            color: rgb(29, 78, 216) !important; 
+        }
+        .pdf-safe .text-gray-600,
+        .pdf-safe [style*="color: #4B5563"] { 
+            color: rgb(75, 85, 99) !important; 
+        }
+        .pdf-safe .text-gray-900 { 
+            color: rgb(17, 24, 39) !important; 
+        }
+        .pdf-safe .bg-white { 
+            background-color: rgb(255, 255, 255) !important; 
+        }
+        .pdf-safe .border-gray-300,
+        .pdf-safe [style*="border"] { 
+            border-color: rgb(209, 213, 219) !important; 
+        }
+        .pdf-safe [style*="borderTop"],
+        .pdf-safe [style*="border-top"] {
+            border-top-color: rgb(59, 130, 246) !important;
+        }
+    `;
+    document.head.appendChild(style);
+    return style;
+};
+
+const removeColorOverrides = (style: HTMLStyleElement): void => {
+    if (style && style.parentNode) {
+        style.parentNode.removeChild(style);
+    }
+};
 
 // ============ COMPONENT FUNCTIONS ============
 const getQuantityLabel = (unit: BusinessUnit): string => {
@@ -387,8 +442,10 @@ const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
     const [namaPenyewa, setNamaPenyewa] = useState<string>('');
     const [quantity, setQuantity] = useState<string>('1');
     const [totalPrice, setTotalPrice] = useState<number>(0);
+    const [isGeneratingPDF, setIsGeneratingPDF] = useState<boolean>(false);
 
     const units = createBusinessUnits(tarifs);
+    const receiptRef = useRef<HTMLDivElement>(null);
 
     // Effects
     useEffect(() => {
@@ -416,14 +473,114 @@ const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
         setNamaPenyewa('');
         setQuantity('1');
         setTotalPrice(0);
+        setIsGeneratingPDF(false);
     };
 
-    const handleSubmit = () => {
+    // Enhanced PDF generation with OKLCH color fix
+    const generateReceiptPDF = async () => {
+        if (!receiptRef.current) {
+            toast.error('Gagal menghasilkan struk: Elemen tidak ditemukan');
+            return;
+        }
+
+        setIsGeneratingPDF(true);
+        let styleOverride: HTMLStyleElement | null = null;
+
+        try {
+            // Add the pdf-safe class to the receipt element
+            receiptRef.current.classList.add('pdf-safe');
+
+            // Add color overrides
+            styleOverride = addColorOverrides();
+
+            // Wait a bit for styles to apply
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            const canvas = await html2canvas(receiptRef.current, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: 'rgb(255, 255, 255)', // Use RGB instead of hex
+                foreignObjectRendering: false,
+                logging: false, // Disable logging to reduce console noise
+                windowWidth: 800,
+                windowHeight: receiptRef.current.scrollHeight,
+                ignoreElements: (element) => {
+                    // Skip elements that might cause issues
+                    return element.tagName === 'SCRIPT' || element.tagName === 'STYLE';
+                },
+                onclone: (clonedDoc, element) => {
+                    // Apply additional fixes to the cloned document
+                    const allElements = element.querySelectorAll('*');
+                    allElements.forEach((el: Element) => {
+                        const htmlEl = el as HTMLElement;
+                        const computedStyle = window.getComputedStyle(htmlEl);
+
+                        // Convert any remaining OKLCH colors to RGB
+                        if (computedStyle.color && computedStyle.color.includes('oklch')) {
+                            htmlEl.style.color = 'rgb(0, 0, 0)';
+                        }
+                        if (computedStyle.backgroundColor && computedStyle.backgroundColor.includes('oklch')) {
+                            htmlEl.style.backgroundColor = 'rgb(255, 255, 255)';
+                        }
+                        if (computedStyle.borderColor && computedStyle.borderColor.includes('oklch')) {
+                            htmlEl.style.borderColor = 'rgb(229, 231, 235)';
+                        }
+                    });
+
+                    return element;
+                },
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4',
+            });
+
+            const imgWidth = 190;
+            const pageHeight = pdf.internal.pageSize.height;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let heightLeft = imgHeight;
+            let positionY = 10;
+
+            pdf.addImage(imgData, 'PNG', 10, positionY, imgWidth, imgHeight);
+            heightLeft -= pageHeight - positionY;
+
+            while (heightLeft > 0) {
+                pdf.addPage();
+                positionY = heightLeft - imgHeight + 10;
+                pdf.addImage(imgData, 'PNG', 10, positionY, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+
+            pdf.save(`struk_booking_${namaPenyewa.replace(/\s/g, '_')}.pdf`);
+            toast.success('Struk PDF berhasil diunduh!');
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            toast.error('Gagal menghasilkan struk PDF. Silakan coba lagi.');
+        } finally {
+            // Cleanup
+            if (receiptRef.current) {
+                receiptRef.current.classList.remove('pdf-safe');
+            }
+            if (styleOverride) {
+                removeColorOverrides(styleOverride);
+            }
+            setIsGeneratingPDF(false);
+        }
+    };
+
+    const handleSubmit = async () => {
         if (!selectedUnit || !selectedPackage || !selectedDate || !namaPenyewa) {
             toast.error('Mohon lengkapi semua data booking');
             return;
         }
 
+        // Generate and download PDF first
+        await generateReceiptPDF();
+
+        // Then proceed to WhatsApp
         let detailQuantity = '';
         if (selectedUnit.calculationType === 'duration' || selectedUnit.calculationType === 'participants') {
             detailQuantity = `\n${selectedUnit.calculationType === 'duration' ? 'Durasi' : 'Jumlah'}: ${quantity} ${selectedUnit.unit}`;
@@ -567,6 +724,20 @@ const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
                                                 className="w-full transform rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-blue-700 hover:to-blue-800 focus:ring-4 focus:ring-blue-300 focus:outline-none"
                                             >
                                                 Lihat detail & booking
+                                            </button>
+                                        </div>
+                                        <div className="mt-2 space-y-3">
+                                            <button
+                                                onClick={() => {
+                                                    const message = `Halo, saya tertarik dengan layanan ${unit.title}. Bisa dibantu dengan informasi lebih lanjut?`;
+                                                    const encodedMessage = encodeURIComponent(message);
+                                                    const whatsappURL = `https://wa.me/${unit.whatsapp}?text=${encodedMessage}`;
+                                                    window.open(whatsappURL, '_blank');
+                                                }}
+                                                className="flex w-full transform items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-green-600 to-green-700 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-green-700 hover:to-green-800 focus:ring-4 focus:ring-green-300 focus:outline-none"
+                                            >
+                                                <MessageCircleMore className="h-5 w-5" />
+                                                Ngobrol di WhatsApp
                                             </button>
                                         </div>
                                     </div>
@@ -750,15 +921,19 @@ const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
                                     <div className="flex flex-col gap-3 pt-4 sm:flex-row">
                                         <button
                                             type="button"
-                                            className="w-full flex-1 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 focus:outline-none sm:w-auto"
+                                            className={`w-full flex-1 rounded-lg px-6 py-3 font-semibold text-white transition-colors focus:ring-4 focus:ring-blue-200 focus:outline-none sm:w-auto ${
+                                                isGeneratingPDF ? 'cursor-not-allowed bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
+                                            }`}
                                             onClick={handleSubmit}
+                                            disabled={isGeneratingPDF}
                                         >
-                                            Konfirmasi Booking
+                                            {isGeneratingPDF ? 'Membuat Struk...' : 'Konfirmasi Booking'}
                                         </button>
                                         <button
                                             type="button"
                                             className="w-full rounded-lg bg-gray-300 px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-400 sm:w-auto"
                                             onClick={resetForm}
+                                            disabled={isGeneratingPDF}
                                         >
                                             Batal
                                         </button>
@@ -795,6 +970,167 @@ const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
                     </div>
                 </div>
             )}
+
+            {/* Hidden Receipt Template for PDF Generation - Enhanced with RGB colors */}
+            <div
+                style={{
+                    position: 'absolute',
+                    left: '-9999px',
+                    width: '800px',
+                    padding: '0',
+                    margin: '0',
+                    border: 'none',
+                    background: 'rgb(255, 255, 255)', // RGB instead of hex
+                    fontFamily: 'Arial, sans-serif',
+                    color: 'rgb(0, 0, 0)', // RGB instead of hex
+                    isolation: 'isolate',
+                }}
+            >
+                <div
+                    ref={receiptRef}
+                    style={{
+                        padding: '20px',
+                        background: 'rgb(255, 255, 255)', // RGB
+                        color: 'rgb(0, 0, 0)', // RGB
+                        fontFamily: 'Arial, sans-serif',
+                        boxSizing: 'border-box',
+                    }}
+                >
+                    <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                        <h1 style={{ fontSize: '24px', color: 'rgb(30, 64, 175)', margin: '0' }}>Bukti booking BUMDes Bagja Waluya</h1>
+                        <p style={{ fontSize: '14px', color: 'rgb(75, 85, 99)', margin: '5px 0' }}>Jl. Raya Cihaurbeuti No. 440, Desa Sumberjaya</p>
+                        <p style={{ fontSize: '14px', color: 'rgb(75, 85, 99)', margin: '5px 0' }}>
+                            Kontak: 0813-2403-0282 | Tanggal: {new Date().toLocaleDateString('id-ID')}
+                        </p>
+                    </div>
+                    <div style={{ borderTop: '2px solid rgb(59, 130, 246)', margin: '20px 0' }}></div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', color: 'rgb(0, 0, 0)' }}>
+                        <tbody>
+                            <tr>
+                                <td
+                                    style={{
+                                        padding: '8px',
+                                        fontWeight: 'bold',
+                                        borderBottom: '1px solid rgb(229, 231, 235)',
+                                        color: 'rgb(0, 0, 0)',
+                                    }}
+                                >
+                                    Nama Penyewa:
+                                </td>
+                                <td
+                                    style={{
+                                        padding: '8px',
+                                        borderBottom: '1px solid rgb(229, 231, 235)',
+                                        color: 'rgb(0, 0, 0)',
+                                    }}
+                                >
+                                    {namaPenyewa}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td
+                                    style={{
+                                        padding: '8px',
+                                        fontWeight: 'bold',
+                                        borderBottom: '1px solid rgb(229, 231, 235)',
+                                        color: 'rgb(0, 0, 0)',
+                                    }}
+                                >
+                                    Unit Usaha:
+                                </td>
+                                <td
+                                    style={{
+                                        padding: '8px',
+                                        borderBottom: '1px solid rgb(229, 231, 235)',
+                                        color: 'rgb(0, 0, 0)',
+                                    }}
+                                >
+                                    {selectedUnit?.title}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td
+                                    style={{
+                                        padding: '8px',
+                                        fontWeight: 'bold',
+                                        borderBottom: '1px solid rgb(229, 231, 235)',
+                                        color: 'rgb(0, 0, 0)',
+                                    }}
+                                >
+                                    Paket:
+                                </td>
+                                <td
+                                    style={{
+                                        padding: '8px',
+                                        borderBottom: '1px solid rgb(229, 231, 235)',
+                                        color: 'rgb(0, 0, 0)',
+                                    }}
+                                >
+                                    {selectedPackage?.label} ({selectedPackage?.detail})
+                                </td>
+                            </tr>
+                            {selectedUnit && (selectedUnit.calculationType === 'duration' || selectedUnit.calculationType === 'participants') && (
+                                <tr>
+                                    <td
+                                        style={{
+                                            padding: '8px',
+                                            fontWeight: 'bold',
+                                            borderBottom: '1px solid rgb(229, 231, 235)',
+                                            color: 'rgb(0, 0, 0)',
+                                        }}
+                                    >
+                                        {getQuantityLabel(selectedUnit)}:
+                                    </td>
+                                    <td
+                                        style={{
+                                            padding: '8px',
+                                            borderBottom: '1px solid rgb(229, 231, 235)',
+                                            color: 'rgb(0, 0, 0)',
+                                        }}
+                                    >
+                                        {quantity} {selectedUnit.unit}
+                                    </td>
+                                </tr>
+                            )}
+                            <tr>
+                                <td
+                                    style={{
+                                        padding: '8px',
+                                        fontWeight: 'bold',
+                                        borderBottom: '1px solid rgb(229, 231, 235)',
+                                        color: 'rgb(0, 0, 0)',
+                                    }}
+                                >
+                                    Tanggal & Waktu:
+                                </td>
+                                <td
+                                    style={{
+                                        padding: '8px',
+                                        borderBottom: '1px solid rgb(229, 231, 235)',
+                                        color: 'rgb(0, 0, 0)',
+                                    }}
+                                >
+                                    {selectedDate?.toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' })}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style={{ padding: '8px', fontWeight: 'bold', color: 'rgb(0, 0, 0)' }}>Total Harga:</td>
+                                <td style={{ padding: '8px', fontSize: '18px', color: 'rgb(29, 78, 216)' }}>
+                                    Rp {totalPrice.toLocaleString('id-ID')}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style={{ borderTop: '2px solid rgb(59, 130, 246)', margin: '20px 0', paddingTop: '10px' }}>
+                        <p style={{ fontSize: '12px', color: 'rgb(75, 85, 99)', textAlign: 'center', margin: '5px 0' }}>
+                            Terima kasih telah booking melalui BUMDes Bagja Waluya. Silakan hubungi kami untuk konfirmasi pembayaran.
+                        </p>
+                        <p style={{ fontSize: '12px', color: 'rgb(75, 85, 99)', textAlign: 'center', margin: '5px 0' }}>
+                            © {new Date().getFullYear()} BUMDes Bagja Waluya
+                        </p>
+                    </div>
+                </div>
+            </div>
         </MainLayout>
     );
 };

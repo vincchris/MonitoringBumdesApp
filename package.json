@@ -50,6 +50,8 @@
         "dayjs": "^1.11.13",
         "framer-motion": "^12.23.12",
         "globals": "^15.14.0",
+        "html2canvas": "^1.4.1",
+        "jspdf": "^3.0.2",
         "laravel-vite-plugin": "^1.0",
         "lucide-react": "^0.475.0",
         "react": "^19.0.0",

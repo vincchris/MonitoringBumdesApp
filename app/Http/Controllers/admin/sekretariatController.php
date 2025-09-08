@@ -17,8 +17,8 @@ class sekretariatController extends Controller
      */
     public function index()
     {
-        $desa = ProfileDesa::first();
-        $bumdes = ProfileBumdes::first();
+        $desa = profileDesa::first();
+        $bumdes = profileBumdes::first();
 
         return Inertia::render('admin/Sekretariat', [
             'desa' => [

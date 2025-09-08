@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\kepala_bumdes;
+namespace App\Http\Controllers\kepala_desa;
 
 use App\Http\Controllers\Controller;
 use App\Models\{BalanceHistory, Expense, Income, InitialBalance, RentTransaction, Unit};

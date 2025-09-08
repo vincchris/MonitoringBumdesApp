@@ -39,7 +39,6 @@ export default function NavMainKepalaBumdes() {
             <div>
                 <div className="px-4 text-xs text-gray-500 uppercase">Unit Usaha</div>
                 <div className="mt-2 space-y-2">
-                    <NavLink href={`/airweslik`} icon={Droplet} label="Air Weslik" />
                     <NavLink href={`/InterDesa`} icon={Wifi} label="Internet Desa" />
                 </div>
             </div>

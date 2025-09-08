@@ -51,7 +51,7 @@ const Navbar: React.FC = () => {
             submenu: [
                 { name: 'Tentang Kami', href: '/profil/tentang-kami' },
                 { name: 'Struktur Organisasi', href: '/profil/struktur-organisasi' },
-                { name: 'Legalitas', href: '/profil/legalitas' },
+                { name: 'Legalitas', href: '/profil/dokumen-legalitas' },
             ],
         },
         { name: 'Unit Usaha', href: '/unit-usaha' },

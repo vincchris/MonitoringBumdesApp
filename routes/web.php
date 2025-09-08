@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\kepala_bumdes\AirWeslikController;
+use App\Http\Controllers\kepala_desa\AirWeslikController;
 use App\Http\Controllers\kepala_desa\BuperController;
 use App\Http\Controllers\kepala_bumdes\InternetDesaController;
 use App\Http\Controllers\kepala_desa\KiosController;
@@ -195,7 +195,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
     // =============================
-    // Route Kepala bumdes Air Weslik
+    // Route Kepala Desa Air Weslik
     // =============================
     Route::resource('airweslik', AirWeslikController::class);
     Route::prefix('airweslik')->name('airweslik.')->controller(AirWeslikController::class)->group(function () {

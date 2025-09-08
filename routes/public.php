@@ -32,5 +32,5 @@ Route::prefix('laporan-transparansi')->controller(laporanTransparansiController:
 Route::prefix('profil')->group(function () {
     Route::get('/tentang-kami', fn() => Inertia::render('Profil/TentangKami'));
     Route::get('/struktur-organisasi', fn() => Inertia::render('Profil/StrukturOrganisasi'));
-    Route::get('/legalitas', fn() => Inertia::render('Profil/legalitas'));
+    Route::get('/dokumen-legalitas', fn() => Inertia::render('Profil/legalitas'));
 });

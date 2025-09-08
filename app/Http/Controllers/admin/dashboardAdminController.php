@@ -3,17 +3,12 @@
 namespace App\Http\Controllers\admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\BalanceHistory;
 use App\Models\Income;
 use App\Models\Expense;
-use App\Models\InitialBalance;
-use App\Models\Unit;
 use App\Models\LegalitasBumdes;
-use App\Models\ProfileBumdes;
+use App\Models\profileBumdes;
 use App\Models\PengurusBumdes;
-use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -148,7 +143,7 @@ class dashboardAdminController extends Controller
     private function getProfileSummary()
     {
         try {
-            $profile = ProfileBumdes::latest()->first();
+            $profile = profileBumdes::latest()->first();
         } catch (\Exception $e) {
             return [
                 'status' => 'incomplete',
