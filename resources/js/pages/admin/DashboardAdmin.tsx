@@ -334,7 +334,6 @@ export default function DashboardAdmin({ data }: Props) {
                     </div>
                 </div>
 
-                {/* Statistik Unit dan Keuangan */}
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
 
                     {/* Chart Legalitas */}
