@@ -266,26 +266,26 @@ const addColorOverrides = (): HTMLStyleElement => {
             border-color: rgb(229, 231, 235) !important;
         }
         .pdf-safe .text-blue-600,
-        .pdf-safe [style*="color: #1E40AF"] { 
-            color: rgb(30, 64, 175) !important; 
+        .pdf-safe [style*="color: #1E40AF"] {
+            color: rgb(30, 64, 175) !important;
         }
         .pdf-safe .text-blue-700,
-        .pdf-safe [style*="color: #1D4ED8"] { 
-            color: rgb(29, 78, 216) !important; 
+        .pdf-safe [style*="color: #1D4ED8"] {
+            color: rgb(29, 78, 216) !important;
         }
         .pdf-safe .text-gray-600,
-        .pdf-safe [style*="color: #4B5563"] { 
-            color: rgb(75, 85, 99) !important; 
+        .pdf-safe [style*="color: #4B5563"] {
+            color: rgb(75, 85, 99) !important;
         }
-        .pdf-safe .text-gray-900 { 
-            color: rgb(17, 24, 39) !important; 
+        .pdf-safe .text-gray-900 {
+            color: rgb(17, 24, 39) !important;
         }
-        .pdf-safe .bg-white { 
-            background-color: rgb(255, 255, 255) !important; 
+        .pdf-safe .bg-white {
+            background-color: rgb(255, 255, 255) !important;
         }
         .pdf-safe .border-gray-300,
-        .pdf-safe [style*="border"] { 
-            border-color: rgb(209, 213, 219) !important; 
+        .pdf-safe [style*="border"] {
+            border-color: rgb(209, 213, 219) !important;
         }
         .pdf-safe [style*="borderTop"],
         .pdf-safe [style*="border-top"] {
