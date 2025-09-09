@@ -18,7 +18,7 @@ use Inertia\Inertia;
 class DashboardKepalaDesaController extends Controller
 {
     // Target hanya unit 1, 2, dan 3
-    private const TARGET_UNIT_IDS = [1, 2, 3];
+    private const TARGET_UNIT_IDS = [1, 2, 3, 4];
 
     public function index()
     {

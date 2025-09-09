@@ -405,21 +405,6 @@ export default function DashboardAdmin({ data }: Props) {
                                 </div>
                             )}
 
-                            {/* Pengurus Missing */}
-                            {safeData.pengurus_summary.jabatan_kosong && safeData.pengurus_summary.jabatan_kosong.length > 0 && (
-                                <div>
-                                    <h4 className="mb-2 font-medium text-red-600">Jabatan Pengurus Kosong:</h4>
-                                    <ul className="space-y-1 text-sm text-gray-600">
-                                        {safeData.pengurus_summary.jabatan_kosong.map((jabatan, index) => (
-                                            <li key={index} className="flex items-center gap-2">
-                                                <XCircle size={14} className="text-red-500" />
-                                                {jabatan}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-
                             {/* All Complete */}
                             {(!safeData.legalitas_summary.missing_documents || safeData.legalitas_summary.missing_documents.length === 0) &&
                                 (!safeData.profile_summary.missing_fields || safeData.profile_summary.missing_fields.length === 0) &&

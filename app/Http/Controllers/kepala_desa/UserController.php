@@ -32,6 +32,7 @@ class UserController extends Controller
                     'id_users' => $user->id_users,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'phone' => $user->phone ?? null, // Pastikan null handling yang benar
                     'roles' => $user->roles,
                     'created_at' => optional($user->created_at)->format('Y-m-d H:i:s'),
                     'updated_at' => optional($user->updated_at)->format('Y-m-d H:i:s'),
@@ -60,6 +61,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
+            'phone' => 'nullable|string|max:20|regex:/^[0-9+\-\s()]*$/', // Ubah ke nullable
             'password' => 'required|string|min:8',
             'roles' => 'required|in:kepala_desa,pengelola,kepala_bumdes,admin',
             'unit_id' => 'nullable|exists:units,id_units',
@@ -74,13 +76,22 @@ class UserController extends Controller
             return back()->withErrors(['error' => 'Hanya boleh ada 1 user dengan role Kepala Bumdes']);
         }
 
-        if ($validated['roles'] === 'pengelola' && !empty($validated['unit_id'])) {
-            $sudahAda = User::where('roles', 'pengelola')
-                ->whereHas('units', fn($q) => $q->where('id_units', $validated['unit_id']))
+        // ✅ VALIDASI PENGELOLA PER UNIT - LEBIH KETAT
+        if ($validated['roles'] === 'pengelola') {
+            if (empty($validated['unit_id'])) {
+                return back()->withErrors(['error' => 'Pengelola harus memiliki unit usaha']);
+            }
+
+            // Cek apakah sudah ada pengelola di unit ini
+            $sudahAdaPengelola = User::where('roles', 'pengelola')
+                ->whereHas('units', function($q) use ($validated) {
+                    $q->where('units.id_units', $validated['unit_id']);
+                })
                 ->exists();
 
-            if ($sudahAda) {
-                return back()->withErrors(['error' => 'Setiap unit usaha hanya boleh memiliki 1 Pengelola']);
+            if ($sudahAdaPengelola) {
+                $unit = Unit::find($validated['unit_id']);
+                return back()->withErrors(['error' => 'Unit "' . ($unit->unit_name ?? 'Tidak diketahui') . '" sudah memiliki pengelola. Satu unit hanya boleh memiliki satu pengelola.']);
             }
         }
 
@@ -90,6 +101,7 @@ class UserController extends Controller
             $user = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
+                'phone' => $validated['phone'] ?? null, // Handle nullable phone
                 'password' => Hash::make($validated['password']),
                 'roles' => $validated['roles'],
             ]);
@@ -110,7 +122,6 @@ class UserController extends Controller
         }
     }
 
-
     public function update(Request $request, string $id)
     {
         $currentUser = Auth::user();
@@ -129,6 +140,7 @@ class UserController extends Controller
                 'max:255',
                 Rule::unique('users', 'email')->ignore($user->id_users, 'id_users'),
             ],
+            'phone' => 'nullable|string|max:20|regex:/^[0-9+\-\s()]*$/', // Ubah ke nullable
             'password' => 'nullable|string|min:8',
             'roles' => 'required|in:kepala_desa,pengelola,kepala_bumdes,admin',
             'unit_id' => 'nullable|exists:units,id_units',
@@ -149,14 +161,23 @@ class UserController extends Controller
             return back()->withErrors(['error' => 'Hanya boleh ada 1 user dengan role Kepala Bumdes']);
         }
 
-        if ($validated['roles'] === 'pengelola' && !empty($validated['unit_id'])) {
-            $sudahAda = User::where('roles', 'pengelola')
-                ->where('id_users', '!=', $user->id_users)
-                ->whereHas('units', fn($q) => $q->where('id_units', $validated['unit_id']))
+        // ✅ VALIDASI PENGELOLA PER UNIT SAAT UPDATE - LEBIH KETAT
+        if ($validated['roles'] === 'pengelola') {
+            if (empty($validated['unit_id'])) {
+                return back()->withErrors(['error' => 'Pengelola harus memiliki unit usaha']);
+            }
+
+            // Cek apakah ada pengelola lain di unit yang sama (selain user yang sedang diedit)
+            $sudahAdaPengelolaLain = User::where('roles', 'pengelola')
+                ->where('id_users', '!=', $user->id_users) // Exclude user yang sedang diedit
+                ->whereHas('units', function($q) use ($validated) {
+                    $q->where('units.id_units', $validated['unit_id']);
+                })
                 ->exists();
 
-            if ($sudahAda) {
-                return back()->withErrors(['error' => 'Setiap unit usaha hanya boleh memiliki 1 Pengelola']);
+            if ($sudahAdaPengelolaLain) {
+                $unit = Unit::find($validated['unit_id']);
+                return back()->withErrors(['error' => 'Unit "' . ($unit->unit_name ?? 'Tidak diketahui') . '" sudah memiliki pengelola lain. Satu unit hanya boleh memiliki satu pengelola.']);
             }
         }
 
@@ -166,6 +187,7 @@ class UserController extends Controller
             $userData = [
                 'name' => $validated['name'],
                 'email' => $validated['email'],
+                'phone' => $validated['phone'] ?? null, // Handle nullable phone
                 'roles' => $validated['roles'],
             ];
 
@@ -175,9 +197,11 @@ class UserController extends Controller
 
             $user->update($userData);
 
+            // Handle unit assignment
             if ($validated['roles'] === 'pengelola' && !empty($validated['unit_id'])) {
                 $user->units()->sync([$validated['unit_id']]);
             } else {
+                // Jika bukan pengelola, hapus semua unit
                 $user->units()->detach();
             }
 
@@ -192,7 +216,6 @@ class UserController extends Controller
             return back()->withErrors(['error' => 'Gagal mengubah user: ' . $e->getMessage()]);
         }
     }
-
 
     public function destroy(string $id)
     {
@@ -240,6 +263,7 @@ class UserController extends Controller
             'id_users' => $user->id_users,
             'name' => $user->name,
             'email' => $user->email,
+            'phone' => $user->phone ?? null, // Handle nullable phone
             'roles' => $user->roles,
             'email_verified_at' => $user->email_verified_at,
             'created_at' => optional($user->created_at)->format('Y-m-d H:i:s'),

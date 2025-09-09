@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use Carbon\Carbon;
 
 class PemasukanMiniSocController extends Controller
 {
@@ -45,7 +46,7 @@ class PemasukanMiniSocController extends Controller
             $query->where('id_units', $unitId);
         })
             ->with([
-                'rent:id_rent,tenant_name,tarif_id,nominal,total_bayar,description,updated_at',
+                'rent:id_rent,tenant_name,tarif_id,nominal,total_bayar,description,jam_mulai,jam_selesai,created_at,updated_at',
                 'rent.tarif:id_tarif,category_name,harga_per_unit',
             ])
             ->orderBy('updated_at', 'desc')
@@ -55,8 +56,10 @@ class PemasukanMiniSocController extends Controller
             return [
                 'id' => $item->rent->id_rent,
                 'tanggal' => optional($item->rent->updated_at)->format('Y-m-d'),
+                'jam_mulai' => $item->rent->jam_mulai ?? '',
+                'jam_selesai' => $item->rent->jam_selesai ?? '',
                 'penyewa' => $item->rent->tenant_name ?? '-',
-                'durasi' => (int) $item->rent->nominal ?? 0,
+                'durasi' => (float) $item->rent->nominal ?? 0,
                 'tipe_penyewa' => $item->rent->tarif->category_name ?? '-',
                 'tarif_per_jam' => (int) $item->rent->tarif->harga_per_unit ?? 0,
                 'total_bayar' => (int) $item->rent->total_bayar ?? 0,
@@ -66,7 +69,7 @@ class PemasukanMiniSocController extends Controller
 
         // Pagination
         $page = $request->get('page', 1);
-        $perPage = 5; // Diubah dari 10 menjadi 5
+        $perPage = 5;
 
         $paged = $formatted->forPage($page, $perPage)->values();
         $totalItems = $formatted->count();
@@ -74,8 +77,8 @@ class PemasukanMiniSocController extends Controller
         return Inertia::render('MiniSoc/PemasukanMiniSoc', [
             'unit_id' => $unitId,
             'user' => $user->only(['id_users', 'name', 'email', 'roles', 'image']),
-            'pemasukan' => $paged, // Gunakan data yang sudah dipaginasi
-            'tarifs' => $tarifs, // Kirim data tarif ke frontend
+            'pemasukan' => $paged,
+            'tarifs' => $tarifs,
             'pagination' => [
                 'total' => $totalItems,
                 'per_page' => $perPage,
@@ -100,15 +103,19 @@ class PemasukanMiniSocController extends Controller
         // Validasi input
         $validated = $request->validate([
             'tanggal' => 'required|date',
+            'jam_mulai' => 'required|date_format:H:i',
+            'jam_selesai' => 'required|date_format:H:i',
             'penyewa' => 'required|string|max:255',
             'tipe' => ['required', Rule::exists('tarifs', 'category_name')->where('unit_id', $unitId)],
             'durasi' => 'required|numeric|min:0.1',
             'keterangan' => 'nullable|string|max:500',
         ]);
 
+        // Validasi waktu booking tidak overlap
+        $this->validateBookingTime($validated['tanggal'], $validated['jam_mulai'], $validated['jam_selesai'], $unitId);
+
         DB::beginTransaction();
         try {
-
             $tarif = Tarif::where('unit_id', $unitId)
                 ->where('category_name', $validated['tipe'])
                 ->first();
@@ -117,25 +124,36 @@ class PemasukanMiniSocController extends Controller
                 return back()->withErrors(['tipe' => 'Tarif tidak ditemukan']);
             }
 
-            // Hitung total bayar
-            $totalBayar = $validated['durasi'] * $tarif->harga_per_unit;
+            // Hitung durasi otomatis berdasarkan jam mulai dan selesai
+            $jamMulai = Carbon::parse($validated['jam_mulai']);
+            $jamSelesai = Carbon::parse( $validated['jam_selesai']);
+
+            // Handle cross-midnight bookings (misal 23:00 - 02:00)
+            if ($jamSelesai->lessThanOrEqualTo($jamMulai)) {
+                $jamSelesai->addDay();
+            }
+
+            $durasi = $jamMulai->diffInHours($jamSelesai, true); // true untuk float result
+            $totalBayar = $durasi * $tarif->harga_per_unit;
 
             // Buat rent transaction
             $rentTransaction = RentTransaction::create([
                 'tarif_id' => $tarif->id_tarif,
                 'tenant_name' => $validated['penyewa'],
-                'nominal' => $validated['durasi'],
+                'nominal' => $durasi,
                 'total_bayar' => $totalBayar,
                 'description' => $validated['keterangan'] ?? '',
-                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'jam_mulai' => $validated['jam_mulai'],
+                'jam_selesai' => $validated['jam_selesai'],
+                'created_at' => Carbon::parse($validated['tanggal'] . ' ' . $validated['jam_mulai']),
+                'updated_at' => Carbon::parse($validated['tanggal'] . ' ' . $validated['jam_mulai']),
             ]);
 
             // Buat income record
             Income::create([
                 'rent_id' => $rentTransaction->id_rent,
-                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' =>  $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'created_at' => $validated['tanggal'] . ' ' . $validated['jam_mulai'] . ':00',
+                'updated_at' => $validated['tanggal'] . ' ' . $validated['jam_mulai'] . ':00',
             ]);
 
             $saldoSebelumnya = BalanceHistory::where('unit_id', $unitId)->latest()->value('saldo_sekarang');
@@ -154,18 +172,18 @@ class PemasukanMiniSocController extends Controller
                 'saldo_sebelum' => $saldoSebelumnya,
                 'jenis' => 'Pendapatan',
                 'saldo_sekarang' => $saldoSebelumnya + $totalBayar,
-                'created_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
-                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'created_at' => $validated['tanggal'] . ' ' . $validated['jam_mulai'] . ':00',
+                'updated_at' => $validated['tanggal'] . ' ' . $validated['jam_mulai'] . ':00',
             ]);
 
             DB::commit();
             return back()->with('info', [
-                'message' => 'Data pemasukan berhasil ditambah',
+                'message' => 'Booking berhasil dibuat untuk ' . $validated['penyewa'] . ' (' . $validated['jam_mulai'] . ' - ' . $validated['jam_selesai'] . ')',
                 'method' => 'create'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Gagal menambahkan data: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'Gagal membuat booking: ' . $e->getMessage()]);
         }
     }
 
@@ -182,11 +200,16 @@ class PemasukanMiniSocController extends Controller
 
         $validated = $request->validate([
             'tanggal' => 'required|date',
+            'jam_mulai' => 'required|date_format:H:i',
+            'jam_selesai' => 'required|date_format:H:i',
             'penyewa' => 'required|string|max:255',
             'tipe' => ['required', Rule::exists('tarifs', 'category_name')->where('unit_id', $unitId)],
             'durasi' => 'required|numeric|min:0.1',
             'keterangan' => 'nullable|string|max:500',
         ]);
+
+        // Validasi waktu booking tidak overlap (kecuali dengan dirinya sendiri)
+        $this->validateBookingTime($validated['tanggal'], $validated['jam_mulai'], $validated['jam_selesai'], $unitId, $id);
 
         DB::beginTransaction();
 
@@ -195,7 +218,16 @@ class PemasukanMiniSocController extends Controller
                 ->where('category_name', $validated['tipe'])
                 ->firstOrFail();
 
-            $totalBayarBaru = $validated['durasi'] * $tarif->harga_per_unit;
+            // Hitung durasi berdasarkan jam
+            $jamMulai = Carbon::createFromFormat('H:i', $validated['jam_mulai']);
+            $jamSelesai = Carbon::createFromFormat('H:i', $validated['jam_selesai']);
+
+            if ($jamSelesai->lessThanOrEqualTo($jamMulai)) {
+                $jamSelesai->addDay();
+            }
+
+            $durasi = $jamMulai->diffInHours($jamSelesai, true);
+            $totalBayarBaru = $durasi * $tarif->harga_per_unit;
 
             $rent = RentTransaction::with('income')->findOrFail($id);
             $totalBayarLama = $rent->total_bayar ?? 0;
@@ -203,15 +235,17 @@ class PemasukanMiniSocController extends Controller
             $rent->update([
                 'tarif_id' => $tarif->id_tarif,
                 'tenant_name' => $validated['penyewa'],
-                'nominal' => $validated['durasi'],
+                'nominal' => $durasi,
                 'total_bayar' => $totalBayarBaru,
                 'description' => $validated['keterangan'],
-                'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                'jam_mulai' => $validated['jam_mulai'],
+                'jam_selesai' => $validated['jam_selesai'],
+                'updated_at' => $validated['tanggal'] . ' ' . $validated['jam_mulai'] . ':00',
             ]);
 
             if ($rent->income) {
                 $rent->income->update([
-                    'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                    'updated_at' => $validated['tanggal'] . ' ' . $validated['jam_mulai'] . ':00',
                 ]);
             }
 
@@ -223,7 +257,6 @@ class PemasukanMiniSocController extends Controller
                 ->first();
 
             if ($lastHistory) {
-                // Jika nominal berubah, update saldo
                 if ($selisih !== 0) {
                     $saldoSebelum = $lastHistory->saldo_sekarang;
                     $saldoSesudah = $saldoSebelum + $selisih;
@@ -231,24 +264,23 @@ class PemasukanMiniSocController extends Controller
                     $lastHistory->update([
                         'saldo_sebelum' => $saldoSebelum,
                         'saldo_sekarang' => $saldoSesudah,
-                        'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                        'updated_at' => $validated['tanggal'] . ' ' . $validated['jam_mulai'] . ':00',
                     ]);
                 } else {
-                    // Jika nominal tidak berubah, cukup update waktu saja (jika kamu mau simpan tanggal baru)
                     $lastHistory->update([
-                        'updated_at' => $validated['tanggal'] . ' ' . now()->format('H:i:s'),
+                        'updated_at' => $validated['tanggal'] . ' ' . $validated['jam_mulai'] . ':00',
                     ]);
                 }
             }
 
             DB::commit();
             return back()->with('info', [
-                'message' => 'Data pemasukan berhasil diubah',
+                'message' => 'Booking berhasil diperbarui untuk ' . $validated['penyewa'],
                 'method' => 'update'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Gagal memperbarui data: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'Gagal memperbarui booking: ' . $e->getMessage()]);
         }
     }
 
@@ -259,10 +291,8 @@ class PemasukanMiniSocController extends Controller
     {
         $user = Auth::user()->load('units');
 
-        // Ambil semua unit ID yang dimiliki user
         $unitIds = $user->units->pluck('id_units')->map(fn($val) => (int) $val)->toArray();
 
-        // Validasi akses ke unit
         if (!in_array((int) $unitId, $unitIds)) {
             abort(403, 'Anda tidak memiliki akses ke unit ini');
         }
@@ -272,18 +302,18 @@ class PemasukanMiniSocController extends Controller
             $rent = RentTransaction::with('income', 'tarif')->where('id_rent', $id)->firstOrFail();
 
             if ((int) $rent->tarif->unit_id !== (int) $unitId) {
-                abort(403, 'Transaksi ini tidak berasal dari unit Anda');
+                abort(403, 'Booking ini tidak berasal dari unit Anda');
             }
 
             $totalBayar = $rent->total_bayar ?? 0;
+            $penyewa = $rent->tenant_name;
+            $jamBooking = $rent->jam_mulai . ' - ' . $rent->jam_selesai;
 
             if ($rent->income) {
-                // Ambil histori saldo terakhir
                 $lastHistory = BalanceHistory::where('unit_id', $unitId)
                     ->latest()
                     ->first();
 
-                // Cek apakah histori terakhir ini punya nilai saldo_setelah yang sama (karena transaksi pemasukan ini)
                 if ($lastHistory && $lastHistory->saldo_sekarang == ($lastHistory->saldo_sebelum + $totalBayar)) {
                     $lastHistory->delete();
                 }
@@ -294,16 +324,57 @@ class PemasukanMiniSocController extends Controller
 
             DB::commit();
             return back()->with('info', [
-                'message' => 'Data pemasukan berhasil dihapus',
+                'message' => 'Booking ' . $penyewa . ' (' . $jamBooking . ') berhasil dibatalkan',
                 'method' => 'delete'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Gagal menghapus data: ' . $e->getMessage());
+            Log::error('Gagal menghapus booking: ' . $e->getMessage());
             return back()->with('info', [
-                'message' => 'Gagal menghapus data',
+                'message' => 'Gagal membatalkan booking',
                 'method' => 'delete'
             ]);
+        }
+    }
+
+    /**
+     * Validasi apakah waktu booking tidak overlap dengan booking lain
+     */
+    private function validateBookingTime($tanggal, $jamMulai, $jamSelesai, $unitId, $excludeId = null)
+    {
+        $jamMulaiCarbon = Carbon::createFromFormat('H:i', $jamMulai);
+        $jamSelesaiCarbon = Carbon::createFromFormat('H:i', $jamSelesai);
+
+        // Handle cross-midnight
+        if ($jamSelesaiCarbon->lessThanOrEqualTo($jamMulaiCarbon)) {
+            $jamSelesaiCarbon->addDay();
+        }
+
+        // Cek overlap dengan booking lain pada tanggal yang sama
+        $existingBookings = RentTransaction::whereHas('tarif', function($query) use ($unitId) {
+                $query->where('unit_id', $unitId);
+            })
+            ->whereDate('created_at', $tanggal)
+            ->when($excludeId, function($query) use ($excludeId) {
+                $query->where('id_rent', '!=', $excludeId);
+            })
+            ->whereNotNull('jam_mulai')
+            ->whereNotNull('jam_selesai')
+            ->get(['jam_mulai', 'jam_selesai', 'tenant_name']);
+
+        foreach ($existingBookings as $booking) {
+            $existingMulai = Carbon::parse($booking->jam_mulai);
+            $existingSelesai = Carbon::parse( $booking->jam_selesai);
+
+            // Handle cross-midnight untuk booking yang sudah ada
+            if ($existingSelesai->lessThanOrEqualTo($existingMulai)) {
+                $existingSelesai->addDay();
+            }
+
+            // Cek overlap
+            if ($jamMulaiCarbon->lt($existingSelesai) && $jamSelesaiCarbon->gt($existingMulai)) {
+                throw new \Exception("Waktu booking bertabrakan dengan booking {$booking->tenant_name} ({$booking->jam_mulai} - {$booking->jam_selesai})");
+            }
         }
     }
 }

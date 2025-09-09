@@ -264,15 +264,6 @@ class dashboardAdminController extends Controller
         // Get all existing positions
         $existingJabatan = PengurusBumdes::distinct('jabatan')->pluck('jabatan')->toArray();
 
-        // Define required positions for BUMDes
-        $jabatanWajib = ['Direktur', 'Penasihat', 'Bendahara', 'Komisaris', 'Sekretaris'];
-        $jabatanKosong = [];
-
-        foreach ($jabatanWajib as $jabatan) {
-            if (!in_array($jabatan, $existingJabatan)) {
-                $jabatanKosong[] = $jabatan;
-            }
-        }
 
         // Get recent pengurus data
         $recentChanges = PengurusBumdes::latest()->limit(3)->get()->map(function ($pengurus) {
@@ -286,9 +277,8 @@ class dashboardAdminController extends Controller
         return [
             'total_pengurus' => $totalPengurus,
             'jabatan_terisi' => count($existingJabatan),
-            'jabatan_kosong' => $jabatanKosong,
             'existing_jabatan' => $existingJabatan,
-            'completion_percentage' => count($jabatanWajib) > 0 ? round((count($existingJabatan) / count($jabatanWajib)) * 100, 1) : 0,
+            'completion_percentage' => count($existingJabatan),
             'recent_changes' => $recentChanges
         ];
     }

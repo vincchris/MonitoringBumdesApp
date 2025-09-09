@@ -18,7 +18,7 @@ use Illuminate\Http\Request;
 class DashboardKepalaBumdesController extends Controller
 {
     // Target hanya unit 4 dan 5
-    private const TARGET_UNIT_IDS = [4, 5];
+    private const TARGET_UNIT_IDS = [5];
 
     public function index()
     {

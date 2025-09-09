@@ -1,12 +1,14 @@
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { CheckCircle, ChevronLeft, ChevronRight, Pencil, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertTriangle, Calendar, CheckCircle, ChevronLeft, ChevronRight, Clock, Pencil, RefreshCw, Trash2, X } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react';
 
 interface PemasukanItem {
     id: number;
     tanggal: string;
+    jam_mulai: string;
+    jam_selesai: string;
     penyewa: string;
     durasi: number;
     tipe_penyewa: string;
@@ -18,6 +20,12 @@ interface PemasukanItem {
 interface TarifOption {
     tipe: string;
     tarif: number;
+}
+
+interface ConflictBooking {
+    tenant_name: string;
+    jam_mulai: string;
+    jam_selesai: string;
 }
 
 interface Props {
@@ -36,24 +44,37 @@ interface Props {
         last_page: number;
     };
     pemasukan: PemasukanItem[];
-    tarifs: TarifOption[]; // Data tarif langsung dari database
-}
-
-interface FlashInfo {
-    message?: string;
-    method?: 'create' | 'update' | 'delete';
+    tarifs: TarifOption[];
 }
 
 export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination, tarifs }: Props) {
     const { flash } = usePage().props as unknown as {
-        flash: { info?: { message?: string; method?: string } };
+        flash: {
+            info?: { message?: string; method?: string };
+            conflict?: {
+                message?: string;
+                conflictBookings?: ConflictBooking[];
+            };
+        };
     };
 
+    const [showConflictModal, setShowConflictModal] = useState(false);
+    const [conflictBookings, setConflictBookings] = useState<ConflictBooking[]>([]);
+    const [conflictMessage, setConflictMessage] = useState<string>('');
     const [flashMethod, setFlashMethod] = useState<string>('');
     const [flashColor, setFlashColor] = useState<string>('');
     const [flashMessage, setFlashMessage] = useState<string | null>(null);
 
     useEffect(() => {
+        // Handle conflict flash message
+        if (flash?.conflict?.message) {
+            setConflictMessage(flash.conflict.message);
+            setConflictBookings(flash.conflict.conflictBookings || []);
+            setShowConflictModal(true);
+            return;
+        }
+
+        // Handle regular flash messages
         if (!flash?.info?.message) return;
 
         const { message, method } = flash.info;
@@ -82,7 +103,6 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
         return () => clearTimeout(timeout);
     }, [flash]);
 
-    // Function to render the appropriate icon based on flash method
     const renderFlashIcon = () => {
         switch (flashMethod) {
             case 'create':
@@ -108,6 +128,8 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
         reset,
     } = useForm({
         tanggal: '',
+        jam_mulai: '',
+        jam_selesai: '',
         penyewa: '',
         tipe: '',
         durasi: 1,
@@ -115,6 +137,30 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
         total: 0,
         keterangan: '',
     });
+
+    // Function to calculate duration in hours between two times
+    const calculateDuration = (startTime: string, endTime: string): number => {
+        if (!startTime || !endTime) return 0;
+
+        const start = new Date(`2000-01-01 ${startTime}`);
+        let end = new Date(`2000-01-01 ${endTime}`);
+
+        // Handle cross-midnight scenarios (e.g., 23:00 to 02:00)
+        if (end <= start) {
+            end = new Date(`2000-01-02 ${endTime}`);
+        }
+
+        const diffMs = end.getTime() - start.getTime();
+        return diffMs / (1000 * 60 * 60); // Convert to hours
+    };
+
+    // Update duration when time changes
+    useEffect(() => {
+        if (formData.jam_mulai && formData.jam_selesai) {
+            const duration = calculateDuration(formData.jam_mulai, formData.jam_selesai);
+            setData('durasi', Math.round(duration * 10) / 10); // Round to 1 decimal place
+        }
+    }, [formData.jam_mulai, formData.jam_selesai]);
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
@@ -138,6 +184,8 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
     const handleEdit = (item: PemasukanItem) => {
         setData({
             tanggal: item.tanggal,
+            jam_mulai: item.jam_mulai || '',
+            jam_selesai: item.jam_selesai || '',
             penyewa: item.penyewa,
             tipe: item.tipe_penyewa,
             durasi: item.durasi,
@@ -155,15 +203,17 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
         }
     };
 
-    // Function to handle pagination navigation
     const handlePageChange = (page: number) => {
-        router.get(`/unit/${unit_id}/pemasukan-minisoc`, { page }, {
-            preserveState: true,
-            preserveScroll: true
-        });
+        router.get(
+            `/unit/${unit_id}/pemasukan-minisoc`,
+            { page },
+            {
+                preserveState: true,
+                preserveScroll: true,
+            },
+        );
     };
 
-    // Menggunakan data tarifs yang dikirim dari backend
     const tipeOptions = tarifs || [];
 
     // Update tarif ketika tipe berubah
@@ -180,11 +230,26 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
         setData('total', total);
     }, [formData.durasi, formData.tarif]);
 
+    // Generate time options (24-hour format)
+    const generateTimeOptions = () => {
+        const options = [];
+        for (let hour = 0; hour < 24; hour++) {
+            for (let minute = 0; minute < 60; minute += 30) {
+                // 30-minute intervals
+                const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                options.push(timeString);
+            }
+        }
+        return options;
+    };
+
+    const timeOptions = generateTimeOptions();
+
     return (
         <AppLayout>
             <Head title="Pemasukan Mini Soccer" />
 
-            {/* Improved Flash Message with Icons */}
+            {/* Regular Flash Messages */}
             {flashMessage && (
                 <div
                     className={`fixed top-6 left-1/2 z-50 flex -translate-x-1/2 transform items-center gap-2 rounded-md px-4 py-3 text-sm font-medium text-white shadow-lg transition-all duration-300 ${flashColor}`}
@@ -194,29 +259,94 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
                 </div>
             )}
 
+            {/* Conflict Modal */}
+            {showConflictModal && (
+                <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black backdrop-blur-sm">
+                    <div className="relative mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+                        <button onClick={() => setShowConflictModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                            <X className="h-5 w-5" />
+                        </button>
+
+                        <div className="mb-4 flex items-center gap-3">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                                <AlertTriangle className="h-6 w-6 text-red-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">Konflik Jadwal Booking</h3>
+                                <p className="text-sm text-gray-500">Waktu yang dipilih sudah terboking</p>
+                            </div>
+                        </div>
+
+                        <div className="mb-6">
+                            <p className="mb-3 text-sm text-gray-700">{conflictMessage}</p>
+
+                            {conflictBookings.length > 0 && (
+                                <div className="rounded-lg bg-red-50 p-3">
+                                    <h4 className="mb-2 text-sm font-medium text-red-800">Booking yang bentrok:</h4>
+                                    <div className="space-y-2">
+                                        {conflictBookings.map((booking, index) => (
+                                            <div key={index} className="flex items-center justify-between rounded-md bg-white px-3 py-2 text-sm">
+                                                <span className="font-medium text-gray-900">{booking.tenant_name}</span>
+                                                <span className="text-red-600">
+                                                    {booking.jam_mulai} - {booking.jam_selesai}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-3">
+                            <p className="text-sm text-gray-600">
+                                Silakan pilih waktu lain yang tersedia atau hubungi penyewa yang sudah booking untuk mengatur ulang jadwal.
+                            </p>
+
+                            <div className="flex justify-end gap-3">
+                                <Button variant="outline" onClick={() => setShowConflictModal(false)} className="px-4 py-2">
+                                    Tutup
+                                </Button>
+                                <Button
+                                    onClick={() => {
+                                        setShowConflictModal(false);
+                                        setShowModal(true);
+                                    }}
+                                    className="bg-blue-700 px-4 py-2 text-white hover:bg-blue-600"
+                                >
+                                    Pilih Waktu Lain
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="rounded-2xl bg-white px-2 py-4">
                 <div className="mt-3 mb-4 flex items-center justify-between px-6">
                     <h2 className="text-xl font-semibold text-gray-800">Pemasukan - Mini Soccer</h2>
                     <Button
                         onClick={() => {
-                            // Cari tipe Member, jika tidak ada ambil yang pertama
                             const memberTarif = tipeOptions.find((opt) => opt.tipe === 'Member') || tipeOptions[0];
                             const today = new Date().toISOString().split('T')[0];
+                            const currentTime = new Date().toTimeString().slice(0, 5);
 
                             if (memberTarif) {
                                 setData({
                                     tanggal: today,
+                                    jam_mulai: currentTime,
+                                    jam_selesai: '',
                                     penyewa: '',
                                     tipe: memberTarif.tipe,
                                     durasi: 1,
                                     tarif: memberTarif.tarif,
-                                    total: memberTarif.tarif * 1, // durasi default 1
+                                    total: memberTarif.tarif * 1,
                                     keterangan: '',
                                 });
                             } else {
-                                // Fallback jika tidak ada tarif sama sekali
                                 setData({
                                     tanggal: today,
+                                    jam_mulai: currentTime,
+                                    jam_selesai: '',
                                     penyewa: '',
                                     tipe: '',
                                     durasi: 1,
@@ -231,13 +361,13 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
                         }}
                         className="bg-blue-700 text-white hover:bg-blue-500"
                     >
-                        Tambah pendapatan harian +
+                        Tambah Booking +
                     </Button>
                 </div>
 
                 {showModal && (
                     <div className="bg-opacity-30 fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-[4px]">
-                        <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 text-black shadow-lg">
+                        <div className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6 text-black shadow-lg">
                             <button
                                 onClick={() => {
                                     setShowModal(false);
@@ -247,23 +377,73 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
                             >
                                 ✕
                             </button>
-                            <h2 className="mb-6 text-lg font-semibold">{editing ? 'Edit Pendapatan' : 'Tambah Pendapatan'} Mini Soccer</h2>
-                            <form onSubmit={handleSubmit}>
-                                {/* Grid Layout 2 kolom */}
-                                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    {/* Kolom Kiri */}
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="mb-1 block text-sm font-medium text-gray-700">Tanggal</label>
-                                            <input
-                                                type="date"
-                                                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 transition-colors outline-none focus:border-blue-500 focus:bg-white"
-                                                value={formData.tanggal}
-                                                onChange={(e) => setData('tanggal', e.target.value)}
-                                                required
-                                            />
-                                        </div>
+                            <h2 className="mb-6 flex items-center gap-2 text-lg font-semibold">
+                                <Calendar className="h-5 w-5 text-blue-600" />
+                                {editing ? 'Edit Booking' : 'Tambah Booking'} Mini Soccer
+                            </h2>
 
+                            <form onSubmit={handleSubmit}>
+                                {/* Grid Layout 3 kolom */}
+                                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                                    {/* Kolom 1: Date & Time */}
+                                    <div className="space-y-4">
+                                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                            <h3 className="mb-3 flex items-center gap-1 text-sm font-semibold text-blue-800">
+                                                <Clock className="h-4 w-4" />
+                                                Waktu Booking
+                                            </h3>
+
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <label className="mb-1 block text-sm font-medium text-gray-700">Tanggal</label>
+                                                    <input
+                                                        type="date"
+                                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 transition-colors outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                                                        value={formData.tanggal}
+                                                        onChange={(e) => setData('tanggal', e.target.value)}
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="mb-1 block text-sm font-medium text-gray-700">Jam Mulai</label>
+                                                    <select
+                                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 transition-colors outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                                                        value={formData.jam_mulai}
+                                                        onChange={(e) => setData('jam_mulai', e.target.value)}
+                                                        required
+                                                    >
+                                                        <option value="">Pilih jam mulai</option>
+                                                        {timeOptions.map((time) => (
+                                                            <option key={time} value={time}>
+                                                                {time}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label className="mb-1 block text-sm font-medium text-gray-700">Jam Selesai</label>
+                                                    <select
+                                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 transition-colors outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                                                        value={formData.jam_selesai}
+                                                        onChange={(e) => setData('jam_selesai', e.target.value)}
+                                                        required
+                                                    >
+                                                        <option value="">Pilih jam selesai</option>
+                                                        {timeOptions.map((time) => (
+                                                            <option key={time} value={time}>
+                                                                {time}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Kolom 2: Customer Info */}
+                                    <div className="space-y-4">
                                         <div>
                                             <label className="mb-1 block text-sm font-medium text-gray-700">Nama Penyewa</label>
                                             <input
@@ -276,23 +456,6 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
                                             />
                                         </div>
 
-                                        <div>
-                                            <label className="mb-1 block text-sm font-medium text-gray-700">Durasi sewa (jam)</label>
-                                            <input
-                                                type="number"
-                                                min="0.1"
-                                                step="0.1"
-                                                placeholder="0"
-                                                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 transition-colors outline-none focus:border-blue-500 focus:bg-white"
-                                                value={formData.durasi}
-                                                onChange={(e) => setData('durasi', Number(e.target.value))}
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Kolom Kanan */}
-                                    <div className="space-y-4">
                                         <div>
                                             <label className="mb-1 block text-sm font-medium text-gray-700">Tipe Penyewa</label>
                                             <select
@@ -311,48 +474,60 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
                                         </div>
 
                                         <div>
-                                            <label className="mb-1 block text-sm font-medium text-gray-700">Tarif per jam</label>
-                                            <input
-                                                type="text"
-                                                className="w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-200 px-4 py-2.5 text-gray-600 outline-none"
-                                                value={`Rp. ${formData.tarif.toLocaleString('id-ID')}`}
-                                                readOnly
-                                                disabled
-                                            />
-                                        </div>
-
-                                        <div>
                                             <label className="mb-1 block text-sm font-medium text-gray-700">Keterangan</label>
-                                            <input
-                                                type="text"
+                                            <textarea
                                                 placeholder="Keterangan (opsional)"
-                                                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 transition-colors outline-none focus:border-blue-500 focus:bg-white"
+                                                className="w-full resize-none rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 transition-colors outline-none focus:border-blue-500 focus:bg-white"
+                                                rows={3}
                                                 value={formData.keterangan}
                                                 onChange={(e) => setData('keterangan', e.target.value)}
                                             />
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* Total Bayar - Full Width */}
-                                <div className="mb-6">
-                                    <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="mb-1 text-sm font-medium text-blue-700">Total Pembayaran</p>
-                                                <p className="text-2xl font-bold text-blue-800">Rp. {formData.total.toLocaleString('id-ID')}</p>
+                                    {/* Kolom 3: Pricing Info */}
+                                    <div className="space-y-4">
+                                        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                                            <h3 className="mb-3 text-sm font-semibold text-green-800">Rincian Biaya</h3>
+
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Durasi:</span>
+                                                    <span className="font-medium">{formData.durasi} jam</span>
+                                                </div>
+
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Tarif/jam:</span>
+                                                    <span className="font-medium">Rp. {formData.tarif.toLocaleString('id-ID')}</span>
+                                                </div>
+
+                                                <hr className="my-2" />
+
+                                                <div className="flex justify-between text-base font-bold text-green-800">
+                                                    <span>Total:</span>
+                                                    <span>Rp. {formData.total.toLocaleString('id-ID')}</span>
+                                                </div>
                                             </div>
-                                            <div className="text-right text-sm text-blue-600">
-                                                <p>
-                                                    {formData.durasi} jam × Rp. {formData.tarif.toLocaleString('id-ID')}
-                                                </p>
+                                        </div>
+
+                                        {/* Duration Display */}
+                                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                                            <h3 className="mb-2 text-sm font-semibold text-blue-800">Durasi Booking</h3>
+                                            <div className="text-center">
+                                                <div className="text-2xl font-bold text-blue-900">{formData.durasi}</div>
+                                                <div className="text-sm text-blue-700">jam</div>
                                             </div>
+                                            {formData.jam_mulai && formData.jam_selesai && (
+                                                <div className="mt-2 text-center text-xs text-blue-600">
+                                                    {formData.jam_mulai} - {formData.jam_selesai}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="flex justify-end gap-3 pt-2">
+                                <div className="flex justify-end gap-3 border-t pt-4">
                                     <Button
                                         type="button"
                                         variant="outline"
@@ -375,9 +550,9 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
                                                 Menyimpan...
                                             </div>
                                         ) : editing ? (
-                                            'Update Data'
+                                            'Update Booking'
                                         ) : (
-                                            'Tambah Data'
+                                            'Konfirmasi Booking'
                                         )}
                                     </Button>
                                 </div>
@@ -392,11 +567,12 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
                             <tr>
                                 <th className="px-4 py-3 text-center">No</th>
                                 <th className="px-4 py-3 text-center">Tanggal</th>
+                                <th className="px-4 py-3 text-center">Waktu</th>
                                 <th className="px-4 py-3 text-center">Penyewa</th>
-                                <th className="px-4 py-3 text-center">Durasi (jam)</th>
-                                <th className="px-4 py-3 text-center">Tipe penyewa</th>
-                                <th className="px-4 py-3 text-center">Tarif per jam</th>
-                                <th className="px-4 py-3 text-center">Total bayar</th>
+                                <th className="px-4 py-3 text-center">Durasi</th>
+                                <th className="px-4 py-3 text-center">Tipe</th>
+                                <th className="px-4 py-3 text-center">Tarif/jam</th>
+                                <th className="px-4 py-3 text-center">Total</th>
                                 <th className="px-4 py-3 text-center">Keterangan</th>
                                 <th className="px-4 py-3 text-center">Aksi</th>
                             </tr>
@@ -407,11 +583,28 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
                                     <tr key={item.id} className="border-t hover:bg-gray-50">
                                         <td className="px-4 py-3 text-center">{(pagination.current_page - 1) * pagination.per_page + i + 1}</td>
                                         <td className="px-4 py-3 text-center">{item.tanggal}</td>
+                                        <td className="px-4 py-3 text-center">
+                                            {item.jam_mulai && item.jam_selesai ? (
+                                                <div className="text-xs">
+                                                    <div className="font-medium">
+                                                        {item.jam_mulai} - {item.jam_selesai}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                '-'
+                                            )}
+                                        </td>
                                         <td className="px-4 py-3 text-center">{item.penyewa}</td>
-                                        <td className="px-4 py-3 text-center">{item.durasi}</td>
-                                        <td className="px-4 py-3 text-center">{item.tipe_penyewa}</td>
+                                        <td className="px-4 py-3 text-center">{item.durasi} jam</td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
+                                                {item.tipe_penyewa}
+                                            </span>
+                                        </td>
                                         <td className="px-4 py-3 text-center">Rp. {item.tarif_per_jam.toLocaleString('id-ID')}</td>
-                                        <td className="px-4 py-3 text-center">Rp. {item.total_bayar.toLocaleString('id-ID')}</td>
+                                        <td className="px-4 py-3 text-center font-medium text-green-600">
+                                            Rp. {item.total_bayar.toLocaleString('id-ID')}
+                                        </td>
                                         <td className="px-4 py-3 text-center">{item.keterangan || '-'}</td>
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex justify-center gap-2">
@@ -437,15 +630,15 @@ export default function PemasukanMiniSoc({ user, unit_id, pemasukan, pagination,
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
-                                        Belum ada data pemasukan
+                                    <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                                        Belum ada data booking
                                     </td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
 
-                    {/* Fixed Pagination */}
+                    {/* Pagination */}
                     {pagination.last_page > 1 && (
                         <div className="mt-4 flex items-center justify-between border-t px-4 py-3">
                             <div className="text-sm text-gray-700">
