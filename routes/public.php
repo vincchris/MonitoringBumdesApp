@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\frontend\dokumenLegalitasController;
 use App\Http\Controllers\frontend\tentangKamiController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -34,5 +35,5 @@ Route::prefix('laporan-transparansi')->controller(laporanTransparansiController:
 Route::prefix('profil')->group(function () {
     Route::resource('/tentang-kami', tentangKamiController::class);
     Route::resource('/struktur-organisasi', strukturOrganisasiController::class);
-    Route::get('/dokumen-legalitas', fn() => Inertia::render('Profil/legalitas'));
+    Route::get('/dokumen-legalitas', [dokumenLegalitasController::class, 'index'])->name('dokumenLegalitas.index');
 });

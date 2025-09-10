@@ -85,28 +85,12 @@ const OrgCard: React.FC<{ item: OrgItem; index: number }> = ({ item, index }) =>
                         className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold tracking-wide uppercase ${color} bg-gray-50 transition-all duration-300 group-hover:bg-white group-hover:shadow-md`}
                     >
                         <Icon className={`h-4 w-4 ${color}`} />
-                        <span className="opacity-90">{title}</span>
+                        <span className="opacity-90">{description}</span>
                     </div>
                 </div>
 
-                {description && <p className="mt-4 text-sm leading-relaxed text-gray-600">{description}</p>}
+                {title && <p className="mt-4 text-sm leading-relaxed text-gray-600 text-center">{title}</p>}
 
-                <div
-                    className={`mt-6 space-y-3 transition-all duration-300 ${isHovered ? 'max-h-40 opacity-100' : 'max-h-0 overflow-hidden opacity-0'}`}
-                >
-                    {email && (
-                        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-                            <Mail className="h-4 w-4" />
-                            <span>{email}</span>
-                        </div>
-                    )}
-                    {phone && (
-                        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-                            <Phone className="h-4 w-4" />
-                            <span>{phone}</span>
-                        </div>
-                    )}
-                </div>
             </div>
         </div>
     );
