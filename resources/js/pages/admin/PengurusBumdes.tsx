@@ -74,7 +74,7 @@ export default function PengurusBumdes() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [pengurusToDelete, setPengurusToDelete] = useState<Pengurus | null>(null);
 
-    const { data, setData, post, put, reset, errors, progress } = useForm({
+    const { data, setData, post, put, reset, errors, clearErrors, progress } = useForm({
         nama_pengurus: '',
         jabatan: '',
         jenis_kelamin: 'L',
@@ -84,19 +84,25 @@ export default function PengurusBumdes() {
     });
 
     const openModal = (pengurus?: Pengurus) => {
+        console.log('openModal dipanggil dengan:', pengurus)
+        // Clear previous errors first
+        clearErrors();
+
         if (pengurus) {
+            console.log('Setting editingData:', pengurus);
             setEditingData(pengurus);
             setData({
-                nama_pengurus: pengurus.nama_pengurus,
-                jabatan: pengurus.jabatan,
-                jenis_kelamin: pengurus.jenis_kelamin,
+                nama_pengurus: pengurus.nama_pengurus || '',
+                jabatan: pengurus.jabatan || '',
+                jenis_kelamin: pengurus.jenis_kelamin || 'L',
                 pekerjaan: pengurus.pekerjaan || '',
-                kategori: pengurus.kategori,
-                foto_pengurus: null,
+                kategori: pengurus.kategori || '',
+                foto_pengurus: null, // Always null for edit, we don't need to re-upload existing image
             });
             // Set existing image preview if available
             setImagePreview(pengurus.foto_pengurus ? `/storage/${pengurus.foto_pengurus}` : null);
         } else {
+            console.log('Mode create - no pengurus data');
             setEditingData(null);
             reset();
             setImagePreview(null);
@@ -107,7 +113,9 @@ export default function PengurusBumdes() {
     const closeModal = () => {
         setIsOpen(false);
         reset();
+        clearErrors(); // Clear errors when closing modal
         setImagePreview(null);
+        setEditingData(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -126,7 +134,12 @@ export default function PengurusBumdes() {
             reader.readAsDataURL(file);
         } else {
             setData('foto_pengurus', null);
-            setImagePreview(editingData?.foto_pengurus || null);
+            // Keep existing image preview if in edit mode
+            if (editingData?.foto_pengurus) {
+                setImagePreview(`/storage/${editingData.foto_pengurus}`);
+            } else {
+                setImagePreview(null);
+            }
         }
     };
 
@@ -140,13 +153,35 @@ export default function PengurusBumdes() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (editingData) {
-            put(route('pengurus-bumdes.update', editingData.id), {
-                onSuccess: () => closeModal(),
+
+        // Clear previous errors
+        console.log('Data yang akan dikirim:', data);
+        console.log('Editing data:', editingData);
+        console.log('Is editing?', !!editingData);
+        console.log('Editing ID:', editingData?.id);
+
+        clearErrors();
+
+        if (editingData && editingData.id) {
+            // Use PUT method with the correct route name (profil prefix)
+            console.log('Melakukan UPDATE ke ID:', editingData.id);
+            put(route('profil.pengurus-bumdes.update', editingData.id), {
+                forceFormData: true,
+                onSuccess: () => {
+                    closeModal();
+                },
+                onError: (errors) => {
+                    console.log('Update errors:', errors);
+                }
             });
         } else {
-            post(route('pengurus-bumdes.store'), {
-                onSuccess: () => closeModal(),
+            post(route('profil.pengurus-bumdes.store'), {
+                onSuccess: () => {
+                    closeModal();
+                },
+                onError: (errors) => {
+                    console.log('Store errors:', errors);
+                }
             });
         }
     };
@@ -164,7 +199,7 @@ export default function PengurusBumdes() {
     const confirmDelete = () => {
         if (!pengurusToDelete) return;
 
-        router.delete(route('pengurus-bumdes.destroy', pengurusToDelete.id), {
+        router.delete(route('profil.pengurus-bumdes.destroy', pengurusToDelete.id), {
             onSuccess: () => {
                 closeDeleteModal();
                 setFlashMessage('Data berhasil dihapus.');
@@ -417,7 +452,7 @@ export default function PengurusBumdes() {
 
             {/* Enhanced Modal */}
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm text-black">
                     <div className="flex max-h-[90vh] w-full max-w-3xl transform flex-col overflow-hidden rounded-2xl bg-white shadow-2xl transition-all">
                         {/* Modal Header */}
                         <div className="flex items-center justify-between border-b border-gray-200 p-6">
@@ -516,9 +551,23 @@ export default function PengurusBumdes() {
                                             type="text"
                                             value={data.kategori}
                                             onChange={(e) => setData('kategori', e.target.value)}
-                                            className="w-full rounded-lg border border-gray-300 px-4 py-3 transition-colors hover:border-gray-400 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                            className={`w-full rounded-lg border px-4 py-3 transition-colors focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+                                                errors.kategori ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400'
+                                            }`}
                                             placeholder="Kategori pengurus"
                                         />
+                                        {errors.kategori && (
+                                            <p className="mt-2 flex items-center gap-1 text-sm text-red-600">
+                                                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path
+                                                        fillRule="evenodd"
+                                                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                                        clipRule="evenodd"
+                                                    />
+                                                </svg>
+                                                {errors.kategori}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 

@@ -36,6 +36,8 @@ use App\Http\Controllers\backend\MiniSoc\PengeluaranMiniSocController;
 use App\Http\Controllers\backend\SewaKios\PengeluaranSewKiosController;
 use App\Http\Controllers\kepala_bumdes\DashboardKepalaBumdesController;
 
+// TAMBAHKAN IMPORT CONTROLLER PENGURUS BUMDES
+use App\Http\Controllers\admin\PengurusBumdesController;
 
 // =============================
 // Public Routes
@@ -116,6 +118,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/update-saldo-awal', [DashboardKepalaDesaController::class, 'updateSaldoAwal'])->name('saldo-awal.update');
     Route::get('user', [UserController::class, 'index']);
     Route::resource('/admin/users', UserController::class)->except(['create', 'edit']);
+
+    // =============================
+    // TAMBAHKAN ROUTE PENGURUS BUMDES
+    // =============================
+    Route::put('profil/pengurus-bumdes/{id}', [PengurusBumdesController::class, 'update'])
+            ->name('profil.pengurus-bumdes.update');
+    // Atau jika menggunakan resource route:
+    Route::resource('profil.pengurus-bumdes', PengurusBumdesController::class);
 
     // =============================
     // Route kepala_desa Minisoc
