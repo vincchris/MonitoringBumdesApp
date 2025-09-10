@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\kepala_desa\UserController;
 
 // Kelola Laporan Controller
-use App\Http\Controllers\frontend\laporanTransparansiController;
 use App\Http\Controllers\backend\MiniSoc\KelolaLaporanMiniSocController;
 use App\Http\Controllers\backend\Buper\KelolaLaporanBuperController;
 use App\Http\Controllers\backend\SewaKios\KelolaLaporanSewKiosController;

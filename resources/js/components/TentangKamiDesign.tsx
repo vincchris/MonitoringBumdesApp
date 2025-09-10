@@ -1,4 +1,5 @@
 import MainLayout from '@/components/layout_compro/MainLayout';
+import { usePage } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import { Eye, Target } from 'lucide-react';
 import React from 'react';
@@ -42,27 +43,36 @@ const misiList = [
 ];
 
 // ====== MAIN COMPONENT ======
-const TentangKami: React.FC<TentangKamiProps> = ({ desa, bumdes }) => {
-    // Create profile data array from backend data
+const TentangKami: React.FC = () => {
+    const { desa, bumdes } = usePage<{ desa: ProfileDesa; bumdes: ProfileBumdes }>().props;
+
     const profilData = [
-        { label: 'Nama Desa', value: desa.nama_desa || 'N/A' },
-        { label: 'Alamat Desa', value: desa.alamat || 'N/A' },
+        { label: 'Nama Desa', value: desa?.nama_desa || 'N/A' },
+        { label: 'Alamat Desa', value: desa?.alamat || 'N/A' },
         {
             label: 'Kepala Desa',
-            value: desa.kepala_desa || 'N/A',
-            sub: desa.periode_kepala_desa || undefined
+            value: desa?.kepala_desa || 'N/A',
+            sub: desa?.periode_kepala_desa || undefined,
         },
         {
             label: 'Luas Desa',
-            value: desa.luas_desa ? `${desa.luas_desa} Ha` : 'N/A'
+            value: desa?.luas_desa ? `${desa?.luas_desa} Ha` : 'N/A',
         },
-        { label: 'BUMDes', value: bumdes.nama_bumdes || 'N/A' },
+        { label: 'BUMDes', value: bumdes?.nama_bumdes || 'N/A' },
         {
             label: 'Email BUMDes',
-            value: bumdes.email || 'N/A',
-            highlight: !!bumdes.email
+            value: bumdes?.email || 'N/A',
+            highlight: !!bumdes?.email,
         },
     ];
+
+    if (!desa || !bumdes) {
+        return (
+            <MainLayout title="Tentang Kami">
+                <div className="py-20 text-center text-gray-600">Data profil desa / BUMDes belum tersedia.</div>
+            </MainLayout>
+        );
+    }
 
     return (
         <MainLayout title="Tentang Kami">
@@ -92,19 +102,9 @@ const TentangKami: React.FC<TentangKamiProps> = ({ desa, bumdes }) => {
                         Mewujudkan kemandirian ekonomi desa melalui pengelolaan potensi lokal yang berkelanjutan dan inovatif.
                     </p>
                     <div className="flex flex-wrap justify-center gap-4">
-                        <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">
-                            📍 {desa.alamat}
-                        </span>
-                        {desa.email && (
-                            <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">
-                                ✉️ {desa.email}
-                            </span>
-                        )}
-                        {desa.telepon && (
-                            <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">
-                                📞 {desa.telepon}
-                            </span>
-                        )}
+                        <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">📍 {desa.alamat}</span>
+                        {desa.email && <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">✉️ {desa.email}</span>}
+                        {desa.telepon && <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">📞 {desa.telepon}</span>}
                     </div>
                 </div>
             </motion.section>
@@ -126,7 +126,8 @@ const TentangKami: React.FC<TentangKamiProps> = ({ desa, bumdes }) => {
                                     Profil <span className="text-blue-600">BUMDes</span>
                                 </h2>
                                 <p className="mb-6 text-lg text-gray-700">
-                                    {bumdes.nama_bumdes} hadir sebagai katalisator pembangunan ekonomi desa yang berkomitmen untuk memberdayakan masyarakat dan mengoptimalkan potensi lokal demi kesejahteraan bersama.
+                                    {bumdes.nama_bumdes} hadir sebagai katalisator pembangunan ekonomi desa yang berkomitmen untuk memberdayakan
+                                    masyarakat dan mengoptimalkan potensi lokal demi kesejahteraan bersama.
                                 </p>
                             </div>
                             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -137,15 +138,11 @@ const TentangKami: React.FC<TentangKamiProps> = ({ desa, bumdes }) => {
                                         whileInView={{ opacity: 1, y: 0 }}
                                         transition={{ duration: 0.5, delay: idx * 0.2 }}
                                         viewport={{ once: true }}
-                                        className="rounded-xl bg-white p-6 shadow hover:shadow-lg transition-shadow duration-300"
+                                        className="rounded-xl bg-white p-6 shadow transition-shadow duration-300 hover:shadow-lg"
                                     >
-                                        <h3 className="text-sm font-semibold text-gray-500 mb-2">{item.label}</h3>
-                                        <p className={`text-lg font-medium ${item.highlight ? 'text-blue-600' : 'text-gray-900'}`}>
-                                            {item.value}
-                                        </p>
-                                        {item.sub && (
-                                            <p className="text-xs text-gray-500 mt-1">{item.sub}</p>
-                                        )}
+                                        <h3 className="mb-2 text-sm font-semibold text-gray-500">{item.label}</h3>
+                                        <p className={`text-lg font-medium ${item.highlight ? 'text-blue-600' : 'text-gray-900'}`}>{item.value}</p>
+                                        {item.sub && <p className="mt-1 text-xs text-gray-500">{item.sub}</p>}
                                     </motion.div>
                                 ))}
                             </div>
@@ -160,7 +157,7 @@ const TentangKami: React.FC<TentangKamiProps> = ({ desa, bumdes }) => {
                             className="relative"
                         >
                             <div className="absolute inset-0 rotate-3 transform rounded-3xl bg-gradient-to-r from-blue-400 to-indigo-500"></div>
-                            <div className="relative -rotate-1 transform rounded-3xl bg-white p-8 shadow-2xl hover:rotate-0 transition-transform duration-300">
+                            <div className="relative -rotate-1 transform rounded-3xl bg-white p-8 shadow-2xl transition-transform duration-300 hover:rotate-0">
                                 <motion.img
                                     src="/assets/images/kantor_desa_sumberjaya.jpg"
                                     alt={`Kantor ${desa.nama_desa}`}
@@ -171,12 +168,8 @@ const TentangKami: React.FC<TentangKamiProps> = ({ desa, bumdes }) => {
                                     viewport={{ once: true }}
                                 />
                                 <div className="mt-6">
-                                    <h4 className="mb-2 text-lg font-semibold text-gray-900">
-                                        Kantor {desa.nama_desa}
-                                    </h4>
-                                    <p className="text-gray-600">
-                                        Pusat koordinasi dan pelayanan masyarakat desa.
-                                    </p>
+                                    <h4 className="mb-2 text-lg font-semibold text-gray-900">Kantor {desa.nama_desa}</h4>
+                                    <p className="text-gray-600">Pusat koordinasi dan pelayanan masyarakat desa.</p>
                                 </div>
                             </div>
                         </motion.div>
@@ -189,9 +182,7 @@ const TentangKami: React.FC<TentangKamiProps> = ({ desa, bumdes }) => {
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="mb-16 text-center">
                         <h2 className="mb-4 text-4xl font-bold text-gray-900">Visi & Misi</h2>
-                        <p className="text-gray-600 max-w-2xl mx-auto">
-                            Komitmen kami dalam membangun desa yang mandiri dan berkelanjutan
-                        </p>
+                        <p className="mx-auto max-w-2xl text-gray-600">Komitmen kami dalam membangun desa yang mandiri dan berkelanjutan</p>
                     </div>
                     <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
                         {/* Visi */}
@@ -200,7 +191,7 @@ const TentangKami: React.FC<TentangKamiProps> = ({ desa, bumdes }) => {
                             whileInView={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.8 }}
                             viewport={{ once: true }}
-                            className="rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-8 hover:shadow-lg transition-shadow duration-300"
+                            className="rounded-3xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-8 transition-shadow duration-300 hover:shadow-lg"
                         >
                             <div className="mb-6 flex items-center">
                                 <div className="mr-4 rounded-2xl bg-blue-600 p-3">
@@ -208,7 +199,7 @@ const TentangKami: React.FC<TentangKamiProps> = ({ desa, bumdes }) => {
                                 </div>
                                 <h3 className="text-2xl font-bold text-gray-900">Visi</h3>
                             </div>
-                            <p className="text-lg text-gray-700 leading-relaxed">{visiText}</p>
+                            <p className="text-lg leading-relaxed text-gray-700">{visiText}</p>
                         </motion.div>
 
                         {/* Misi */}
@@ -217,7 +208,7 @@ const TentangKami: React.FC<TentangKamiProps> = ({ desa, bumdes }) => {
                             whileInView={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.8 }}
                             viewport={{ once: true }}
-                            className="rounded-3xl border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8 hover:shadow-lg transition-shadow duration-300"
+                            className="rounded-3xl border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8 transition-shadow duration-300 hover:shadow-lg"
                         >
                             <div className="mb-6 flex items-center">
                                 <div className="mr-4 rounded-2xl bg-green-600 p-3">
@@ -235,7 +226,7 @@ const TentangKami: React.FC<TentangKamiProps> = ({ desa, bumdes }) => {
                                         viewport={{ once: true }}
                                         className="flex items-start"
                                     >
-                                        <span className="mt-2 mr-3 h-2 w-2 rounded-full bg-green-500 flex-shrink-0"></span>
+                                        <span className="mt-2 mr-3 h-2 w-2 flex-shrink-0 rounded-full bg-green-500"></span>
                                         <span className="leading-relaxed">{misi}</span>
                                     </motion.li>
                                 ))}
@@ -252,9 +243,7 @@ const TentangKami: React.FC<TentangKamiProps> = ({ desa, bumdes }) => {
                         <h2 className="mb-4 text-4xl font-bold text-gray-900">
                             Kepala <span className="text-blue-600">BUMDes</span>
                         </h2>
-                        <p className="text-gray-600 max-w-2xl mx-auto">
-                            Pemimpin yang berkomitmen dalam memajukan ekonomi desa
-                        </p>
+                        <p className="mx-auto max-w-2xl text-gray-600">Pemimpin yang berkomitmen dalam memajukan ekonomi desa</p>
                     </div>
 
                     <motion.div
@@ -262,36 +251,26 @@ const TentangKami: React.FC<TentangKamiProps> = ({ desa, bumdes }) => {
                         whileInView={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.8 }}
                         viewport={{ once: true }}
-                        className="flex flex-col items-center max-w-4xl mx-auto"
+                        className="mx-auto flex max-w-4xl flex-col items-center"
                     >
                         <div className="relative mb-8">
                             <div className="absolute inset-0 rounded-full bg-blue-200 blur-2xl"></div>
-                            <div className="relative z-10 h-48 w-48 rounded-full border-4 border-white bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-lg">
-                                <span className="text-white text-6xl font-bold">
-                                    {bumdes.kepala_bumdes.charAt(0)}
-                                </span>
+                            <div className="relative z-10 flex h-48 w-48 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-400 to-indigo-600 shadow-lg">
+                                <span className="text-6xl font-bold text-white">{bumdes.kepala_bumdes.charAt(0)}</span>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-2xl p-8 shadow-lg max-w-2xl w-full">
-                            <h3 className="text-3xl font-bold text-gray-900 mb-2">
-                                {bumdes?.kepala_bumdes || 'Kepala BUMDes'}
-                            </h3>
-                            <p className="font-medium text-blue-600 mb-4 text-lg">
-                                Kepala {bumdes?.nama_bumdes || 'BUMDes'}
-                            </p>
+                        <div className="w-full max-w-2xl rounded-2xl bg-white p-8 shadow-lg">
+                            <h3 className="mb-2 text-3xl font-bold text-gray-900">{bumdes?.kepala_bumdes || 'Kepala BUMDes'}</h3>
+                            <p className="mb-4 text-lg font-medium text-blue-600">Kepala {bumdes?.nama_bumdes || 'BUMDes'}</p>
 
-                            {bumdes?.alamat && (
-                                <p className="text-gray-600 mb-2">
-                                    📍 {bumdes.alamat}
-                                </p>
-                            )}
+                            {bumdes?.alamat && <p className="mb-2 text-gray-600">📍 {bumdes.alamat}</p>}
 
-                            <div className="flex flex-wrap justify-center gap-4 mt-6">
+                            <div className="mt-6 flex flex-wrap justify-center gap-4">
                                 {bumdes?.email && (
                                     <a
                                         href={`mailto:${bumdes.email}`}
-                                        className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors duration-200"
+                                        className="rounded-lg bg-blue-100 px-4 py-2 text-blue-700 transition-colors duration-200 hover:bg-blue-200"
                                     >
                                         ✉️ {bumdes.email}
                                     </a>
@@ -299,16 +278,16 @@ const TentangKami: React.FC<TentangKamiProps> = ({ desa, bumdes }) => {
                                 {bumdes?.telepon && (
                                     <a
                                         href={`tel:${bumdes.telepon}`}
-                                        className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors duration-200"
+                                        className="rounded-lg bg-green-100 px-4 py-2 text-green-700 transition-colors duration-200 hover:bg-green-200"
                                     >
                                         📞 {bumdes.telepon}
                                     </a>
                                 )}
                             </div>
 
-                            <p className="mt-6 text-gray-700 leading-relaxed">
-                                Memimpin BUMDes dengan dedikasi tinggi, fokus pada pemberdayaan masyarakat dan
-                                pengelolaan potensi desa secara inovatif dan berkelanjutan untuk mencapai kemandirian ekonomi desa.
+                            <p className="mt-6 leading-relaxed text-gray-700">
+                                Memimpin BUMDes dengan dedikasi tinggi, fokus pada pemberdayaan masyarakat dan pengelolaan potensi desa secara
+                                inovatif dan berkelanjutan untuk mencapai kemandirian ekonomi desa.
                             </p>
                         </div>
                     </motion.div>
