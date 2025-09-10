@@ -50,7 +50,7 @@ interface PageProps {
 }
 
 export default function DetailLaporanMiniSoccer() {
-    const { detailLaporan, bulan, unit, summary, auth, } = usePage().props as unknown as PageProps;
+    const { detailLaporan, bulan, unit, summary, auth } = usePage().props as unknown as PageProps;
     const [isDownloading, setIsDownloading] = useState({ pdf: false, excel: false });
 
     const formatCurrency = (amount: number) => {
@@ -95,7 +95,7 @@ export default function DetailLaporanMiniSoccer() {
             // Konversi format bulan ke YYYY-MM
             if (bulan.includes(' ')) {
                 const [monthName, year] = bulan.split(' ');
-                const monthMap = {
+                const monthMap: Record<string, string> = {
                     // Indonesian months
                     Januari: '01',
                     Februari: '02',
@@ -109,19 +109,6 @@ export default function DetailLaporanMiniSoccer() {
                     Oktober: '10',
                     November: '11',
                     Desember: '12',
-                    // // English months
-                    // January: '01',
-                    // February: '02',
-                    // March: '03',
-                    // April: '04',
-                    // May: '05',
-                    // June: '06',
-                    // July: '07',
-                    // August: '08',
-                    // September: '09',
-                    // October: '10',
-                    // November: '11',
-                    // December: '12',
                 };
 
                 const monthNumber = monthMap[monthName];
@@ -285,16 +272,18 @@ export default function DetailLaporanMiniSoccer() {
                 };
 
                 showSuccessToast();
-            } catch (fetchError) {
+            } catch (err: unknown) {
+                const fetchError = err as Error;
+
                 // PERBAIKAN 10: Fallback to window.open if fetch fails
-                if (fetchError.name === 'AbortError') {
+                if (fetchError instanceof Error && fetchError.name === 'AbortError') {
                     throw new Error('Download timeout. Silakan coba lagi.');
                 }
 
-                console.warn('Fetch failed, trying window.open fallback:', fetchError.message);
+                console.warn('Fetch failed, trying window.open fallback:', fetchError instanceof Error ? fetchError.message : String(fetchError));
 
                 // Fallback: Direct window.open
-                const downloadUrl = route('minisoc.downloadPdfDetail', { bulan: encodeURIComponent(bulanParam) });
+                const downloadUrl = route('Kios.downloadPdfDetail', { bulan: encodeURIComponent(bulanParam) });
                 const newWindow = window.open(downloadUrl, '_blank');
 
                 if (!newWindow) {
@@ -334,7 +323,7 @@ export default function DetailLaporanMiniSoccer() {
             const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat mendownload PDF';
 
             // Show error toast
-            const showErrorToast = (message) => {
+            const showErrorToast = (message: string) => {
                 const errorToast = document.createElement('div');
                 errorToast.innerHTML = `
                 <div style="position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; padding: 12px 20px; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 400px;">
@@ -507,7 +496,7 @@ export default function DetailLaporanMiniSoccer() {
                     )}
 
                     {/* Transaction Table */}
-                    <Card className="shadow-sm p-4">
+                    <Card className="p-4 shadow-sm">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 py-2">
                                 <FileText className="h-5 w-5" />
@@ -595,8 +584,8 @@ export default function DetailLaporanMiniSoccer() {
                     {detailLaporan.length > 0 && (
                         <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
                             {/* Summary Info */}
-                            <Card className='p-2'>
-                                <CardHeader className='px-6 py-2'>
+                            <Card className="p-2">
+                                <CardHeader className="px-6 py-2">
                                     <CardTitle className="text-base">Informasi Laporan</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
@@ -628,8 +617,8 @@ export default function DetailLaporanMiniSoccer() {
                             </Card>
 
                             {/* Cash Flow Info */}
-                            <Card className='p-2'>
-                                <CardHeader className='px-6 py-2'>
+                            <Card className="p-2">
+                                <CardHeader className="px-6 py-2">
                                     <CardTitle className="text-base">Aliran Kas</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">

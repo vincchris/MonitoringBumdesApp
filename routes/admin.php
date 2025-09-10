@@ -16,15 +16,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('data-umum', DataUmumController::class);
         Route::resource('sekretariat', sekretariatController::class);
         Route::resource('tentang', tentangBumdesController::class);
-        Route::resource('pengurus-bumdes', PengurusBumdesController::class)->names([
-            'index' => 'profil.pengurus-bumdes.index',
-            'create' => 'profil.pengurus-bumdes.create',
-            'store' => 'profil.pengurus-bumdes.store',
-            'show' => 'profil.pengurus-bumdes.show',
-            'edit' => 'profil.pengurus-bumdes.edit',
-            'update' => 'profil.pengurus-bumdes.update',
-            'destroy' => 'profil.pengurus-bumdes.destroy',
-        ]);
+        Route::resource('pengurus-bumdes', PengurusBumdesController::class);
         Route::resource('legalitas', LegalitasBumdesController::class);
     });
 

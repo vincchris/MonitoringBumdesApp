@@ -74,22 +74,20 @@ export default function PengurusBumdes() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [pengurusToDelete, setPengurusToDelete] = useState<Pengurus | null>(null);
 
-    const { data, setData, post, put, reset, errors, clearErrors, progress } = useForm({
+    const { data, setData, post, reset, errors, clearErrors, progress } = useForm({
         nama_pengurus: '',
         jabatan: '',
         jenis_kelamin: 'L',
         pekerjaan: '',
         kategori: '',
         foto_pengurus: null as File | null,
+        _method: 'POST' as 'POST' | 'PUT',
     });
 
     const openModal = (pengurus?: Pengurus) => {
-        console.log('openModal dipanggil dengan:', pengurus)
-        // Clear previous errors first
         clearErrors();
 
         if (pengurus) {
-            console.log('Setting editingData:', pengurus);
             setEditingData(pengurus);
             setData({
                 nama_pengurus: pengurus.nama_pengurus || '',
@@ -97,15 +95,15 @@ export default function PengurusBumdes() {
                 jenis_kelamin: pengurus.jenis_kelamin || 'L',
                 pekerjaan: pengurus.pekerjaan || '',
                 kategori: pengurus.kategori || '',
-                foto_pengurus: null, // Always null for edit, we don't need to re-upload existing image
+                foto_pengurus: null, // Reset file input untuk edit
+                _method: 'PUT',
             });
-            // Set existing image preview if available
             setImagePreview(pengurus.foto_pengurus ? `/storage/${pengurus.foto_pengurus}` : null);
         } else {
-            console.log('Mode create - no pengurus data');
             setEditingData(null);
             reset();
             setImagePreview(null);
+            setData('_method', 'POST');
         }
         setIsOpen(true);
     };
@@ -113,7 +111,7 @@ export default function PengurusBumdes() {
     const closeModal = () => {
         setIsOpen(false);
         reset();
-        clearErrors(); // Clear errors when closing modal
+        clearErrors();
         setImagePreview(null);
         setEditingData(null);
         if (fileInputRef.current) {
@@ -154,34 +152,42 @@ export default function PengurusBumdes() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Clear previous errors
-        console.log('Data yang akan dikirim:', data);
-        console.log('Editing data:', editingData);
-        console.log('Is editing?', !!editingData);
-        console.log('Editing ID:', editingData?.id);
-
         clearErrors();
 
+        // Prepare form data
+        const formData = new FormData();
+        formData.append('nama_pengurus', data.nama_pengurus);
+        formData.append('jabatan', data.jabatan);
+        formData.append('jenis_kelamin', data.jenis_kelamin);
+        formData.append('pekerjaan', data.pekerjaan);
+        formData.append('kategori', data.kategori);
+
+        if (data.foto_pengurus) {
+            formData.append('foto_pengurus', data.foto_pengurus);
+        }
+
         if (editingData && editingData.id) {
-            // Use PUT method with the correct route name (profil prefix)
-            console.log('Melakukan UPDATE ke ID:', editingData.id);
-            put(route('profil.pengurus-bumdes.update', editingData.id), {
+            formData.append('_method', 'PUT');
+
+            router.post(route('pengurus-bumdes.update', editingData.id), formData, {
                 forceFormData: true,
                 onSuccess: () => {
                     closeModal();
                 },
                 onError: (errors) => {
                     console.log('Update errors:', errors);
-                }
+                },
             });
         } else {
-            post(route('profil.pengurus-bumdes.store'), {
+            // For create, use regular POST
+            router.post(route('pengurus-bumdes.store'), formData, {
+                forceFormData: true,
                 onSuccess: () => {
                     closeModal();
                 },
                 onError: (errors) => {
                     console.log('Store errors:', errors);
-                }
+                },
             });
         }
     };
@@ -452,7 +458,7 @@ export default function PengurusBumdes() {
 
             {/* Enhanced Modal */}
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm text-black">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 text-black backdrop-blur-sm">
                     <div className="flex max-h-[90vh] w-full max-w-3xl transform flex-col overflow-hidden rounded-2xl bg-white shadow-2xl transition-all">
                         {/* Modal Header */}
                         <div className="flex items-center justify-between border-b border-gray-200 p-6">

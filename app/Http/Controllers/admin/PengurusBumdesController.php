@@ -75,16 +75,7 @@ class PengurusBumdesController extends Controller
      */
     public function update(Request $request, $id)
     {
-        Log::info('Update request received', [
-            'id' => $id,
-            'request_data' => $request->all(),
-            'files' => $request->allFiles()
-        ]);
-
-        // Find the pengurus by ID
         $pengurusBumdes = PengurusBumdes::findOrFail($id);
-
-        Log::info('Data before update', $pengurusBumdes->toArray());
 
         $validated = $request->validate([
             'nama_pengurus' => 'required|string|max:255',
@@ -95,36 +86,21 @@ class PengurusBumdesController extends Controller
             'foto_pengurus' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
-
-
         DB::beginTransaction();
         try {
-            // Handle file upload for update
             if ($request->hasFile('foto_pengurus')) {
-                // Delete old photo if exists
                 if ($pengurusBumdes->foto_pengurus && Storage::disk('public')->exists($pengurusBumdes->foto_pengurus)) {
                     Storage::disk('public')->delete($pengurusBumdes->foto_pengurus);
                 }
 
-                // Store new photo
                 $file = $request->file('foto_pengurus');
                 $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
                 $validated['foto_pengurus'] = $file->storeAs('pengurus', $filename, 'public');
-            }
-            // If no new file uploaded, keep the existing photo
-            else {
-                // unset($validated['foto_pengurus']);
+            } else {
+                unset($validated['foto_pengurus']);
             }
 
-            Log::info('Data will be updated with', $validated);
-
-            $result = $pengurusBumdes->update($validated);
-
-            Log::info('Update result', [
-                'success' => $result,
-                'data_after' => $pengurusBumdes->fresh()->toArray()
-            ]);
-
+            $pengurusBumdes->update($validated);
             DB::commit();
 
             return back()->with('info', [
@@ -136,10 +112,11 @@ class PengurusBumdesController extends Controller
             Log::error('Error updating pengurus bumdes: ' . $e->getMessage());
 
             return back()->withErrors([
-                'error' => 'Terjadi kesalahan saat memperbarui data: ' . $e->getMessage()
+                'error' => 'Terjadi kesalahan saat memperbarui data.'
             ]);
         }
     }
+
 
     /**
      * Remove the specified resource from storage.
