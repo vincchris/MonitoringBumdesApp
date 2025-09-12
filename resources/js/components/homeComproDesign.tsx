@@ -1,8 +1,16 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import { ArrowRight, BanknoteIcon, Building, Calendar } from 'lucide-react';
 import React from 'react';
 import MainLayout from '../components/layout_compro/MainLayout';
+
+// ======================
+// Interfaces
+// ======================
+interface PhotosData {
+    foto_kantor_desa: string | null;
+    foto_sekretariat: string | null;
+}
 
 // ======================
 // Data Section
@@ -13,7 +21,7 @@ const HERO_DATA = {
     highlight: 'Melalui Ekonomi Kreatif',
     description:
         'BUMDES Bagja Waluya hadir dengan berbagai unit usaha dan layanan untuk meningkatkan kesejahteraan masyarakat desa melalui inovasi dan pemberdayaan ekonomi lokal.',
-    image: '/assets/images/foto_bumdes.jpg',
+    defaultImage: '/assets/images/foto_bumdes.jpg',
     imageCaption: 'Sekretariat BUMDes Bagja Waluya',
     cta: [
         { label: 'Lihat Unit Usaha', href: '/unit-usaha', primary: true },
@@ -30,12 +38,12 @@ const DUMMY_STATS = [
 
 const WELCOME_MESSAGE = {
     title: 'Sambutan Kepala Desa',
-    message: `Assalamu’alaikum warahmatullahi wabarakatuh.\n\n
+    message: `Assalamu'alaikum warahmatullahi wabarakatuh.\n\n
   Puji syukur ke hadirat Tuhan Yang Maha Esa, atas limpahan rahmat dan karunia-Nya sehingga Desa kami dapat terus berkembang menjadi desa yang mandiri dan produktif. Website ini hadir sebagai jembatan informasi dan transparansi antara pemerintah desa dan masyarakat. Kami berharap partisipasi aktif dari seluruh warga untuk bersama-sama membangun desa yang lebih baik.`,
     name: 'H. Haris Iwan Gunawan',
     position: 'Kepala Desa',
     period: '2021 - 2027',
-    photo: 'assets/images/kepala_bumdes.jpg',
+    defaultPhoto: '/assets/images/kepala_bumdes.jpg',
 };
 
 // ======================
@@ -43,6 +51,34 @@ const WELCOME_MESSAGE = {
 // ======================
 
 const Home: React.FC = () => {
+    // Get photos from Inertia shared data
+    let photos: PhotosData | null = null;
+    try {
+        const pageData = usePage<{ photos?: PhotosData }>().props;
+        photos = pageData.photos || null;
+
+        // Debug log
+        console.log('Photos data in Home:', photos);
+    } catch (error) {
+        console.error('Error accessing photos data in Home:', error);
+    }
+
+    // Handle image loading error with fallback
+    const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+        const img = e.currentTarget;
+        const altText = img.alt.toLowerCase();
+
+        // Set fallback image based on image type
+        if (altText.includes('sekretariat') || altText.includes('bumdes')) {
+            img.src = HERO_DATA.defaultImage;
+        } else if (altText.includes('kepala') || altText.includes('desa')) {
+            img.src = WELCOME_MESSAGE.defaultPhoto;
+        }
+
+        // Prevent infinite error loop
+        img.onerror = null;
+    };
+
     return (
         <MainLayout title="Beranda">
             {/* Hero Section */}
@@ -75,7 +111,7 @@ const Home: React.FC = () => {
                             </div>
                         </motion.div>
 
-                        {/* Image */}
+                        {/* Image - Dynamic from Backend */}
                         <motion.div
                             className="group relative"
                             initial={{ opacity: 0, x: 50 }}
@@ -83,7 +119,12 @@ const Home: React.FC = () => {
                             transition={{ duration: 0.8 }}
                         >
                             <div className="aspect-video overflow-hidden rounded-2xl bg-gradient-to-br from-white/10 to-blue-100/10 shadow-xl backdrop-blur-sm transition-transform duration-300 group-hover:scale-[1.015]">
-                                <img src={HERO_DATA.image} alt={HERO_DATA.imageCaption} className="h-full w-full object-cover" />
+                                <img
+                                    src={photos?.foto_sekretariat || HERO_DATA.defaultImage}
+                                    alt={HERO_DATA.imageCaption}
+                                    className="h-full w-full object-cover"
+                                    onError={handleImageError}
+                                />
                             </div>
                             <div className="absolute -top-4 -right-4 h-24 w-24 animate-pulse rounded-full bg-yellow-300/20 blur-lg"></div>
                             <div className="absolute -bottom-4 -left-4 h-16 w-16 animate-ping rounded-full bg-blue-200/20 blur-md"></div>
@@ -146,7 +187,7 @@ const Home: React.FC = () => {
                             <p className="mt-6 font-semibold text-blue-700">- {WELCOME_MESSAGE.position}</p>
                         </motion.div>
 
-                        {/* Photo */}
+                        {/* Photo - Could be dynamic in the future */}
                         <motion.div
                             className="order-1 flex flex-col items-center text-center md:order-2"
                             initial={{ opacity: 0, scale: 0.9 }}
@@ -155,7 +196,13 @@ const Home: React.FC = () => {
                             viewport={{ once: true }}
                         >
                             <div className="relative h-60 w-60 overflow-hidden rounded-4xl shadow-lg ring-4 ring-blue-100 transition-transform duration-300 hover:scale-105">
-                                <img src={WELCOME_MESSAGE.photo} alt={WELCOME_MESSAGE.name} className="h-full w-full object-cover" />
+                                {/* Note: Untuk foto kepala desa, bisa ditambahkan field di database jika diperlukan */}
+                                <img
+                                    src={WELCOME_MESSAGE.defaultPhoto}
+                                    alt={WELCOME_MESSAGE.name}
+                                    className="h-full w-full object-cover"
+                                    onError={handleImageError}
+                                />
                             </div>
                             <div className="mt-4 text-xl font-bold text-gray-800">{WELCOME_MESSAGE.name}</div>
                             <div className="text-md mt-1 font-semibold text-blue-600">{WELCOME_MESSAGE.position}</div>

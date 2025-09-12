@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { Clock, Facebook, Instagram, LucideIcon, Mail, MapPin, MessageCircle, Phone, Youtube } from 'lucide-react';
 import React from 'react';
 
@@ -18,8 +18,22 @@ interface ContactItem {
     icon: LucideIcon;
 }
 
+interface LogoData {
+    logo_desa: string | null;
+    logo_bumdes: string | null;
+}
+
 const Footer: React.FC = () => {
     const currentYear = new Date().getFullYear();
+
+    // Get logos from Inertia shared data
+    let logos: LogoData | null = null;
+    try {
+        const pageData = usePage<{ logos?: LogoData }>().props;
+        logos = pageData.logos || null;
+    } catch (error) {
+        console.error('Error accessing logos data in Footer:', error);
+    }
 
     const quickLinks: FooterLink[] = [
         { name: 'Tentang Kami', href: '/profil/tentang-kami' },
@@ -82,6 +96,22 @@ const Footer: React.FC = () => {
         { src: '/assets/images/Logo UBSI.png', alt: 'Logo Ubsi' },
     ];
 
+    // Handle image loading error with fallback
+    const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+        const img = e.currentTarget;
+        const isDesaLogo = img.alt.includes('Desa') || img.alt.includes('SumberJaya');
+
+        // Set fallback image based on logo type
+        if (isDesaLogo) {
+            img.src = '/assets/images/SumberJaya Logo.png';
+        } else {
+            img.src = '/assets/images/Bumdes Logo.png';
+        }
+
+        // Prevent infinite error loop
+        img.onerror = null;
+    };
+
     return (
         <footer className="bg-white text-gray-900 border-t border-gray-200">
             <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -89,8 +119,20 @@ const Footer: React.FC = () => {
                     {/* Company Info */}
                     <div>
                         <Link href="#" className="mb-4 flex items-center space-x-3">
-                            <img src="/assets/images/Bumdes Logo.png" alt="Logo Bumdes" className="h-12 w-auto object-contain" />
-                            <img src="/assets/images/SumberJaya Logo.png" alt="Logo SumberJaya" className="h-12 w-auto object-contain" />
+                            {/* Logo Bumdes - Dynamic */}
+                            <img
+                                src={logos?.logo_bumdes || '/assets/images/Bumdes Logo.png'}
+                                alt="Logo Bumdes"
+                                className="h-12 w-auto object-contain"
+                                onError={handleImageError}
+                            />
+                            {/* Logo Desa - Dynamic */}
+                            <img
+                                src={logos?.logo_desa || '/assets/images/SumberJaya Logo.png'}
+                                alt="Logo Desa SumberJaya"
+                                className="h-12 w-auto object-contain"
+                                onError={handleImageError}
+                            />
                         </Link>
                         <p className="mb-6 text-sm leading-relaxed text-gray-600">
                             BUMDes yang berkomitmen membangun ekonomi desa melalui berbagai unit usaha untuk kesejahteraan masyarakat.

@@ -9,13 +9,27 @@ interface MenuItem {
     submenu?: MenuItem[];
 }
 
+interface LogoData {
+    logo_desa: string | null;
+    logo_bumdes: string | null;
+}
+
 const Navbar: React.FC = () => {
     const [isOpen, setIsOpen] = useState<boolean>(false);
     const [isScrolled, setIsScrolled] = useState<boolean>(false);
     const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
 
-    // Get current URL from Inertia
-    const { url } = usePage();
+    // Safe way to get page data
+    let url = '/';
+    let logos: LogoData | null = null;
+
+    try {
+        const pageData = usePage<{ logos?: LogoData }>().props;
+        url = pageData.url || '/';
+        logos = pageData.logos || null;
+    } catch (error) {
+        console.error('Error accessing page data:', error);
+    }
 
     useEffect(() => {
         const handleScroll = () => {
@@ -55,7 +69,6 @@ const Navbar: React.FC = () => {
             ],
         },
         { name: 'Unit Usaha', href: '/unit-usaha' },
-        // { name: 'Galeri', href: '/galeri' },
         { name: 'Laporan & Transparansi', href: '/laporan-transparansi' },
         { name: 'Kontak', href: '/kontak' },
     ];
@@ -108,6 +121,22 @@ const Navbar: React.FC = () => {
         return `${baseClasses} ${isActive(href) ? activeClasses : inactiveClasses}`;
     };
 
+    // Handle image loading error with fallback
+    const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+        const img = e.currentTarget;
+        const isDesaLogo = img.alt.includes('Desa');
+
+        // Set fallback image based on logo type
+        if (isDesaLogo) {
+            img.src = '/assets/images/SumberJaya Logo.png';
+        } else {
+            img.src = '/assets/images/Bumdes Logo.png';
+        }
+
+        // Prevent infinite error loop
+        img.onerror = null;
+    };
+
     return (
         <nav
             className={`fixed top-0 right-0 left-0 z-50 transition-all duration-300 ${
@@ -119,14 +148,26 @@ const Navbar: React.FC = () => {
                     {/* Logo Section */}
                     <Link href="/" className="flex items-center space-x-3 transition-opacity duration-200 hover:opacity-80">
                         <div className="flex h-10 items-center space-x-3 sm:h-12 sm:space-x-4">
-                            {/* Logo Bumdes */}
+                            {/* Logo Bumdes - Dynamic */}
                             <div className="flex h-full flex-shrink-0 items-center">
-                                <img src="/assets/images/Bumdes Logo.png" alt="Logo Bumdes" className="h-full w-auto object-contain" />
+                                <img
+                                    src={logos?.logo_bumdes || '/assets/images/Bumdes Logo.png'}
+                                    alt="Logo Bumdes"
+                                    className="h-full w-auto object-contain transition-opacity duration-200 hover:opacity-90"
+                                    onError={handleImageError}
+                                    onLoad={() => console.log('Bumdes logo loaded')}
+                                />
                             </div>
 
-                            {/* Logo SumberJaya */}
+                            {/* Logo Desa - Dynamic */}
                             <div className="flex h-full flex-shrink-0 items-center">
-                                <img src="/assets/images/SumberJaya Logo.png" alt="Logo SumberJaya" className="h-full w-auto object-contain" />
+                                <img
+                                    src={logos?.logo_desa || '/assets/images/SumberJaya Logo.png'}
+                                    alt="Logo Desa"
+                                    className="h-full w-auto object-contain transition-opacity duration-200 hover:opacity-90"
+                                    onError={handleImageError}
+                                    onLoad={() => console.log('Desa logo loaded')}
+                                />
                             </div>
                         </div>
                     </Link>

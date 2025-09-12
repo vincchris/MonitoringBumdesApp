@@ -5,6 +5,11 @@ import { Eye, Target } from 'lucide-react';
 import React from 'react';
 
 // ====== INTERFACES ======
+interface PhotosData {
+    foto_kantor_desa: string | null;
+    foto_sekretariat: string | null;
+}
+
 interface ProfileDesa {
     id: number;
     nama_desa?: string;
@@ -24,27 +29,62 @@ interface ProfileBumdes {
     alamat?: string;
     email?: string;
     telepon?: string;
+    // Dynamic fields
+    keunggulan?: string;
+    visi?: string;
+    misi?: string;
+    foto_kepala_bumdes?: string; // New field for photo
 }
 
 interface TentangKamiProps {
     desa: ProfileDesa;
     bumdes: ProfileBumdes;
+    photos?: PhotosData;
 }
 
-// ====== Static Data ======
-const visiText =
-    'Menjadi BUMDes unggulan di tingkat regional dalam pengelolaan usaha dan pelayanan masyarakat desa yang inovatif, mandiri, dan berkelanjutan untuk menciptakan kesejahteraan bersama.';
+// ====== DEFAULT VALUES ======
+const defaultVisiText = 'Menjadi BUMDes unggulan di tingkat regional dalam pengelolaan usaha dan pelayanan masyarakat desa yang inovatif, mandiri, dan berkelanjutan untuk menciptakan kesejahteraan bersama.';
 
-const misiList = [
+const defaultMisiList = [
     'Mengembangkan unit usaha produktif berbasis potensi dan kearifan lokal desa',
     'Memberdayakan masyarakat melalui pelatihan, pendampingan, dan kemitraan strategis',
     'Menjalin kerja sama dengan berbagai pihak untuk meningkatkan nilai tambah produk lokal',
     'Menjadi kontributor utama Pendapatan Asli Desa (PADes) yang berkelanjutan',
 ];
 
+const defaultKeunggulanText = 'BUMDes kami memiliki keunggulan dalam pengelolaan potensi lokal dengan pendekatan inovatif dan berkelanjutan, didukung oleh sumber daya manusia yang kompeten dan komitmen tinggi terhadap kesejahteraan masyarakat desa.';
+
+const DEFAULT_KANTOR_IMAGE = '/assets/images/kantor_desa_sumberjaya.jpg';
+
 // ====== MAIN COMPONENT ======
 const TentangKami: React.FC = () => {
     const { desa, bumdes } = usePage<{ desa: ProfileDesa; bumdes: ProfileBumdes }>().props;
+
+    // Get photos from Inertia shared data - same approach as Home
+    let photos: PhotosData | null = null;
+    try {
+        const pageData = usePage<{ photos?: PhotosData }>().props;
+        photos = pageData.photos || null;
+
+        // Debug log
+        console.log('Photos data in TentangKami:', photos);
+    } catch (error) {
+        console.error('Error accessing photos data in TentangKami:', error);
+    }
+
+    // Handle image loading error with fallback - same approach as Home
+    const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+        const img = e.currentTarget;
+        const altText = img.alt.toLowerCase();
+
+        // Set fallback image based on image type
+        if (altText.includes('kantor') || altText.includes('desa')) {
+            img.src = DEFAULT_KANTOR_IMAGE;
+        }
+
+        // Prevent infinite error loop
+        img.onerror = null;
+    };
 
     const profilData = [
         { label: 'Nama Desa', value: desa?.nama_desa || 'N/A' },
@@ -65,6 +105,27 @@ const TentangKami: React.FC = () => {
             highlight: !!bumdes?.email,
         },
     ];
+
+    // Parse misi dynamically - if it's a string, split by newlines or numbered list
+    const parseMisi = (misiText?: string): string[] => {
+        if (!misiText) return defaultMisiList;
+
+        // Split by line breaks and filter out empty lines
+        const misiArray = misiText
+            .split('\n')
+            .map(item => item.trim())
+            .filter(item => item.length > 0)
+            .map(item => {
+                // Remove numbering if present (e.g., "1. ", "1) ", etc.)
+                return item.replace(/^\d+[\.\)]\s*/, '');
+            });
+
+        return misiArray.length > 0 ? misiArray : defaultMisiList;
+    };
+
+    const visiText = bumdes?.visi || defaultVisiText;
+    const misiList = parseMisi(bumdes?.misi);
+    const keunggulanText = bumdes?.keunggulan || defaultKeunggulanText;
 
     if (!desa || !bumdes) {
         return (
@@ -98,13 +159,10 @@ const TentangKami: React.FC = () => {
                     <h1 className="mb-6 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-5xl leading-relaxed font-bold text-transparent md:text-6xl">
                         {bumdes.nama_bumdes}
                     </h1>
-                    <p className="mx-auto mb-8 max-w-3xl text-xl leading-relaxed text-blue-100 md:text-2xl">
-                        Mewujudkan kemandirian ekonomi desa melalui pengelolaan potensi lokal yang berkelanjutan dan inovatif.
-                    </p>
                     <div className="flex flex-wrap justify-center gap-4">
                         <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">📍 {desa.alamat}</span>
-                        {desa.email && <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">✉️ {desa.email}</span>}
-                        {desa.telepon && <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">📞 {desa.telepon}</span>}
+                        {bumdes.email && <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">✉️ {bumdes.email}</span>}
+                        {bumdes.telepon && <span className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">📞 {bumdes.telepon}</span>}
                     </div>
                 </div>
             </motion.section>
@@ -125,10 +183,6 @@ const TentangKami: React.FC = () => {
                                 <h2 className="mb-6 text-4xl font-bold text-gray-900">
                                     Profil <span className="text-blue-600">BUMDes</span>
                                 </h2>
-                                <p className="mb-6 text-lg text-gray-700">
-                                    {bumdes.nama_bumdes} hadir sebagai katalisator pembangunan ekonomi desa yang berkomitmen untuk memberdayakan
-                                    masyarakat dan mengoptimalkan potensi lokal demi kesejahteraan bersama.
-                                </p>
                             </div>
                             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                                 {profilData.map((item, idx) => (
@@ -148,7 +202,7 @@ const TentangKami: React.FC = () => {
                             </div>
                         </motion.div>
 
-                        {/* Image */}
+                        {/* Image - Now using dynamic foto_kantor_desa like Home component */}
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             whileInView={{ opacity: 1, scale: 1 }}
@@ -159,9 +213,10 @@ const TentangKami: React.FC = () => {
                             <div className="absolute inset-0 rotate-3 transform rounded-3xl bg-gradient-to-r from-blue-400 to-indigo-500"></div>
                             <div className="relative -rotate-1 transform rounded-3xl bg-white p-8 shadow-2xl transition-transform duration-300 hover:rotate-0">
                                 <motion.img
-                                    src="/assets/images/kantor_desa_sumberjaya.jpg"
+                                    src={photos?.foto_kantor_desa || DEFAULT_KANTOR_IMAGE}
                                     alt={`Kantor ${desa.nama_desa}`}
                                     className="h-64 w-full rounded-2xl object-cover"
+                                    onError={handleImageError}
                                     initial={{ opacity: 0 }}
                                     whileInView={{ opacity: 1 }}
                                     transition={{ duration: 1 }}
@@ -236,7 +291,7 @@ const TentangKami: React.FC = () => {
                 </div>
             </section>
 
-            {/* Kepala BUMDes */}
+            {/* Kepala BUMDes - Now Dynamic with Photo */}
             <section className="bg-gradient-to-br from-gray-50 to-blue-50 py-20">
                 <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
                     <div className="mb-16">
@@ -255,14 +310,46 @@ const TentangKami: React.FC = () => {
                     >
                         <div className="relative mb-8">
                             <div className="absolute inset-0 rounded-full bg-blue-200 blur-2xl"></div>
-                            <div className="relative z-10 flex h-48 w-48 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-400 to-indigo-600 shadow-lg">
-                                <span className="text-6xl font-bold text-white">{bumdes.kepala_bumdes.charAt(0)}</span>
-                            </div>
+                            {/* Dynamic Photo Display */}
+                            {bumdes?.foto_kepala_bumdes ? (
+                                <div className="relative z-10 h-48 w-48 overflow-hidden rounded-full border-4 border-white shadow-lg">
+                                    <img
+                                        src={`/storage/${bumdes.foto_kepala_bumdes}`}
+                                        alt={`Foto ${bumdes.kepala_bumdes}`}
+                                        className="h-full w-full object-cover"
+                                        onError={(e) => {
+                                            // Fallback to initial display if image fails to load
+                                            const target = e.target as HTMLImageElement;
+                                            target.style.display = 'none';
+                                            const parent = target.parentElement;
+                                            if (parent) {
+                                                parent.innerHTML = `
+                                                    <div class="flex h-48 w-48 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-400 to-indigo-600 shadow-lg">
+                                                        <span class="text-6xl font-bold text-white">
+                                                            ${bumdes.kepala_bumdes ? bumdes.kepala_bumdes.charAt(0).toUpperCase() : 'K'}
+                                                        </span>
+                                                    </div>
+                                                `;
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            ) : (
+                                <div className="relative z-10 flex h-48 w-48 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-400 to-indigo-600 shadow-lg">
+                                    <span className="text-6xl font-bold text-white">
+                                        {bumdes?.kepala_bumdes ? bumdes.kepala_bumdes.charAt(0).toUpperCase() : 'K'}
+                                    </span>
+                                </div>
+                            )}
                         </div>
 
                         <div className="w-full max-w-2xl rounded-2xl bg-white p-8 shadow-lg">
-                            <h3 className="mb-2 text-3xl font-bold text-gray-900">{bumdes?.kepala_bumdes || 'Kepala BUMDes'}</h3>
-                            <p className="mb-4 text-lg font-medium text-blue-600">Kepala {bumdes?.nama_bumdes || 'BUMDes'}</p>
+                            <h3 className="mb-2 text-3xl font-bold text-gray-900">
+                                {bumdes?.kepala_bumdes || 'Kepala BUMDes'}
+                            </h3>
+                            <p className="mb-4 text-lg font-medium text-blue-600">
+                                Kepala {bumdes?.nama_bumdes || 'BUMDes'}
+                            </p>
 
                             {bumdes?.alamat && <p className="mb-2 text-gray-600">📍 {bumdes.alamat}</p>}
 

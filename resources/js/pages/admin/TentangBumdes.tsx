@@ -1,7 +1,7 @@
 import { FooterInfo } from '@/components/footer-dashboard';
 import AppLayout from '@/layouts/app-layout';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { CheckCircle, Eye, Lightbulb, Save, Target } from 'lucide-react';
+import { CheckCircle, Eye, Lightbulb, Save, Target, User, Mail, Phone, MapPin, Camera, X } from 'lucide-react';
 import { FormEventHandler, useEffect, useState } from 'react';
 
 export default function TentangBumdes({ profile }: { profile: any }) {
@@ -12,6 +12,7 @@ export default function TentangBumdes({ profile }: { profile: any }) {
     const [flashMethod, setFlashMethod] = useState<string>('');
     const [flashColor, setFlashColor] = useState<string>('');
     const [flashMessage, setFlashMessage] = useState<string | null>(null);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     useEffect(() => {
         if (!flash?.info?.message) return;
@@ -51,15 +52,59 @@ export default function TentangBumdes({ profile }: { profile: any }) {
                 return <CheckCircle className="h-5 w-5 text-white" />;
         }
     };
-    const { data, setData, put, processing, errors, wasSuccessful } = useForm({
+
+    const { data, setData, post, processing, errors, wasSuccessful } = useForm({
+        kepala_bumdes: profile?.kepala_bumdes || '',
+        email: profile?.email || '',
+        telepon: profile?.telepon || '',
+        alamat: profile?.alamat || '',
         keunggulan: profile?.keunggulan || '',
         visi: profile?.visi || '',
         misi: profile?.misi || '',
+        foto_kepala_bumdes: null as File | null,
+        _method: 'PUT'
     });
+
+    // Handle file selection
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setData('foto_kepala_bumdes', file);
+
+            // Create preview
+            const reader = new FileReader();
+            reader.onload = () => {
+                setPreviewImage(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    // Remove selected image
+    const removeImage = () => {
+        setData('foto_kepala_bumdes', null);
+        setPreviewImage(null);
+        // Reset file input
+        const fileInput = document.getElementById('foto_kepala_bumdes') as HTMLInputElement;
+        if (fileInput) {
+            fileInput.value = '';
+        }
+    };
+
+    // Get current image URL
+    const getCurrentImageUrl = () => {
+        if (previewImage) return previewImage;
+        if (profile?.foto_kepala_bumdes) {
+            return `/storage/${profile.foto_kepala_bumdes}`;
+        }
+        return null;
+    };
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        put(route('tentang.update', profile?.id));
+        post(route('tentang.update', profile?.id), {
+            forceFormData: true,
+        });
     };
 
     return (
@@ -82,11 +127,10 @@ export default function TentangBumdes({ profile }: { profile: any }) {
                     <div className="mb-8 text-center">
                         <h1 className="mb-2 text-3xl font-bold text-gray-900">Tentang Bumdes</h1>
                         <p className="mx-auto max-w-2xl text-gray-600">
-                            Kelola informasi tentang Bumdes dengan mudah. Isi keunggulan, visi, dan misi untuk memberikan gambaran yang jelas kepada
-                            masyarakat.
+                            Kelola informasi tentang Bumdes dengan mudah. Isi data kepala bumdes, kontak, keunggulan, visi, dan misi untuk memberikan gambaran yang jelas kepada masyarakat.
                         </p>
                     </div>
-                    
+
                     {/* Main Form Card */}
                     <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl">
                         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6">
@@ -94,6 +138,169 @@ export default function TentangBumdes({ profile }: { profile: any }) {
                         </div>
 
                         <form onSubmit={submit} className="space-y-8 p-8">
+                            {/* Foto Kepala Bumdes */}
+                            <div className="group">
+                                <label className="mb-3 flex items-center space-x-2 text-base font-semibold text-gray-800">
+                                    <Camera className="h-5 w-5 text-indigo-500" />
+                                    <span>Foto Kepala Bumdes</span>
+                                </label>
+
+                                {/* Current/Preview Image */}
+                                {getCurrentImageUrl() && (
+                                    <div className="mb-4 relative inline-block">
+                                        <img
+                                            src={getCurrentImageUrl()!}
+                                            alt="Foto Kepala Bumdes"
+                                            className="h-32 w-32 rounded-xl object-cover border-4 border-gray-200 shadow-lg"
+                                        />
+                                        {(previewImage || data.foto_kepala_bumdes) && (
+                                            <button
+                                                type="button"
+                                                onClick={removeImage}
+                                                className="absolute -top-2 -right-2 rounded-full bg-red-500 p-1 text-white hover:bg-red-600 transition-colors duration-200"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* File Input */}
+                                <div className="relative">
+                                    <input
+                                        type="file"
+                                        id="foto_kepala_bumdes"
+                                        accept="image/jpeg,image/png,image/jpg,image/gif"
+                                        onChange={handleFileChange}
+                                        className={`w-full rounded-xl border-2 px-4 py-3 text-gray-700 transition-all duration-200 focus:outline-none ${
+                                            errors.foto_kepala_bumdes
+                                                ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+                                                : 'border-gray-200 hover:border-gray-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100'
+                                        }`}
+                                    />
+                                    <p className="mt-2 text-sm text-gray-500">
+                                        💡 Format yang didukung: JPG, PNG, GIF. Maksimal 2MB.
+                                    </p>
+                                </div>
+                                {errors.foto_kepala_bumdes && (
+                                    <p className="mt-2 flex items-center space-x-2 text-sm text-red-600">
+                                        <span className="h-1 w-1 rounded-full bg-red-500"></span>
+                                        <span>{errors.foto_kepala_bumdes}</span>
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Kepala Bumdes */}
+                            <div className="group">
+                                <label className="mb-3 flex items-center space-x-2 text-base font-semibold text-gray-800">
+                                    <User className="h-5 w-5 text-purple-500" />
+                                    <span>Kepala Bumdes</span>
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={data.kepala_bumdes}
+                                        onChange={(e) => setData('kepala_bumdes', e.target.value)}
+                                        placeholder="Masukkan nama kepala Bumdes..."
+                                        className={`w-full rounded-xl border-2 px-4 py-3 text-gray-700 placeholder-gray-400 transition-all duration-200 focus:outline-none ${
+                                            errors.kepala_bumdes
+                                                ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+                                                : 'border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
+                                        }`}
+                                    />
+                                </div>
+                                {errors.kepala_bumdes && (
+                                    <p className="mt-2 flex items-center space-x-2 text-sm text-red-600">
+                                        <span className="h-1 w-1 rounded-full bg-red-500"></span>
+                                        <span>{errors.kepala_bumdes}</span>
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Contact Information Section */}
+                            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                {/* Email */}
+                                <div className="group">
+                                    <label className="mb-3 flex items-center space-x-2 text-base font-semibold text-gray-800">
+                                        <Mail className="h-5 w-5 text-blue-500" />
+                                        <span>Email</span>
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="email"
+                                            value={data.email}
+                                            onChange={(e) => setData('email', e.target.value)}
+                                            placeholder="contoh@email.com"
+                                            className={`w-full rounded-xl border-2 px-4 py-3 text-gray-700 placeholder-gray-400 transition-all duration-200 focus:outline-none ${
+                                                errors.email
+                                                    ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+                                                    : 'border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
+                                            }`}
+                                        />
+                                    </div>
+                                    {errors.email && (
+                                        <p className="mt-2 flex items-center space-x-2 text-sm text-red-600">
+                                            <span className="h-1 w-1 rounded-full bg-red-500"></span>
+                                            <span>{errors.email}</span>
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Telepon */}
+                                <div className="group">
+                                    <label className="mb-3 flex items-center space-x-2 text-base font-semibold text-gray-800">
+                                        <Phone className="h-5 w-5 text-green-500" />
+                                        <span>No. Telepon</span>
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="tel"
+                                            value={data.telepon}
+                                            onChange={(e) => setData('telepon', e.target.value)}
+                                            placeholder="08xxxxxxxxxx"
+                                            className={`w-full rounded-xl border-2 px-4 py-3 text-gray-700 placeholder-gray-400 transition-all duration-200 focus:outline-none ${
+                                                errors.telepon
+                                                    ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+                                                    : 'border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
+                                            }`}
+                                        />
+                                    </div>
+                                    {errors.telepon && (
+                                        <p className="mt-2 flex items-center space-x-2 text-sm text-red-600">
+                                            <span className="h-1 w-1 rounded-full bg-red-500"></span>
+                                            <span>{errors.telepon}</span>
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Alamat */}
+                            <div className="group">
+                                <label className="mb-3 flex items-center space-x-2 text-base font-semibold text-gray-800">
+                                    <MapPin className="h-5 w-5 text-red-500" />
+                                    <span>Alamat</span>
+                                </label>
+                                <div className="relative">
+                                    <textarea
+                                        value={data.alamat}
+                                        onChange={(e) => setData('alamat', e.target.value)}
+                                        placeholder="Masukkan alamat lengkap Bumdes..."
+                                        className={`w-full resize-none rounded-xl border-2 px-4 py-3 text-gray-700 placeholder-gray-400 transition-all duration-200 focus:outline-none ${
+                                            errors.alamat
+                                                ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+                                                : 'border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
+                                        }`}
+                                        rows={3}
+                                    />
+                                </div>
+                                {errors.alamat && (
+                                    <p className="mt-2 flex items-center space-x-2 text-sm text-red-600">
+                                        <span className="h-1 w-1 rounded-full bg-red-500"></span>
+                                        <span>{errors.alamat}</span>
+                                    </p>
+                                )}
+                            </div>
+
                             {/* Keunggulan */}
                             <div className="group">
                                 <label className="mb-3 flex items-center space-x-2 text-base font-semibold text-gray-800">
@@ -158,15 +365,18 @@ export default function TentangBumdes({ profile }: { profile: any }) {
                                     <textarea
                                         value={data.misi}
                                         onChange={(e) => setData('misi', e.target.value)}
-                                        placeholder="Deskripsikan misi dan langkah-langkah strategis..."
+                                        placeholder="Deskripsikan misi dan langkah-langkah strategis... (pisahkan setiap poin dengan enter baru)"
                                         className={`w-full resize-none rounded-xl border-2 px-4 py-3 text-gray-700 placeholder-gray-400 transition-all duration-200 focus:outline-none ${
                                             errors.misi
                                                 ? 'border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-100'
                                                 : 'border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100'
                                         }`}
-                                        rows={5}
+                                        rows={6}
                                     />
                                 </div>
+                                <p className="mt-2 text-sm text-gray-500">
+                                    💡 Tips: Pisahkan setiap poin misi dengan baris baru untuk tampilan yang rapi
+                                </p>
                                 {errors.misi && (
                                     <p className="mt-2 flex items-center space-x-2 text-sm text-red-600">
                                         <span className="h-1 w-1 rounded-full bg-red-500"></span>

@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\profileBumdes;
+use App\Models\profileDesa;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -39,6 +41,10 @@ class HandleInertiaRequests extends Middleware
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
+        // Ambil data logos dari database
+        $desa = profileDesa::first();
+        $bumdes = profileBumdes::first();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -53,7 +59,16 @@ class HandleInertiaRequests extends Middleware
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [
                 'info' => fn() => $request->session()->get('info') ?? []
-            ]
+            ],
+            // Tambahkan data logos yang akan di-share ke semua halaman
+            'logos' => [
+                'logo_desa' => $desa?->logo_desa ? asset('storage/' . $desa->logo_desa) : null,
+                'logo_bumdes' => $bumdes?->logo_bumdes ? asset('storage/' . $bumdes->logo_bumdes) : null,
+            ],
+            'photos' => [
+                'foto_kantor_desa' => $desa?->foto_kantor_desa ? asset('storage/' . $desa->foto_kantor_desa) : null,
+                'foto_sekretariat' => $bumdes?->foto_sekretariat ? asset('storage/' . $bumdes->foto_sekretariat) : null,
+            ],
         ];
     }
 }
