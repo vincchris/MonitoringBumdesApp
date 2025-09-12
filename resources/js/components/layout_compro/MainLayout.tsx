@@ -20,8 +20,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({
     image = '',
 }) => {
     const fullTitle = title
-        ? `${title} - BUMDES Cihaurbeuti`
-        : 'BUMDES Cihaurbeuti - Membangun Desa Melalui Ekonomi Kreatif';
+        ? `${title} - BUMDes Bagja Waluya`
+        : 'BUMDes Bagja Waluya - Membangun Desa Melalui Ekonomi Kreatif';
 
     const metaDescription =
         description ||
@@ -29,7 +29,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
 
     const metaKeywords =
         keywords ||
-        'BUMDES, Cihaurbeuti, Unit Usaha, Mini Soccer, Internet Desa, Air Bersih';
+        'BUMDES, Cihaurbeuti, Ciamis, Unit Usaha, Mini Soccer, Internet Desa, Air Bersih';
 
     const metaImage = image || '/images/hero-bumdes.jpg';
 
