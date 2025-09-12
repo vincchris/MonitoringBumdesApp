@@ -19,17 +19,8 @@ const Navbar: React.FC = () => {
     const [isScrolled, setIsScrolled] = useState<boolean>(false);
     const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
 
-    // Safe way to get page data
-    let url = '/';
-    let logos: LogoData | null = null;
-
-    try {
-        const pageData = usePage<{ logos?: LogoData }>().props;
-        url = pageData.url || '/';
-        logos = pageData.logos || null;
-    } catch (error) {
-        console.error('Error accessing page data:', error);
-    }
+    const { props, url } = usePage<{ logos?: LogoData }>();
+    const logos = props.logos || null;
 
     useEffect(() => {
         const handleScroll = () => {
@@ -82,43 +73,49 @@ const Navbar: React.FC = () => {
         setActiveDropdown(null);
     };
 
-    // Check if current path matches menu item
+    // Cek apakah link aktif
     const isActive = (href: string): boolean => {
-        if (href === '/') {
-            return url === '/';
-        }
-        return url.startsWith(href);
+        const currentUrl = url.toLowerCase();
+        const target = href.toLowerCase();
+        if (target === '/') return currentUrl === '/';
+        return currentUrl.startsWith(target);
     };
 
-    // Check if any submenu item is active
+    // Cek apakah ada submenu yang aktif
     const hasActiveSubmenu = (submenu?: MenuItem[]): boolean => {
         if (!submenu) return false;
         return submenu.some((item) => isActive(item.href));
     };
 
-    const getNavLinkClasses = (href: string, isSubmenu: boolean = false) => {
+    // Kelas untuk desktop
+    const getNavLinkClasses = (href: string, isSubmenu: boolean = false, submenu?: MenuItem[]) => {
         const baseClasses = isSubmenu
             ? 'block px-4 py-2 text-sm transition-colors duration-200'
             : 'px-3 py-2 text-sm font-medium transition-colors duration-200';
+
+        const active = isActive(href) || hasActiveSubmenu(submenu);
 
         const activeClasses = isSubmenu ? 'bg-blue-50 text-blue-600 border-l-2 border-blue-600' : 'text-blue-600 font-semibold';
 
         const inactiveClasses = isSubmenu ? 'text-gray-700 hover:bg-blue-50 hover:text-blue-600' : 'text-gray-700 hover:text-blue-600';
 
-        return `${baseClasses} ${isActive(href) ? activeClasses : inactiveClasses}`;
+        return `${baseClasses} ${active ? activeClasses : inactiveClasses}`;
     };
 
-    const getMobileNavLinkClasses = (href: string, isSubmenu: boolean = false) => {
+    // Kelas untuk mobile
+    const getMobileNavLinkClasses = (href: string, isSubmenu: boolean = false, submenu?: MenuItem[]) => {
         const baseClasses = isSubmenu
             ? 'block rounded-md px-3 py-2 text-sm transition-colors duration-200'
             : 'block rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200';
+
+        const active = isActive(href) || hasActiveSubmenu(submenu);
 
         const activeClasses = 'bg-blue-50 text-blue-600 font-semibold';
         const inactiveClasses = isSubmenu
             ? 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
             : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600';
 
-        return `${baseClasses} ${isActive(href) ? activeClasses : inactiveClasses}`;
+        return `${baseClasses} ${active ? activeClasses : inactiveClasses}`;
     };
 
     // Handle image loading error with fallback

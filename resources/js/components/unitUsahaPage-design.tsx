@@ -184,8 +184,8 @@ const createBusinessUnits = (tarifs: Record<string, Tarif[]>): BusinessUnit[] =>
         highlights: ['Fasilitas: Lapangan rumput sintetis', 'Bonus: Air mineral gelas 1 dus', 'Parkir luas tersedia'],
         pricing: tarifs['1'] || [],
         operatingHours: '24 jam (dengan koordinasi)',
-        contact: '0813-2403-0282',
-        whatsapp: '+6281324030282',
+        contact: '08995335513 (Teh riska)',
+        whatsapp: '628995335513',
         location: 'Jl.Raya Cihaurbeuti No. 440',
         terms: [
             'Booking minimal 2 jam sebelumnya',
@@ -204,8 +204,8 @@ const createBusinessUnits = (tarifs: Record<string, Tarif[]>): BusinessUnit[] =>
         highlights: ['Lahan luas dan rindang', 'Cocok untuk event besar seperti perkemahan'],
         pricing: tarifs['2'] || [],
         operatingHours: '24 Jam (dengan koordinasi)',
-        contact: '0813-2403-0282',
-        whatsapp: '+6287797689348',
+        contact: '082240557069 (Pak Uus Usman R)',
+        whatsapp: '6282240557069',
         location: 'Area Perkemahan Desa, Bagja Waluya',
         terms: ['Booking minimal 1 minggu sebelumnya', 'DP 30% untuk konfirmasi', 'Termasuk fasilitas dasar'],
         calculationType: 'none',
@@ -218,8 +218,8 @@ const createBusinessUnits = (tarifs: Record<string, Tarif[]>): BusinessUnit[] =>
         highlights: ['Lokasi strategis', 'Sewa tahunan', 'Akses mudah dari jalan utama', 'Listrik dan air tersedia'],
         pricing: tarifs['3'] || [],
         operatingHours: 'Sesuai kesepakatan',
-        contact: '0812-3456-7892',
-        whatsapp: '6281234567892',
+        contact: '082240557069 (Pak Uus Usman R)',
+        whatsapp: '6282240557069',
         location: 'Berbagai lokasi strategis di Desa',
         terms: ['Kontrak minimal 1 tahun', 'Pembayaran di muka', 'Deposit keamanan Rp500.000'],
         calculationType: 'none',
@@ -232,8 +232,8 @@ const createBusinessUnits = (tarifs: Record<string, Tarif[]>): BusinessUnit[] =>
         highlights: ['Distribusi air bersih untuk berbagai sektor', 'Kualitas air terjamin', 'Pelayanan 24 jam', 'Sistem meteran digital'],
         pricing: tarifs['4'] || [],
         operatingHours: '24 Jam',
-        contact: '0812-3456-7893',
-        whatsapp: '6281234567893',
+        contact: '082240557069 (Pak Uus Usman R)',
+        whatsapp: '6282240557069',
         location: 'Seluruh area Desa Bagja Waluya',
         terms: ['Pendaftaran dengan KTP', 'Deposit meter Rp200.000', 'Pembayaran bulanan'],
         calculationType: 'participants',
@@ -246,8 +246,8 @@ const createBusinessUnits = (tarifs: Record<string, Tarif[]>): BusinessUnit[] =>
         highlights: ['Internet murah untuk warga', 'Stabil dan terjangkau', 'Kecepatan hingga 20 Mbps', 'Support teknis lokal'],
         pricing: tarifs['5'] || [],
         operatingHours: '24 Jam',
-        contact: '0812-3456-7894',
-        whatsapp: '6281234567894',
+        contact: '0895402153200 (Pak Asep Rohendi)',
+        whatsapp: '62895402153200 ',
         location: 'Seluruh area Desa Bagja Waluya',
         terms: ['Instalasi gratis', 'Kontrak minimal 6 bulan', 'Pembayaran di awal bulan'],
         calculationType: 'duration',
@@ -599,7 +599,7 @@ const UnitUsaha: React.FC<Props> = ({ tarifs, bookings }) => {
 
         const message = `Halo, saya ingin booking:\n\nNama: ${namaPenyewa}\nUnit: ${selectedUnit.title}\nPaket: ${selectedPackage.label}${detailQuantity}\nTanggal: ${formattedDate}${detailHarga}`;
 
-        const adminNumber = '6287737709694';
+        const adminNumber = selectedUnit.whatsapp;
         const encodedMessage = encodeURIComponent(message);
         const whatsappURL = `https://wa.me/${adminNumber}?text=${encodedMessage}`;
 
